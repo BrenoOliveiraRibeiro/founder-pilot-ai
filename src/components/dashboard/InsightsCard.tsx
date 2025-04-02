@@ -8,6 +8,9 @@ import {
   TrendingDown, 
   TrendingUp 
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFinanceData } from "@/hooks/useFinanceData";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface InsightItemProps {
   icon: React.ReactNode;
@@ -38,40 +41,119 @@ const InsightItem = ({ icon, title, status }: InsightItemProps) => {
 };
 
 export const InsightsCard = () => {
+  const { currentEmpresa } = useAuth();
+  const { loading, insights } = useFinanceData(currentEmpresa?.id || null);
+
+  // Mapeamento de tipo para status visual
+  const getStatusFromType = (tipo: string) => {
+    switch (tipo) {
+      case "alerta": return "danger";
+      case "sugestão": return "info";
+      case "projeção": return "info";
+      default: return "info";
+    }
+  };
+
+  // Mapeamento de prioridade para status visual
+  const getStatusFromPriority = (prioridade: string) => {
+    switch (prioridade) {
+      case "alta": return "danger";
+      case "media": return "warning";
+      case "baixa": return "success";
+      default: return "info";
+    }
+  };
+
+  // Mapeamento de tipo para ícone
+  const getIconFromType = (tipo: string) => {
+    switch (tipo) {
+      case "alerta": return <AlertTriangle className="h-4 w-4" />;
+      case "sugestão": return <CheckCircle className="h-4 w-4" />;
+      case "projeção":
+        return Math.random() > 0.5 ? 
+          <TrendingUp className="h-4 w-4" /> : 
+          <TrendingDown className="h-4 w-4" />;
+      default: return <BarChart2 className="h-4 w-4" />;
+    }
+  };
+
+  // Exemplo de insights para quando não há dados reais
+  const exampleInsights = [
+    {
+      id: "1",
+      empresa_id: "",
+      tipo: "alerta",
+      titulo: "Seus gastos com engenharia são 30% maiores que startups similares",
+      descricao: "",
+      prioridade: "alta",
+      status: "pendente",
+      data_criacao: "",
+      data_resolucao: null
+    },
+    {
+      id: "2",
+      empresa_id: "",
+      tipo: "alerta",
+      titulo: "Você pode precisar captar recursos nos próximos 3 meses com base no runway atual",
+      descricao: "",
+      prioridade: "media",
+      status: "pendente",
+      data_criacao: "",
+      data_resolucao: null
+    },
+    {
+      id: "3",
+      empresa_id: "",
+      tipo: "projeção",
+      titulo: "O crescimento da receita é consistente com transições bem-sucedidas de Seed para Series A",
+      descricao: "",
+      prioridade: "baixa",
+      status: "pendente",
+      data_criacao: "",
+      data_resolucao: null
+    },
+    {
+      id: "4",
+      empresa_id: "",
+      tipo: "sugestão",
+      titulo: "Sua margem bruta (68%) é melhor que a média do setor (55%)",
+      descricao: "",
+      prioridade: "baixa",
+      status: "pendente",
+      data_criacao: "",
+      data_resolucao: null
+    }
+  ];
+
+  const insightsToDisplay = insights.length > 0 ? insights : exampleInsights;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
           <BarChart2 className="h-5 w-5 text-primary" />
-          AI-Generated Insights
+          Insights Gerados por IA
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          <InsightItem
-            icon={<TrendingDown className="h-4 w-4" />}
-            title="Your engineering expenses are 30% higher than similar startups"
-            status="danger"
-          />
-          
-          <InsightItem
-            icon={<AlertTriangle className="h-4 w-4" />}
-            title="You may need to raise funds in the next 3 months based on current runway"
-            status="warning"
-          />
-          
-          <InsightItem
-            icon={<TrendingUp className="h-4 w-4" />}
-            title="Revenue growth is consistent with successful Seed to Series A transitions"
-            status="success"
-          />
-          
-          <InsightItem
-            icon={<CheckCircle className="h-4 w-4" />}
-            title="Your gross margin (68%) is better than industry average (55%)"
-            status="success"
-          />
-        </div>
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="w-full h-14" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {insightsToDisplay.map((insight) => (
+              <InsightItem
+                key={insight.id}
+                icon={getIconFromType(insight.tipo)}
+                title={insight.titulo}
+                status={getStatusFromPriority(insight.prioridade)}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

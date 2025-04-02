@@ -10,72 +10,93 @@ import {
   TrendingDown, 
   Wallet 
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 export const MetricsGrid = () => {
+  const { currentEmpresa } = useAuth();
+  const { metrics, loading } = useFinanceData(currentEmpresa?.id || null);
+
+  // Usar dados de métricas da API ou fallback para valores de exemplo
+  const cashBalance = metrics?.caixa_atual ?? 124500;
+  const monthlyRevenue = metrics?.receita_mensal ?? 45800;
+  const monthlyBurn = metrics?.burn_rate ?? 38200;
+  const runway = metrics?.runway_meses ?? 3.5;
+  const mrrGrowth = metrics?.mrr_growth ?? 12.5;
+  const burnRate = monthlyBurn / 4; // Semanal (ou do banco de dados se disponível)
+  const cashFlow = metrics?.cash_flow ?? 7600;
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
       <MetricCard
-        title="Cash Balance"
-        value="$124,500"
-        description="Total available"
+        title="Saldo em Caixa"
+        value={`R$${cashBalance.toLocaleString('pt-BR')}`}
+        description="Total disponível"
         icon={<DollarSign className="h-5 w-5 text-primary" />}
-        tooltip="Your total cash balance across all connected accounts"
+        tooltip="Seu saldo total em caixa em todas as contas conectadas"
+        loading={loading}
       />
       
       <MetricCard
-        title="Monthly Revenue"
-        value="$45,800"
+        title="Receita Mensal"
+        value={`R$${monthlyRevenue.toLocaleString('pt-BR')}`}
         change={12}
-        description="vs. last month"
+        description="vs. mês anterior"
         icon={<BanknoteIcon className="h-5 w-5 text-primary" />}
-        tooltip="Your total revenue for the current month"
+        tooltip="Sua receita total para o mês atual"
+        loading={loading}
       />
       
       <MetricCard
-        title="Monthly Burn"
-        value="$38,200"
+        title="Gastos Mensais"
+        value={`R$${monthlyBurn.toLocaleString('pt-BR')}`}
         change={-8}
-        description="vs. last month"
+        description="vs. mês anterior"
         icon={<CreditCard className="h-5 w-5 text-primary" />}
-        tooltip="Your total expenses for the current month"
+        tooltip="Suas despesas totais para o mês atual"
+        loading={loading}
       />
       
       <MetricCard
         title="Runway"
-        value="3.5 months"
+        value={`${runway.toLocaleString('pt-BR')} meses`}
         change={-15}
-        description="at current burn rate"
+        description="na taxa atual de queima"
         icon={<CalendarClock className="h-5 w-5 text-warning" />}
-        tooltip="How long your cash will last at the current burn rate"
+        tooltip="Quanto tempo seu caixa durará na taxa atual de queima"
         className="border-warning/20 bg-warning/5"
+        loading={loading}
       />
       
       <MetricCard
-        title="MRR Growth"
-        value="12.5%"
+        title="Crescimento MRR"
+        value={`${mrrGrowth}%`}
         change={3.2}
-        description="vs. last month"
+        description="vs. mês anterior"
         icon={<LineChart className="h-5 w-5 text-success" />}
-        tooltip="Month-over-month growth in recurring revenue"
+        tooltip="Crescimento mês a mês em receita recorrente"
         className="border-success/20 bg-success/5"
+        loading={loading}
       />
       
       <MetricCard
-        title="Burn Rate"
-        value="$12,733"
-        description="weekly average"
+        title="Taxa de Queima"
+        value={`R$${burnRate.toLocaleString('pt-BR')}`}
+        description="média semanal"
         icon={<TrendingDown className="h-5 w-5 text-destructive" />}
-        tooltip="Your average weekly spending rate"
+        tooltip="Sua taxa média de gasto semanal"
         className="border-destructive/20 bg-destructive/5"
+        loading={loading}
       />
       
       <MetricCard
-        title="Cash Flow"
-        value="$7,600"
+        title="Fluxo de Caixa"
+        value={`R$${cashFlow.toLocaleString('pt-BR')}`}
         change={-22}
-        description="vs. last month"
+        description="vs. mês anterior"
         icon={<Wallet className="h-5 w-5 text-primary" />}
-        tooltip="Net cash flow (revenue minus expenses)"
+        tooltip="Fluxo de caixa líquido (receita menos despesas)"
+        loading={loading}
       />
     </div>
   );

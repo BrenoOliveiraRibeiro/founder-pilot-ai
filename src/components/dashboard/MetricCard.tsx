@@ -12,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MetricCardProps {
   title: string;
@@ -21,6 +22,7 @@ interface MetricCardProps {
   icon: React.ReactNode;
   tooltip?: string;
   className?: string;
+  loading?: boolean;
 }
 
 export const MetricCard = ({
@@ -31,6 +33,7 @@ export const MetricCard = ({
   icon,
   tooltip,
   className,
+  loading = false,
 }: MetricCardProps) => {
   return (
     <div className={cn("bg-card rounded-lg border p-6", className)}>
@@ -55,30 +58,41 @@ export const MetricCard = ({
         </div>
       </div>
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight">{value}</h2>
-        {(description || typeof change !== 'undefined') && (
-          <div className="flex items-center gap-2">
-            {typeof change !== 'undefined' && (
-              <span
-                className={cn(
-                  "text-xs font-medium inline-flex items-center",
-                  change > 0 ? "text-success" : "text-destructive"
-                )}
-              >
-                {change > 0 ? (
-                  <ArrowUpRight className="h-3 w-3 mr-1" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 mr-1" />
-                )}
-                {Math.abs(change)}%
-              </span>
+        {loading ? (
+          <>
+            <Skeleton className="h-8 w-28 mb-2" />
+            {(description || typeof change !== 'undefined') && (
+              <Skeleton className="h-4 w-20" />
             )}
-            {description && (
-              <span className="text-xs text-muted-foreground">
-                {description}
-              </span>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold tracking-tight">{value}</h2>
+            {(description || typeof change !== 'undefined') && (
+              <div className="flex items-center gap-2">
+                {typeof change !== 'undefined' && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium inline-flex items-center",
+                      change > 0 ? "text-success" : "text-destructive"
+                    )}
+                  >
+                    {change > 0 ? (
+                      <ArrowUpRight className="h-3 w-3 mr-1" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3 mr-1" />
+                    )}
+                    {Math.abs(change)}%
+                  </span>
+                )}
+                {description && (
+                  <span className="text-xs text-muted-foreground">
+                    {description}
+                  </span>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>

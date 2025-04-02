@@ -9,13 +9,276 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      empresas: {
+        Row: {
+          created_at: string | null
+          data_fundacao: string | null
+          estagio: string | null
+          id: string
+          nome: string
+          num_funcionarios: number | null
+          segmento: string | null
+          updated_at: string | null
+          user_id: string | null
+          website: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_fundacao?: string | null
+          estagio?: string | null
+          id?: string
+          nome: string
+          num_funcionarios?: number | null
+          segmento?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_fundacao?: string | null
+          estagio?: string | null
+          id?: string
+          nome?: string
+          num_funcionarios?: number | null
+          segmento?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insights: {
+        Row: {
+          data_criacao: string | null
+          data_resolucao: string | null
+          descricao: string
+          empresa_id: string | null
+          id: string
+          prioridade: string
+          status: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          data_criacao?: string | null
+          data_resolucao?: string | null
+          descricao: string
+          empresa_id?: string | null
+          id?: string
+          prioridade: string
+          status?: string | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          data_criacao?: string | null
+          data_resolucao?: string | null
+          descricao?: string
+          empresa_id?: string | null
+          id?: string
+          prioridade?: string
+          status?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracoes_bancarias: {
+        Row: {
+          created_at: string | null
+          detalhes: Json | null
+          empresa_id: string | null
+          id: string
+          nome_banco: string
+          status: string
+          tipo_conexao: string
+          ultimo_sincronismo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detalhes?: Json | null
+          empresa_id?: string | null
+          id?: string
+          nome_banco: string
+          status: string
+          tipo_conexao: string
+          ultimo_sincronismo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detalhes?: Json | null
+          empresa_id?: string | null
+          id?: string
+          nome_banco?: string
+          status?: string
+          tipo_conexao?: string
+          ultimo_sincronismo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_bancarias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metricas: {
+        Row: {
+          burn_rate: number | null
+          caixa_atual: number | null
+          cash_flow: number | null
+          created_at: string | null
+          data_referencia: string
+          empresa_id: string | null
+          id: string
+          mrr_growth: number | null
+          receita_mensal: number | null
+          runway_meses: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          burn_rate?: number | null
+          caixa_atual?: number | null
+          cash_flow?: number | null
+          created_at?: string | null
+          data_referencia: string
+          empresa_id?: string | null
+          id?: string
+          mrr_growth?: number | null
+          receita_mensal?: number | null
+          runway_meses?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          burn_rate?: number | null
+          caixa_atual?: number | null
+          cash_flow?: number | null
+          created_at?: string | null
+          data_referencia?: string
+          empresa_id?: string | null
+          id?: string
+          mrr_growth?: number | null
+          receita_mensal?: number | null
+          runway_meses?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metricas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          cargo: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          nome: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          nome?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transacoes: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          data_transacao: string
+          descricao: string
+          empresa_id: string | null
+          id: string
+          metodo_pagamento: string | null
+          recorrente: boolean | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          data_transacao: string
+          descricao: string
+          empresa_id?: string | null
+          id?: string
+          metodo_pagamento?: string | null
+          recorrente?: boolean | null
+          tipo: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          data_transacao?: string
+          descricao?: string
+          empresa_id?: string | null
+          id?: string
+          metodo_pagamento?: string | null
+          recorrente?: boolean | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_owner_of_empresa: {
+        Args: {
+          empresa_uuid: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
