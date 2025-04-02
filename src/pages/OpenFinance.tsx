@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegracaoBancaria } from "@/integrations/supabase/models";
-import { Building, Check, ChevronRight, Database, Lock, RefreshCw, Shield } from "lucide-react";
+import { AlertTriangle, Building, Check, ChevronRight, Database, Lock, RefreshCw, Shield } from "lucide-react";
 
 const PROVIDERS = [
   { id: "itau", name: "Itaú", logo: "I", popular: true },
@@ -17,16 +18,36 @@ const PROVIDERS = [
   { id: "banco-do-brasil", name: "Banco do Brasil", logo: "BB", popular: false },
 ];
 
+declare global {
+  interface Window {
+    belvoSDK?: any;
+  }
+}
+
 const OpenFinance = () => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [activeIntegrations, setActiveIntegrations] = useState<IntegracaoBancaria[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [belvoWidgetLoaded, setBelvoWidgetLoaded] = useState(false);
   const { user, currentEmpresa } = useAuth();
   const { toast } = useToast();
+  const belvoContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Carregar o script do Belvo Widget
+    if (!document.getElementById("belvo-script")) {
+      const script = document.createElement("script");
+      script.id = "belvo-script";
+      script.src = "https://cdn.belvo.io/belvo-widget-1-stable.js";
+      script.async = true;
+      script.onload = () => setBelvoWidgetLoaded(true);
+      document.head.appendChild(script);
+    } else {
+      setBelvoWidgetLoaded(true);
+    }
+
     if (currentEmpresa?.id) {
       fetchIntegrations();
     }
@@ -51,44 +72,104 @@ const OpenFinance = () => {
   };
 
   const handleConnect = async () => {
-    if (!selectedProvider || !currentEmpresa?.id) return;
+    if (!selectedProvider || !currentEmpresa?.id || !belvoWidgetLoaded) {
+      toast({
+        title: "Erro",
+        description: "Selecione um banco e tente novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setConnecting(true);
     try {
-      // Chamar a função Edge para obter URL de autorização
+      // Obter token para o widget do Belvo
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "authorize",
           empresa_id: currentEmpresa.id,
-          provedor: selectedProvider
+          institution: selectedProvider
+        }
+      });
+
+      if (error) throw error;
+      if (!data.widget_token) throw new Error("Token não retornado");
+
+      // Inicializar e abrir o widget do Belvo
+      if (window.belvoSDK) {
+        const successCallback = (link: string, institution: string) => {
+          console.log("Link criado com sucesso:", link);
+          handleBelvoSuccess(link, institution);
+        };
+
+        const errorCallback = (error: any) => {
+          console.error("Erro no widget do Belvo:", error);
+          toast({
+            title: "Erro de conexão",
+            description: "Não foi possível conectar ao banco. Tente novamente.",
+            variant: "destructive"
+          });
+          setConnecting(false);
+        };
+
+        const exitCallback = () => {
+          console.log("Widget fechado pelo usuário");
+          setConnecting(false);
+        };
+
+        const widget = window.belvoSDK.createWidget(data.widget_token, {
+          callback: (link_id: string, institution: string) => 
+            successCallback(link_id, institution),
+          onError: errorCallback,
+          onExit: exitCallback,
+          locale: "pt",
+          institution: data.institution
+        }).build();
+
+        widget.mount(belvoContainerRef.current);
+        
+      } else {
+        throw new Error("Widget do Belvo não carregado");
+      }
+    } catch (error: any) {
+      console.error("Erro ao conectar conta:", error);
+      toast({
+        title: "Erro ao conectar conta",
+        description: error.message || "Não foi possível estabelecer conexão com o banco. Tente novamente.",
+        variant: "destructive"
+      });
+      setConnecting(false);
+    }
+  };
+
+  const handleBelvoSuccess = async (linkId: string, institution: string) => {
+    if (!currentEmpresa?.id) return;
+    
+    try {
+      // Registrar o link no backend
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "callback",
+          empresa_id: currentEmpresa.id,
+          link_id: linkId,
+          institution: institution
         }
       });
 
       if (error) throw error;
 
-      // Normalmente redirecionaria para URL de autorização
-      // Mas para fins de demonstração, vamos simular um callback bem-sucedido
-      await supabase.functions.invoke("open-finance", {
-        body: {
-          action: "callback",
-          empresa_id: currentEmpresa.id,
-          provedor: selectedProvider,
-          authorization_code: "demo-auth-code-" + Date.now()
-        }
-      });
-
       toast({
         title: "Conta conectada com sucesso!",
-        description: `Sua conta ${getProviderName(selectedProvider)} foi conectada via Open Finance.`,
+        description: `Sua conta foi conectada via Open Finance e os dados estão sendo sincronizados.`,
       });
 
       // Atualizar a lista de integrações
       fetchIntegrations();
-    } catch (error) {
-      console.error("Erro ao conectar conta:", error);
+    } catch (error: any) {
+      console.error("Erro ao registrar conexão:", error);
       toast({
-        title: "Erro ao conectar conta",
-        description: "Não foi possível estabelecer conexão com o banco. Tente novamente.",
+        title: "Erro ao registrar conexão",
+        description: error.message || "A conexão foi estabelecida, mas houve um erro ao registrar. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -117,11 +198,11 @@ const OpenFinance = () => {
 
       // Atualizar a lista de integrações para mostrar o último sincronismo
       fetchIntegrations();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao sincronizar dados:", error);
       toast({
         title: "Erro ao sincronizar dados",
-        description: "Não foi possível sincronizar os dados financeiros. Tente novamente.",
+        description: error.message || "Não foi possível sincronizar os dados financeiros. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -143,6 +224,11 @@ const OpenFinance = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const isRunwayCritical = (integration: IntegracaoBancaria) => {
+    // Esta função verifica se o runway da integração está crítico (< 3 meses)
+    return integration.detalhes?.runway_meses < 3;
   };
 
   return (
@@ -170,6 +256,12 @@ const OpenFinance = () => {
                       <p className="text-xs text-muted-foreground">
                         Última sincronização: {formatDate(integration.ultimo_sincronismo)}
                       </p>
+                      {isRunwayCritical(integration) && (
+                        <div className="flex items-center gap-1 text-xs text-destructive mt-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>Runway crítico: ação necessária</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Button 
@@ -257,9 +349,12 @@ const OpenFinance = () => {
                 </div>
               </div>
               
+              {/* Container para o widget do Belvo */}
+              <div ref={belvoContainerRef} className="belvo-widget-container"></div>
+              
               <Button 
                 className="w-full" 
-                disabled={!selectedProvider || connecting}
+                disabled={!selectedProvider || connecting || !belvoWidgetLoaded}
                 onClick={handleConnect}
               >
                 {connecting ? "Conectando..." : "Conectar Conta Bancária"}
