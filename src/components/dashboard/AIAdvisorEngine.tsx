@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Insight } from "@/integrations/supabase/models";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, BarChart2, AlertTriangle, TrendingUp, TestTube } from "lucide-react";
+import { Lightbulb, BarChart2, AlertTriangle, TrendingUp, TestTube, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export const AIAdvisorEngine = () => {
   const { currentEmpresa } = useAuth();
@@ -14,6 +15,7 @@ export const AIAdvisorEngine = () => {
   const [loading, setLoading] = useState(true);
   const [syncingData, setSyncingData] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export const AIAdvisorEngine = () => {
         .from("insights")
         .select("*")
         .eq("empresa_id", currentEmpresa?.id)
+        .order("prioridade", { ascending: true })
         .order("data_criacao", { ascending: false })
         .limit(5);
 
@@ -93,12 +96,13 @@ export const AIAdvisorEngine = () => {
     try {
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
-          action: "test_connection",
-          empresa_id: currentEmpresa.id
+          action: "test_connection"
         }
       });
       
       if (error) throw error;
+      
+      setTestResult(data);
       
       if (data.success) {
         toast({
@@ -148,6 +152,19 @@ export const AIAdvisorEngine = () => {
     }
   };
 
+  const getPriorityBadge = (prioridade: string) => {
+    switch (prioridade) {
+      case "alta":
+        return <Badge variant="destructive" className="ml-2">Urgente</Badge>;
+      case "media":
+        return <Badge variant="warning" className="ml-2">Importante</Badge>;
+      case "baixa":
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -162,6 +179,10 @@ export const AIAdvisorEngine = () => {
             onClick={testBelvoConnection}
             disabled={testingConnection || !currentEmpresa?.id}
           >
+            {testingConnection ? 
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
+              <TestTube className="h-4 w-4 mr-2" />
+            }
             {testingConnection ? "Testando..." : "Testar Belvo"}
           </Button>
           <Button 
@@ -170,10 +191,26 @@ export const AIAdvisorEngine = () => {
             onClick={syncMarketData}
             disabled={syncingData || !currentEmpresa?.id}
           >
-            {syncingData ? "Analisando..." : "Analisar Dados de Mercado"}
+            {syncingData ? 
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
+              <RefreshCw className="h-4 w-4 mr-2" />
+            }
+            {syncingData ? "Analisando..." : "Analisar Dados"}
           </Button>
         </div>
       </div>
+      
+      {testResult && testResult.success && (
+        <div className="p-3 rounded-md bg-primary/5 border border-primary/20 mb-3 text-sm">
+          <div className="font-medium flex items-center">
+            <TestTube className="h-4 w-4 mr-2 text-primary" />
+            Conexão Belvo ativa
+          </div>
+          <div className="text-muted-foreground mt-1 text-xs">
+            {testResult.accountsCount} contas de teste disponíveis para integração
+          </div>
+        </div>
+      )}
       
       {loading ? (
         <div className="space-y-3">
@@ -191,7 +228,10 @@ export const AIAdvisorEngine = () => {
               <div className="flex items-start gap-3">
                 {getIconForInsight(insight.tipo)}
                 <div>
-                  <h4 className="font-medium text-sm mb-1">{insight.titulo}</h4>
+                  <h4 className="font-medium text-sm mb-1 flex items-center">
+                    {insight.titulo}
+                    {getPriorityBadge(insight.prioridade)}
+                  </h4>
                   <p className="text-xs text-muted-foreground">{insight.descricao}</p>
                 </div>
               </div>

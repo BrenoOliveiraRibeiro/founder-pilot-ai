@@ -7,9 +7,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegracaoBancaria } from "@/integrations/supabase/models";
-import { AlertTriangle, Building, Check, ChevronRight, Database, Lock, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, AlertTriangle, Building, Check, ChevronRight, Database, ExternalLink, Lock, RefreshCw, Shield } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
-const PROVIDERS = [
+const SANDBOX_PROVIDERS = [
+  { id: "banamex_mx_retail", name: "Banamex (Sandbox)", logo: "B", popular: true },
+  { id: "santander_mx_retail", name: "Santander (Sandbox)", logo: "S", popular: true },
+  { id: "bbva_mx_retail", name: "BBVA (Sandbox)", logo: "B", popular: true },
+  { id: "banregio_mx_retail", name: "Banregio (Sandbox)", logo: "BR", popular: false },
+];
+
+const REAL_PROVIDERS = [
   { id: "itau", name: "Itaú", logo: "I", popular: true },
   { id: "bradesco", name: "Bradesco", logo: "B", popular: true },
   { id: "santander", name: "Santander", logo: "S", popular: true },
@@ -29,11 +38,16 @@ const OpenFinance = () => {
   const [activeIntegrations, setActiveIntegrations] = useState<IntegracaoBancaria[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
   const [belvoWidgetLoaded, setBelvoWidgetLoaded] = useState(false);
+  const [useSandbox, setUseSandbox] = useState(true);
+  const [connectionProgress, setConnectionProgress] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState("");
   const { user, currentEmpresa } = useAuth();
   const { toast } = useToast();
   const belvoContainerRef = useRef<HTMLDivElement>(null);
+
+  const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
 
   useEffect(() => {
     // Carregar o script do Belvo Widget
@@ -44,6 +58,7 @@ const OpenFinance = () => {
       script.async = true;
       script.onload = () => setBelvoWidgetLoaded(true);
       document.head.appendChild(script);
+      console.log("Belvo SDK script loaded");
     } else {
       setBelvoWidgetLoaded(true);
     }
@@ -66,6 +81,11 @@ const OpenFinance = () => {
       setActiveIntegrations(data as IntegracaoBancaria[]);
     } catch (error) {
       console.error("Erro ao buscar integrações:", error);
+      toast({
+        title: "Erro ao carregar integrações",
+        description: "Não foi possível carregar suas integrações bancárias. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -82,31 +102,41 @@ const OpenFinance = () => {
     }
 
     setConnecting(true);
+    setConnectionProgress(20);
+    setConnectionStatus("Inicializando conexão...");
+    
     try {
       // Obter token para o widget do Belvo
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "authorize",
           empresa_id: currentEmpresa.id,
-          institution: selectedProvider
+          institution: selectedProvider,
+          sandbox: useSandbox
         }
       });
 
       if (error) throw error;
       if (!data.widget_token) throw new Error("Token não retornado");
 
+      setConnectionProgress(40);
+      setConnectionStatus("Autorizando com o banco...");
+
       // Inicializar e abrir o widget do Belvo
       if (window.belvoSDK) {
         const successCallback = (link: string, institution: string) => {
           console.log("Link criado com sucesso:", link);
+          setConnectionProgress(80);
+          setConnectionStatus("Conexão estabelecida, registrando...");
           handleBelvoSuccess(link, institution);
         };
 
         const errorCallback = (error: any) => {
           console.error("Erro no widget do Belvo:", error);
+          setConnectionProgress(0);
           toast({
             title: "Erro de conexão",
-            description: "Não foi possível conectar ao banco. Tente novamente.",
+            description: "Não foi possível conectar ao banco. Detalhes: " + (error.message || "Erro desconhecido"),
             variant: "destructive"
           });
           setConnecting(false);
@@ -114,6 +144,7 @@ const OpenFinance = () => {
 
         const exitCallback = () => {
           console.log("Widget fechado pelo usuário");
+          setConnectionProgress(0);
           setConnecting(false);
         };
 
@@ -133,6 +164,7 @@ const OpenFinance = () => {
       }
     } catch (error: any) {
       console.error("Erro ao conectar conta:", error);
+      setConnectionProgress(0);
       toast({
         title: "Erro ao conectar conta",
         description: error.message || "Não foi possível estabelecer conexão com o banco. Tente novamente.",
@@ -146,18 +178,25 @@ const OpenFinance = () => {
     if (!currentEmpresa?.id) return;
     
     try {
+      setConnectionProgress(90);
+      setConnectionStatus("Sincronizando dados...");
+      
       // Registrar o link no backend
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "callback",
           empresa_id: currentEmpresa.id,
           link_id: linkId,
-          institution: institution
+          institution: institution,
+          sandbox: useSandbox
         }
       });
 
       if (error) throw error;
 
+      setConnectionProgress(100);
+      setConnectionStatus("Concluído!");
+      
       toast({
         title: "Conta conectada com sucesso!",
         description: `Sua conta foi conectada via Open Finance e os dados estão sendo sincronizados.`,
@@ -174,18 +213,22 @@ const OpenFinance = () => {
       });
     } finally {
       setConnecting(false);
+      setTimeout(() => {
+        setConnectionProgress(0);
+      }, 1500);
     }
   };
 
   const handleSyncData = async (integracaoId: string) => {
     if (!currentEmpresa?.id) return;
 
-    setSyncing(true);
+    setSyncing(integracaoId);
     try {
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "sync",
-          empresa_id: currentEmpresa.id
+          empresa_id: currentEmpresa.id,
+          integration_id: integracaoId
         }
       });
 
@@ -206,12 +249,12 @@ const OpenFinance = () => {
         variant: "destructive"
       });
     } finally {
-      setSyncing(false);
+      setSyncing(null);
     }
   };
 
   const getProviderName = (providerId: string) => {
-    return PROVIDERS.find((p) => p.id === providerId)?.name || providerId;
+    return [...SANDBOX_PROVIDERS, ...REAL_PROVIDERS].find((p) => p.id === providerId)?.name || providerId;
   };
 
   const formatDate = (dateString: string | null) => {
@@ -268,10 +311,10 @@ const OpenFinance = () => {
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleSyncData(integration.id)}
-                    disabled={syncing}
+                    disabled={syncing === integration.id}
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    {syncing ? "Sincronizando..." : "Sincronizar Dados"}
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncing === integration.id ? "animate-spin" : ""}`} />
+                    {syncing === integration.id ? "Sincronizando..." : "Sincronizar Dados"}
                   </Button>
                 </div>
               ))}
@@ -281,22 +324,64 @@ const OpenFinance = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Conectar Nova Conta</CardTitle>
-            <CardDescription>
-              Conecte suas contas bancárias via Open Finance para análise automática
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-xl">Conectar Nova Conta</CardTitle>
+                <CardDescription>
+                  Conecte suas contas bancárias via Open Finance para análise automática
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs ${useSandbox ? "text-primary" : "text-muted-foreground"}`}>Sandbox</span>
+                <button 
+                  onClick={() => setUseSandbox(!useSandbox)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${useSandbox ? 'bg-primary' : 'bg-input'}`}
+                >
+                  <span className={`inline-block h-5 w-5 rounded-full bg-background transition-transform ${useSandbox ? 'translate-x-6' : 'translate-x-1'}`}></span>
+                </button>
+                <span className={`text-xs ${!useSandbox ? "text-primary" : "text-muted-foreground"}`}>Produção</span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
+            {useSandbox && (
+              <Alert variant="info" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Modo Sandbox Ativado</AlertTitle>
+                <AlertDescription>
+                  No modo sandbox, utilize as credenciais de teste: "fake-user" e "fake-password"
+                  <a 
+                    href="https://developers.belvo.com/docs/test-in-sandbox" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="flex items-center text-primary mt-1 text-sm"
+                  >
+                    Ver documentação <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
               <Lock className="h-4 w-4" />
               <p>Utilizamos criptografia e tecnologia de ponta para manter seus dados seguros</p>
             </div>
             
+            {connecting && connectionProgress > 0 && (
+              <div className="mb-6 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{connectionStatus}</span>
+                  <span>{connectionProgress}%</span>
+                </div>
+                <Progress value={connectionProgress} className="h-2" />
+              </div>
+            )}
+            
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium mb-3">Selecione seu banco:</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {PROVIDERS.map((provider) => (
+                  {providers.map((provider) => (
                     <div
                       key={provider.id}
                       className={`border rounded-md p-3 flex items-center gap-3 cursor-pointer transition-colors ${
