@@ -23,6 +23,8 @@ serve(async (req) => {
     const belvoSecretId = Deno.env.get("BELVO_SECRET_ID") || "";
     const belvoSecretPassword = Deno.env.get("BELVO_SECRET_PASSWORD") || "";
 
+    console.log("Using Belvo credentials - ID:", belvoSecretId.substring(0, 5) + "***");
+
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -50,13 +52,33 @@ serve(async (req) => {
         body: body ? JSON.stringify(body) : null,
       };
 
+      console.log(`Calling Belvo API: ${method} ${endpoint}`);
       const response = await fetch(url, options);
-      return await response.json();
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        console.error("Belvo API Error:", responseData);
+        throw new Error(`Belvo API Error: ${JSON.stringify(responseData)}`);
+      }
+      
+      return responseData;
     }
 
     if (action === "authorize") {
       // Criar widget token
       console.log(`Iniciando autorização para empresa ${empresa_id} com ${institution || provedor}`);
+      
+      // Primeiro, vamos validar o acesso à API Belvo com uma chamada simples
+      try {
+        const institutionsResponse = await callBelvoAPI('/api/institutions/', 'GET');
+        console.log(`Instituições disponíveis: ${institutionsResponse.length}`);
+      } catch (error) {
+        console.error("Erro na validação de acesso à API Belvo:", error);
+        return new Response(
+          JSON.stringify({ error: "Falha na autenticação com a API Belvo. Verifique suas credenciais." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
+      }
       
       const widgetTokenResponse = await callBelvoAPI('/api/token/', 'POST', {
         id: belvoSecretId,
@@ -91,6 +113,8 @@ serve(async (req) => {
       if (!linkDetails.id) {
         throw new Error("Falha ao buscar detalhes do link");
       }
+
+      console.log(`Link criado com sucesso: ${linkDetails.id} para instituição: ${linkDetails.institution}`);
 
       // Atualizar o status da integração no banco de dados
       const { data, error } = await supabase
@@ -148,6 +172,8 @@ serve(async (req) => {
         );
       }
       
+      console.log(`Encontradas ${integracoes.length} integrações ativas`);
+      
       // Para cada integração, buscar os dados atualizados
       const syncPromises = integracoes.map(integracao => 
         syncData(empresa_id, integracao.detalhes.link_id, supabase)
@@ -169,7 +195,7 @@ serve(async (req) => {
         .eq("empresa_id", empresa_id)
         .order("data_referencia", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       return new Response(
         JSON.stringify({ 
@@ -184,6 +210,8 @@ serve(async (req) => {
     // Função auxiliar para sincronizar dados do Belvo
     async function syncData(empresaId, linkId, supabaseClient) {
       try {
+        console.log(`Iniciando sincronização de dados para empresa ${empresaId}, link ${linkId}`);
+        
         // 1. Buscar balanços da conta
         const accounts = await callBelvoAPI('/api/accounts/', 'GET', {
           link: linkId,
@@ -194,6 +222,8 @@ serve(async (req) => {
           throw new Error("Nenhuma conta encontrada");
         }
         
+        console.log(`Encontradas ${accounts.length} contas`);
+        
         // 2. Buscar transações
         const transactions = await callBelvoAPI('/api/transactions/', 'GET', {
           link: linkId,
@@ -201,6 +231,8 @@ serve(async (req) => {
           date_to: new Date().toISOString().split('T')[0],
           save_data: true
         });
+        
+        console.log(`Encontradas ${transactions.length} transações`);
         
         // 3. Calcular métricas relevantes
         // Saldo atual (soma dos saldos das contas)
@@ -224,6 +256,8 @@ serve(async (req) => {
         
         // Calcular crescimento do MRR (simplificado)
         const mrr_growth = 0; // Será calculado com dados históricos posteriormente
+        
+        console.log(`Métricas calculadas: Caixa: ${caixaAtual}, Receita: ${receitaMensal}, Burn: ${burnRate}, Runway: ${runwayMeses}`);
         
         // 4. Salvar métricas calculadas
         const { error: metricasError } = await supabaseClient
@@ -268,6 +302,7 @@ serve(async (req) => {
         // 6. Gerar insights (regras de negócio)
         await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, supabaseClient);
         
+        console.log("Sincronização concluída com sucesso");
         return true;
       } catch (error) {
         console.error("Erro ao sincronizar dados:", error);
@@ -337,7 +372,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Erro na função de Open Finance:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ error: "Erro interno do servidor", message: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
