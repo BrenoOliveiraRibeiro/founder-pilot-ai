@@ -28,7 +28,7 @@ serve(async (req) => {
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, empresa_id, authorization_code, provedor, link_id, institution } = await req.json();
+    const { action, empresa_id, institution, link_id } = await req.json();
 
     if (!empresa_id) {
       return new Response(
@@ -54,7 +54,19 @@ serve(async (req) => {
 
       console.log(`Calling Belvo API: ${method} ${endpoint}`);
       const response = await fetch(url, options);
-      const responseData = await response.json();
+      
+      // Log entire response for debugging
+      const responseText = await response.text();
+      console.log(`Belvo API Response (${response.status}):`, responseText);
+      
+      // Try to parse as JSON if possible
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Failed to parse Belvo response as JSON:", e);
+        responseData = { text: responseText };
+      }
       
       if (!response.ok) {
         console.error("Belvo API Error:", responseData);
@@ -64,9 +76,55 @@ serve(async (req) => {
       return responseData;
     }
 
-    if (action === "authorize") {
+    // Test connection function - similar to your Python example
+    async function testBelvoConnection() {
+      try {
+        console.log("Testing Belvo connection...");
+        
+        // 1. Create a test link (similar to your Python example)
+        const createLinkResponse = await callBelvoAPI('/api/links/', 'POST', {
+          institution: 'banamex_mx_retail',
+          username: 'fake-user',
+          password: 'fake-password', 
+          access_mode: 'single'
+        });
+        
+        console.log("Test link created:", createLinkResponse.id);
+        
+        // 2. Retrieve accounts for this link
+        const accounts = await callBelvoAPI('/api/accounts/', 'GET', {
+          link: createLinkResponse.id,
+          save_data: false
+        });
+        
+        console.log(`Retrieved ${accounts.length} test accounts`);
+        return {
+          success: true,
+          message: "Belvo connection test successful",
+          testLink: createLinkResponse.id,
+          accountsCount: accounts.length
+        };
+      } catch (error) {
+        console.error("Belvo test connection failed:", error);
+        return {
+          success: false,
+          message: "Belvo connection test failed",
+          error: error.message
+        };
+      }
+    }
+
+    if (action === "test_connection") {
+      // Test connection to Belvo API
+      const testResult = await testBelvoConnection();
+      return new Response(
+        JSON.stringify(testResult),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    else if (action === "authorize") {
       // Criar widget token
-      console.log(`Iniciando autorização para empresa ${empresa_id} com ${institution || provedor}`);
+      console.log(`Iniciando autorização para empresa ${empresa_id} com ${institution}`);
       
       // Primeiro, vamos validar o acesso à API Belvo com uma chamada simples
       try {
@@ -93,7 +151,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           widget_token: widgetTokenResponse.access,
-          institution: institution || provedor
+          institution
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );

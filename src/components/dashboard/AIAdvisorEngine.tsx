@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Insight } from "@/integrations/supabase/models";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, BarChart2, AlertTriangle, TrendingUp } from "lucide-react";
+import { Lightbulb, BarChart2, AlertTriangle, TrendingUp, TestTube } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -13,6 +13,7 @@ export const AIAdvisorEngine = () => {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingData, setSyncingData] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,6 +86,44 @@ export const AIAdvisorEngine = () => {
     }
   };
 
+  const testBelvoConnection = async () => {
+    if (!currentEmpresa?.id) return;
+    
+    setTestingConnection(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "test_connection",
+          empresa_id: currentEmpresa.id
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        toast({
+          title: "Conexão com Belvo estabelecida",
+          description: `Teste bem-sucedido: ${data.accountsCount} contas de teste encontradas.`,
+        });
+      } else {
+        toast({
+          title: "Falha na conexão com Belvo",
+          description: data.message || "Erro ao conectar com a API do Belvo.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao testar conexão Belvo:", error);
+      toast({
+        title: "Erro ao testar conexão",
+        description: "Ocorreu um erro ao testar a conexão com a API do Belvo.",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const getIconForInsight = (tipo: string) => {
     switch (tipo) {
       case "alerta":
@@ -116,14 +155,24 @@ export const AIAdvisorEngine = () => {
           <BarChart2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-medium">Motor de Análise IA</h3>
         </div>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={syncMarketData}
-          disabled={syncingData || !currentEmpresa?.id}
-        >
-          {syncingData ? "Analisando..." : "Analisar Dados de Mercado"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={testBelvoConnection}
+            disabled={testingConnection || !currentEmpresa?.id}
+          >
+            {testingConnection ? "Testando..." : "Testar Belvo"}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={syncMarketData}
+            disabled={syncingData || !currentEmpresa?.id}
+          >
+            {syncingData ? "Analisando..." : "Analisar Dados de Mercado"}
+          </Button>
+        </div>
       </div>
       
       {loading ? (
