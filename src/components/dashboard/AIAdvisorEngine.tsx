@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,7 +102,8 @@ export const AIAdvisorEngine = () => {
       console.log("Iniciando teste de conexão com Belvo...");
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
-          action: "test_connection"
+          action: "test_connection",
+          sandbox: true
         }
       });
       

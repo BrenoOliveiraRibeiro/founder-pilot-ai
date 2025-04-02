@@ -22,14 +22,14 @@ serve(async (req) => {
     const belvoSecretId = Deno.env.get("BELVO_SECRET_ID") || "";
     const belvoSecretPassword = Deno.env.get("BELVO_SECRET_PASSWORD") || "";
 
-    console.log("Using Belvo credentials - ID:", belvoSecretId.substring(0, 5) + "***");
+    console.log("Using Belvo credentials - ID:", belvoSecretId ? belvoSecretId.substring(0, 5) + "***" : "not set");
     console.log("Password length:", belvoSecretPassword ? belvoSecretPassword.length : "not set");
 
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
-    const { action, empresa_id, institution, link_id, sandbox = false } = requestData;
+    const { action, empresa_id, institution, link_id, sandbox = true } = requestData;
 
     // API base URL based on environment
     const apiBaseUrl = sandbox ? BELVO_SANDBOX_URL : BELVO_API_URL;
@@ -48,8 +48,9 @@ serve(async (req) => {
       const authString = `${belvoSecretId}:${belvoSecretPassword}`;
       const encodedAuth = btoa(authString);
       
-      console.log(`Auth string (first 5 chars): ${authString.substring(0, 5)}...`);
-      console.log(`Encoded Auth (first 10 chars): ${encodedAuth.substring(0, 10)}...`);
+      console.log(`Auth string first chars: ${authString.substring(0, 5)}...`);
+      console.log(`Encoded Auth first chars: ${encodedAuth.substring(0, 10)}...`);
+      console.log(`Full URL: ${url}`);
       
       const headers = new Headers({
         'Authorization': `Basic ${encodedAuth}`,
@@ -64,81 +65,111 @@ serve(async (req) => {
       };
 
       console.log(`Calling Belvo API: ${method} ${endpoint}`);
-      console.log(`Full URL: ${url}`);
       
       try {
         const response = await fetch(url, options);
         
-        // Log entire response for debugging
-        const responseText = await response.text();
+        // Log response details
         console.log(`Belvo API Response Status: ${response.status}`);
         console.log(`Response Headers:`, Object.fromEntries([...response.headers]));
+        
+        // Get the raw response text
+        const responseText = await response.text();
         console.log(`Response Body (first 500 chars): ${responseText.substring(0, 500)}${responseText.length > 500 ? '...' : ''}`);
         
-        // Try to parse as JSON if possible
+        // Try to parse as JSON
         let responseData;
         try {
           responseData = JSON.parse(responseText);
         } catch (e) {
           console.error("Failed to parse Belvo response as JSON:", e);
-          console.log("Raw response:", responseText);
-          responseData = { text: responseText };
+          responseData = { text: responseText, rawError: e.message };
         }
         
         if (!response.ok) {
-          console.error("Belvo API Error:", responseData);
-          throw new Error(`Belvo API Error (${response.status}): ${JSON.stringify(responseData)}`);
+          console.error(`Belvo API Error (${response.status}):`, responseData);
+          return { 
+            success: false, 
+            error: responseData,
+            status: response.status,
+            errorType: response.status === 401 ? "authentication_failure" : "api_error" 
+          };
         }
         
-        return responseData;
+        return { success: true, data: responseData };
       } catch (error) {
-        console.error(`Error calling Belvo API at ${endpoint}:`, error);
-        throw error;
+        console.error(`Network error calling Belvo API at ${endpoint}:`, error);
+        return { 
+          success: false, 
+          error: { message: error.message },
+          errorType: "network_error" 
+        };
       }
     }
 
-    // Test connection function - similar to Python example
+    // Test connection function
     async function testBelvoConnection() {
       try {
         console.log("Testing Belvo connection using current credentials...");
         
-        // First, let's try a simple GET institutions call to verify credentials
-        try {
-          console.log("Verifying credentials with GET /api/institutions/ call");
-          const institutions = await callBelvoAPI('/api/institutions/', 'GET');
-          console.log(`Successfully retrieved ${institutions.length} institutions`);
-        } catch (error) {
-          console.error("Failed basic API authentication test:", error);
+        // First, try to get institutions to verify auth
+        console.log("Verifying credentials with GET /api/institutions/ call");
+        const institutionsResult = await callBelvoAPI('/api/institutions/', 'GET');
+        
+        if (!institutionsResult.success) {
+          console.error("Failed basic API authentication test:", institutionsResult.error);
           return {
             success: false,
             message: "Falha na autenticação básica com a API Belvo",
-            error: error.message,
-            errorType: "authentication_failure"
+            error: institutionsResult.error,
+            errorType: "authentication_failure",
+            status: institutionsResult.status
           };
         }
         
+        console.log(`Successfully retrieved ${institutionsResult.data.length} institutions`);
+        
         // If authentication works, proceed to test link creation
         console.log("Creating test link using sandbox credentials...");
-        // 1. Create a test link (similar to Python example)
-        const createLinkResponse = await callBelvoAPI('/api/links/', 'POST', {
+        const createLinkResult = await callBelvoAPI('/api/links/', 'POST', {
           institution: 'banamex_mx_retail',
           username: 'fake-user',
           password: 'fake-password', 
           access_mode: 'single'
         });
         
-        console.log("Test link created:", createLinkResponse.id);
+        if (!createLinkResult.success) {
+          console.error("Failed to create test link:", createLinkResult.error);
+          return {
+            success: false,
+            message: "Falha ao criar link de teste",
+            error: createLinkResult.error,
+            errorType: "test_link_failure"
+          };
+        }
         
-        // 2. Retrieve accounts for this link
-        const accounts = await callBelvoAPI(`/api/accounts/?link=${createLinkResponse.id}`, 'GET');
+        console.log("Test link created:", createLinkResult.data.id);
         
-        console.log(`Retrieved ${accounts.length} test accounts`);
+        // Retrieve accounts for this link
+        const accountsResult = await callBelvoAPI(`/api/accounts/?link=${createLinkResult.data.id}`, 'GET');
+        
+        if (!accountsResult.success) {
+          console.error("Failed to retrieve accounts:", accountsResult.error);
+          return {
+            success: false,
+            message: "Falha ao recuperar contas de teste",
+            error: accountsResult.error,
+            errorType: "accounts_retrieval_failure"
+          };
+        }
+        
+        console.log(`Retrieved ${accountsResult.data.length} test accounts`);
         return {
           success: true,
           message: "Conexão com a API Belvo realizada com sucesso",
-          testLink: createLinkResponse.id,
-          accountsCount: accounts.length,
-          accounts: accounts.slice(0, 2) // Return first 2 accounts as sample
+          testLink: createLinkResult.data.id,
+          accountsCount: accountsResult.data.length,
+          accounts: accountsResult.data.slice(0, 2) // Return first 2 accounts as sample
         };
       } catch (error) {
         console.error("Belvo test connection failed:", error);
@@ -167,8 +198,18 @@ serve(async (req) => {
       
       // Primeiro, vamos validar o acesso à API Belvo com uma chamada simples
       try {
-        const institutionsResponse = await callBelvoAPI('/api/institutions/', 'GET');
-        console.log(`Instituições disponíveis: ${institutionsResponse.length}`);
+        const institutionsResult = await callBelvoAPI('/api/institutions/', 'GET');
+        if (!institutionsResult.success) {
+          console.error("Erro na validação de acesso à API Belvo:", institutionsResult.error);
+          return new Response(
+            JSON.stringify({ 
+              error: "Falha na autenticação com a API Belvo. Verifique suas credenciais.",
+              details: institutionsResult.error 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+          );
+        }
+        console.log(`Instituições disponíveis: ${institutionsResult.data.length}`);
       } catch (error) {
         console.error("Erro na validação de acesso à API Belvo:", error);
         return new Response(
@@ -181,19 +222,19 @@ serve(async (req) => {
       }
       
       try {
-        const widgetTokenResponse = await callBelvoAPI('/api/token/', 'POST', {
+        const widgetTokenResult = await callBelvoAPI('/api/token/', 'POST', {
           id: belvoSecretId,
           password: belvoSecretPassword,
           scopes: 'read_institutions,write_links,read_links,read_accounts',
         });
 
-        if (!widgetTokenResponse.access) {
+        if (!widgetTokenResult.success || !widgetTokenResult.data.access) {
           throw new Error("Falha ao obter token de acesso do Belvo");
         }
 
         return new Response(
           JSON.stringify({ 
-            widget_token: widgetTokenResponse.access,
+            widget_token: widgetTokenResult.data.access,
             institution
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -221,12 +262,16 @@ serve(async (req) => {
       console.log(`Processing callback for link: ${link_id}, sandbox mode: ${sandbox}`);
 
       // Buscar detalhes do link
-      const linkDetails = await callBelvoAPI(`/api/links/${link_id}/`, 'GET');
+      const linkDetailsResult = await callBelvoAPI(`/api/links/${link_id}/`, 'GET');
       
-      if (!linkDetails.id) {
-        throw new Error("Falha ao buscar detalhes do link");
+      if (!linkDetailsResult.success || !linkDetailsResult.data.id) {
+        return new Response(
+          JSON.stringify({ error: "Falha ao buscar detalhes do link", details: linkDetailsResult.error }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
       }
 
+      const linkDetails = linkDetailsResult.data;
       console.log(`Link criado com sucesso: ${linkDetails.id} para instituição: ${linkDetails.institution}`);
 
       // Atualizar o status da integração no banco de dados
@@ -351,20 +396,28 @@ serve(async (req) => {
     async function syncData(empresaId, linkId, supabaseClient, isSandbox = false) {
       try {
         console.log(`Iniciando sincronização de dados para empresa ${empresaId}, link ${linkId}, sandbox: ${isSandbox}`);
-        const apiUrl = isSandbox ? BELVO_SANDBOX_URL : BELVO_API_URL;
         
         // 1. Buscar balanços da conta
-        const accounts = await callBelvoAPI(`/api/accounts/?link=${linkId}`, 'GET');
+        const accountsResult = await callBelvoAPI(`/api/accounts/?link=${linkId}`, 'GET');
         
-        if (!accounts || accounts.length === 0) {
+        if (!accountsResult.success || !accountsResult.data || accountsResult.data.length === 0) {
           throw new Error("Nenhuma conta encontrada");
         }
         
+        const accounts = accountsResult.data;
         console.log(`Encontradas ${accounts.length} contas`);
         
         // 2. Buscar transações
-        const transactions = await callBelvoAPI(`/api/transactions/?link=${linkId}&date_from=${new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&date_to=${new Date().toISOString().split('T')[0]}`, 'GET');
+        const transactionsResult = await callBelvoAPI(
+          `/api/transactions/?link=${linkId}&date_from=${new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&date_to=${new Date().toISOString().split('T')[0]}`, 
+          'GET'
+        );
         
+        if (!transactionsResult.success) {
+          throw new Error("Falha ao buscar transações");
+        }
+        
+        const transactions = transactionsResult.data;
         console.log(`Encontradas ${transactions.length} transações`);
         
         // 3. Calcular métricas relevantes

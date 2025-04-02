@@ -37,6 +37,14 @@ export function formatBelvoError(errorData: any): string {
     return "Credenciais inválidas para a API Belvo. Verifique seu Secret ID e Password.";
   }
   
+  if (errorData.code === "authentication_failed") {
+    return "Falha na autenticação: credenciais inválidas para API Belvo.";
+  }
+  
+  if (errorData.message) {
+    return `Erro Belvo: ${errorData.message}`;
+  }
+  
   return errorData.message || "Erro na conexão com o Belvo. Verifique os logs para mais detalhes.";
 }
 
