@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegracaoBancaria } from "@/integrations/supabase/models";
-import { Buildings, Check, ChevronRight, Database, Lock, RefreshCw, Shield } from "lucide-react";
+import { Building, Check, ChevronRight, Database, Lock, RefreshCw, Shield } from "lucide-react";
 
 const PROVIDERS = [
   { id: "itau", name: "Itaú", logo: "I", popular: true },
@@ -250,7 +249,7 @@ const OpenFinance = () => {
                 </div>
                 
                 <div className="flex items-start gap-2 text-sm">
-                  <Buildings className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <Building className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="font-medium">Dados empresariais</p>
                     <p className="text-muted-foreground">Será necessário selecionar sua conta PJ durante o processo de autorização.</p>
