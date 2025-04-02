@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
@@ -24,6 +23,7 @@ serve(async (req) => {
     const belvoSecretPassword = Deno.env.get("BELVO_SECRET_PASSWORD") || "";
 
     console.log("Using Belvo credentials - ID:", belvoSecretId.substring(0, 5) + "***");
+    console.log("Password length:", belvoSecretPassword ? belvoSecretPassword.length : "not set");
 
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -45,8 +45,14 @@ serve(async (req) => {
     // Funções auxiliares para interagir com a API do Belvo
     async function callBelvoAPI(endpoint, method, body = null) {
       const url = `${apiBaseUrl}${endpoint}`;
+      const authString = `${belvoSecretId}:${belvoSecretPassword}`;
+      const encodedAuth = btoa(authString);
+      
+      console.log(`Auth string (first 5 chars): ${authString.substring(0, 5)}...`);
+      console.log(`Encoded Auth (first 10 chars): ${encodedAuth.substring(0, 10)}...`);
+      
       const headers = new Headers({
-        'Authorization': `Basic ${btoa(`${belvoSecretId}:${belvoSecretPassword}`)}`,
+        'Authorization': `Basic ${encodedAuth}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       });
@@ -58,34 +64,61 @@ serve(async (req) => {
       };
 
       console.log(`Calling Belvo API: ${method} ${endpoint}`);
-      const response = await fetch(url, options);
+      console.log(`Full URL: ${url}`);
       
-      // Log entire response for debugging
-      const responseText = await response.text();
-      console.log(`Belvo API Response (${response.status}):`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
-      
-      // Try to parse as JSON if possible
-      let responseData;
       try {
-        responseData = JSON.parse(responseText);
-      } catch (e) {
-        console.error("Failed to parse Belvo response as JSON:", e);
-        responseData = { text: responseText };
+        const response = await fetch(url, options);
+        
+        // Log entire response for debugging
+        const responseText = await response.text();
+        console.log(`Belvo API Response Status: ${response.status}`);
+        console.log(`Response Headers:`, Object.fromEntries([...response.headers]));
+        console.log(`Response Body (first 500 chars): ${responseText.substring(0, 500)}${responseText.length > 500 ? '...' : ''}`);
+        
+        // Try to parse as JSON if possible
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          console.error("Failed to parse Belvo response as JSON:", e);
+          console.log("Raw response:", responseText);
+          responseData = { text: responseText };
+        }
+        
+        if (!response.ok) {
+          console.error("Belvo API Error:", responseData);
+          throw new Error(`Belvo API Error (${response.status}): ${JSON.stringify(responseData)}`);
+        }
+        
+        return responseData;
+      } catch (error) {
+        console.error(`Error calling Belvo API at ${endpoint}:`, error);
+        throw error;
       }
-      
-      if (!response.ok) {
-        console.error("Belvo API Error:", responseData);
-        throw new Error(`Belvo API Error (${response.status}): ${JSON.stringify(responseData)}`);
-      }
-      
-      return responseData;
     }
 
     // Test connection function - similar to Python example
     async function testBelvoConnection() {
       try {
-        console.log("Testing Belvo connection with sandbox credentials...");
+        console.log("Testing Belvo connection using current credentials...");
         
+        // First, let's try a simple GET institutions call to verify credentials
+        try {
+          console.log("Verifying credentials with GET /api/institutions/ call");
+          const institutions = await callBelvoAPI('/api/institutions/', 'GET');
+          console.log(`Successfully retrieved ${institutions.length} institutions`);
+        } catch (error) {
+          console.error("Failed basic API authentication test:", error);
+          return {
+            success: false,
+            message: "Falha na autenticação básica com a API Belvo",
+            error: error.message,
+            errorType: "authentication_failure"
+          };
+        }
+        
+        // If authentication works, proceed to test link creation
+        console.log("Creating test link using sandbox credentials...");
         // 1. Create a test link (similar to Python example)
         const createLinkResponse = await callBelvoAPI('/api/links/', 'POST', {
           institution: 'banamex_mx_retail',
@@ -102,7 +135,7 @@ serve(async (req) => {
         console.log(`Retrieved ${accounts.length} test accounts`);
         return {
           success: true,
-          message: "Belvo connection test successful",
+          message: "Conexão com a API Belvo realizada com sucesso",
           testLink: createLinkResponse.id,
           accountsCount: accounts.length,
           accounts: accounts.slice(0, 2) // Return first 2 accounts as sample
@@ -111,15 +144,18 @@ serve(async (req) => {
         console.error("Belvo test connection failed:", error);
         return {
           success: false,
-          message: "Belvo connection test failed",
-          error: error.message
+          message: "Teste de conexão Belvo falhou",
+          error: error.message,
+          errorType: "test_link_failure"
         };
       }
     }
 
     if (action === "test_connection") {
       // Test connection to Belvo API
+      console.log("Running test_connection action");
       const testResult = await testBelvoConnection();
+      console.log("Test result:", testResult);
       return new Response(
         JSON.stringify(testResult),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -136,28 +172,42 @@ serve(async (req) => {
       } catch (error) {
         console.error("Erro na validação de acesso à API Belvo:", error);
         return new Response(
-          JSON.stringify({ error: "Falha na autenticação com a API Belvo. Verifique suas credenciais." }),
+          JSON.stringify({ 
+            error: "Falha na autenticação com a API Belvo. Verifique suas credenciais.",
+            details: error.message 
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
         );
       }
       
-      const widgetTokenResponse = await callBelvoAPI('/api/token/', 'POST', {
-        id: belvoSecretId,
-        password: belvoSecretPassword,
-        scopes: 'read_institutions,write_links,read_links,read_accounts',
-      });
+      try {
+        const widgetTokenResponse = await callBelvoAPI('/api/token/', 'POST', {
+          id: belvoSecretId,
+          password: belvoSecretPassword,
+          scopes: 'read_institutions,write_links,read_links,read_accounts',
+        });
 
-      if (!widgetTokenResponse.access) {
-        throw new Error("Falha ao obter token de acesso do Belvo");
+        if (!widgetTokenResponse.access) {
+          throw new Error("Falha ao obter token de acesso do Belvo");
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            widget_token: widgetTokenResponse.access,
+            institution
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      } catch (error) {
+        console.error("Erro ao obter widget token:", error);
+        return new Response(
+          JSON.stringify({ 
+            error: "Falha ao obter token para o widget", 
+            details: error.message
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
       }
-
-      return new Response(
-        JSON.stringify({ 
-          widget_token: widgetTokenResponse.access,
-          institution
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
     } 
     else if (action === "callback") {
       // Processar o callback após autorização do usuário
@@ -296,7 +346,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
-    
+
     // Função auxiliar para sincronizar dados do Belvo
     async function syncData(empresaId, linkId, supabaseClient, isSandbox = false) {
       try {
@@ -481,7 +531,11 @@ serve(async (req) => {
   } catch (error) {
     console.error("Erro na função de Open Finance:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor", message: error.message }),
+      JSON.stringify({ 
+        error: "Erro interno do servidor", 
+        message: error.message,
+        stack: error.stack 
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

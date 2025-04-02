@@ -4,10 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Insight } from "@/integrations/supabase/models";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, BarChart2, AlertTriangle, TrendingUp, TestTube, RefreshCw } from "lucide-react";
+import { Lightbulb, BarChart2, AlertTriangle, TrendingUp, TestTube, RefreshCw, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { formatBelvoError } from "@/lib/utils";
 
 export const AIAdvisorEngine = () => {
   const { currentEmpresa } = useAuth();
@@ -16,6 +18,7 @@ export const AIAdvisorEngine = () => {
   const [syncingData, setSyncingData] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,15 +96,22 @@ export const AIAdvisorEngine = () => {
     if (!currentEmpresa?.id) return;
     
     setTestingConnection(true);
+    setError(null);
+    setTestResult(null);
+    
     try {
+      console.log("Iniciando teste de conexão com Belvo...");
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "test_connection"
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro ao chamar função: ${error.message}`);
+      }
       
+      console.log("Resposta do teste:", data);
       setTestResult(data);
       
       if (data.success) {
@@ -110,17 +120,19 @@ export const AIAdvisorEngine = () => {
           description: `Teste bem-sucedido: ${data.accountsCount} contas de teste encontradas.`,
         });
       } else {
+        setError(formatBelvoError(data));
         toast({
           title: "Falha na conexão com Belvo",
-          description: data.message || "Erro ao conectar com a API do Belvo.",
+          description: formatBelvoError(data),
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao testar conexão Belvo:", error);
+      setError(error.message);
       toast({
         title: "Erro ao testar conexão",
-        description: "Ocorreu um erro ao testar a conexão com a API do Belvo.",
+        description: `Ocorreu um erro ao testar a conexão com a API do Belvo: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -200,6 +212,28 @@ export const AIAdvisorEngine = () => {
         </div>
       </div>
       
+      {error && (
+        <Alert variant="destructive" className="mb-3">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Erro na conexão com Belvo</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                asChild
+                className="text-xs h-7"
+              >
+                <a href="/open-finance" className="flex items-center">
+                  Configurar Open Finance <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {testResult && testResult.success && (
         <div className="p-3 rounded-md bg-primary/5 border border-primary/20 mb-3 text-sm">
           <div className="font-medium flex items-center">
@@ -209,6 +243,16 @@ export const AIAdvisorEngine = () => {
           <div className="text-muted-foreground mt-1 text-xs">
             {testResult.accountsCount} contas de teste disponíveis para integração
           </div>
+          <Button 
+            variant="link" 
+            size="sm" 
+            asChild
+            className="p-0 h-auto text-xs"
+          >
+            <a href="/open-finance" className="flex items-center mt-1">
+              Configurar integrações <ExternalLink className="h-3 w-3 ml-1" />
+            </a>
+          </Button>
         </div>
       )}
       
