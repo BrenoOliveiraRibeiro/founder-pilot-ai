@@ -22,9 +22,10 @@ max_rows = 1000
 points = 10
 time_window_seconds = 60
 
-[api.extra_search_path]
+# Removing the duplicate extra_search_path section that's causing the conflict
+# [api.extra_search_path]
 # list of extra schema to add to the search_path of every request
-schemas = []
+# schemas = []
 
 [db]
 # Port to use for the local database URL.
