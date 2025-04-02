@@ -36,7 +36,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
 
   .dark {
@@ -79,5 +79,33 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Apple-inspired styles */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border border-white/20 dark:border-white/10;
+  }
+
+  .apple-card {
+    @apply rounded-2xl shadow-apple hover:shadow-apple-hover transition-all duration-300;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+}
+
+@layer components {
+  .ai-card-gradient {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    backdrop-filter: blur(10px);
+  }
+  
+  .btn-apple {
+    @apply rounded-full py-2 px-4 font-medium transition-all duration-300 
+      bg-gradient-to-b from-white/90 to-white/80 dark:from-gray-800 dark:to-gray-900
+      border border-white/20 dark:border-gray-700
+      shadow-sm hover:shadow-md hover:scale-105;
   }
 }
