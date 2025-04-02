@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Advisor from "./pages/Advisor";
 import Connect from "./pages/Connect";
+import OpenFinance from "./pages/OpenFinance"; // Nova página
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -53,6 +54,12 @@ const App = () => (
             <Route path="/connect" element={
               <ProtectedRoute>
                 <Connect />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/open-finance" element={
+              <ProtectedRoute>
+                <OpenFinance />
               </ProtectedRoute>
             } />
             

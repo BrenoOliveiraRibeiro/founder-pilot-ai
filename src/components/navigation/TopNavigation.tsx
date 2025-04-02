@@ -1,38 +1,112 @@
 
 import React from "react";
-import { Search, Bell, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { BanknoteIcon, CircuitBoard, LogOut, User } from "lucide-react";
 
 export const TopNavigation = () => {
+  const { user, signOut, currentEmpresa } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const userDisplayName = user?.email?.split("@")[0] || "Usuário";
+
   return (
-    <header className="border-b border-border py-3 px-6 bg-card">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center w-72">
-          <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full pl-9 bg-background h-9"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" className="text-foreground/80">
-            <Bell className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Notifications</span>
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium hidden sm:inline">
-              Founder
+    <header className="border-b bg-background">
+      <div className="flex h-16 items-center px-4 md:px-6">
+        <div className="flex items-center gap-6 md:gap-8 lg:gap-10">
+          <Link to="/dashboard" className="hidden items-center gap-2 md:flex">
+            <CircuitBoard className="h-6 w-6" />
+            <span className="text-xl font-bold tracking-tight">
+              {currentEmpresa?.nome || "Co-Founder IA"}
             </span>
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-          </div>
+          </Link>
+          <nav className="flex items-center gap-4 lg:gap-6">
+            <Link
+              to="/dashboard"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Dashboard
+            </Link>
+            <Link
+              to="/open-finance"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              <div className="flex items-center gap-1">
+                <BanknoteIcon className="h-4 w-4" />
+                Open Finance
+              </div>
+            </Link>
+            <Link
+              to="/advisor"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              IA Assistant
+            </Link>
+          </nav>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-9 w-9 rounded-full"
+              >
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src="" alt={userDisplayName} />
+                  <AvatarFallback>{getInitials(userDisplayName)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {userDisplayName}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Perfil</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
