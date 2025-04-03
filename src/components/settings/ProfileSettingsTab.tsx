@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -42,11 +43,35 @@ export function ProfileSettingsTab() {
     defaultValues,
   });
 
-  function onSubmit(data: ProfileFormValues) {
-    toast({
-      title: "Perfil atualizado",
-      description: "Suas informações foram atualizadas com sucesso.",
-    });
+  async function onSubmit(data: ProfileFormValues) {
+    try {
+      if (!user?.id) {
+        throw new Error("Usuário não encontrado");
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          nome: data.name,
+          bio: data.bio,
+          cargo: data.role,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar seu perfil. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   }
 
   function getInitials(name: string) {

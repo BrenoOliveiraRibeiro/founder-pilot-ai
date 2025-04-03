@@ -9,7 +9,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/use-toast";
-import { BanknoteIcon, CalendarIcon, Linkedin, PlusIcon } from "lucide-react";
+import { BanknoteIcon, CalendarIcon, PlusIcon } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 const apiKeySchema = z.object({
   googleCalendarApiKey: z.string().optional(),
@@ -20,6 +21,7 @@ type ApiKeyValues = z.infer<typeof apiKeySchema>;
 
 export function ApiIntegrationSettingsTab() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const connectedServices = [
     { 
@@ -90,7 +92,7 @@ export function ApiIntegrationSettingsTab() {
                   size="sm" 
                   className="w-full"
                   onClick={() => {
-                    window.location.href = "/connect";
+                    navigate("/connect");
                   }}
                 >
                   {service.status === "connected" ? "Resincronizar" : "Conectar"}

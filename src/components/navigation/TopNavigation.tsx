@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, Brain, CircuitBoard, LogOut, User } from "lucide-react";
+import { BanknoteIcon, Brain, CircuitBoard, LogOut, Settings, User } from "lucide-react";
 
 export const TopNavigation = () => {
   const { user, signOut, currentEmpresa } = useAuth();
@@ -96,9 +96,9 @@ export const TopNavigation = () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile" className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Perfil</span>
+                <Link to="/settings" className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
