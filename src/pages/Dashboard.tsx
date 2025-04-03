@@ -12,16 +12,18 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <DashboardHeader />
-      <MetricsGrid />
+      <div className="space-y-6 mb-6">
+        <MetricsGrid />
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <RunwayChart />
         <AIAdvisorCard />
+        <RunwayChart />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TransactionsCard />
         <InsightsCard />
+        <TransactionsCard />
       </div>
     </AppLayout>
   );

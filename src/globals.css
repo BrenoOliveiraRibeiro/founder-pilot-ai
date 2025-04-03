@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 98%;
     --foreground: 0 0% 12%;
 
     --card: 0 0% 100%;
@@ -88,7 +88,7 @@
   }
 
   .apple-card {
-    @apply rounded-2xl shadow-apple hover:shadow-apple-hover transition-all duration-300 dark:shadow-apple-dark dark:hover:shadow-apple-dark-hover;
+    @apply rounded-2xl shadow-apple hover:shadow-apple-hover transition-all duration-300 dark:shadow-apple-dark dark:hover:shadow-apple-dark-hover bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90;
   }
 
   .gradient-text {

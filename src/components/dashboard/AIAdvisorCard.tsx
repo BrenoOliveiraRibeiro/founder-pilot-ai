@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 
 export const AIAdvisorCard = () => {
   return (
-    <Card className="overflow-hidden border-none ai-card-gradient">
+    <Card className="overflow-hidden border-none apple-card">
       <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-apple-silver/20 dark:border-apple-spacegray/40">
         <div className="flex items-center gap-3">
           <div className="apple-icon-container">
