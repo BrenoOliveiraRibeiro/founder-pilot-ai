@@ -78,6 +78,12 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        'apple': '0 2px 12px rgba(0, 0, 0, 0.08)',
+        'apple-hover': '0 4px 24px rgba(0, 0, 0, 0.12)',
+        'apple-dark': '0 2px 12px rgba(255, 255, 255, 0.05)',
+        'apple-dark-hover': '0 4px 24px rgba(255, 255, 255, 0.08)'
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -141,12 +147,6 @@ export default {
         "float": "float 3s ease-in-out infinite",
         "shimmer": "shimmer 2s infinite linear"
       },
-      boxShadow: {
-        'apple': '0 2px 12px rgba(0, 0, 0, 0.08)',
-        'apple-hover': '0 4px 24px rgba(0, 0, 0, 0.12)',
-        'apple-dark': '0 2px 12px rgba(255, 255, 255, 0.05)',
-        'apple-dark-hover': '0 4px 24px rgba(255, 255, 255, 0.08)'
-      }
     },
   },
   plugins: [require("tailwindcss-animate")],
