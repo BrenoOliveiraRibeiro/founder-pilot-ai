@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Brain, ChevronRight, SendIcon, ArrowRight } from "lucide-react";
+import { Brain, ArrowRight, SendIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 // Sample suggestions and responses
@@ -101,7 +101,7 @@ const Advisor = () => {
                     </div>
                     <h2 className="text-2xl font-medium mb-3">Como posso ajudar hoje?</h2>
                     <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                      Sou seu co-founder AI, especializado em estratégia de startup, análise financeira, 
+                      Sou seu co-founder IA, especializado em estratégia de startup, análise financeira, 
                       e suporte à decisão. Tenho acesso aos seus dados financeiros e insights de mercado.
                     </p>
                     

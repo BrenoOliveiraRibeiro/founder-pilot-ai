@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { title: "Saúde Financeira", href: "/finances", icon: DollarSign },
   { title: "Análise de Runway", href: "/runway", icon: TrendingUp },
-  { title: "IA Advisor", href: "/advisor", icon: Brain },
+  { title: "Co-Founder IA", href: "/advisor", icon: Brain },
   { title: "Relatórios", href: "/reports", icon: FileText },
   { title: "Dados de Mercado", href: "/market", icon: BarChart3 },
   { title: "Equipe", href: "/team", icon: Users2 },

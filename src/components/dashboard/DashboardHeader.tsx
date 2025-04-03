@@ -61,7 +61,7 @@ export const DashboardHeader = () => {
           </p>
         </div>
         <Button size="sm" className="whitespace-nowrap" onClick={handleAskAI}>
-          Perguntar ao IA Advisor
+          Perguntar ao Co-Founder IA
         </Button>
       </div>
     </div>

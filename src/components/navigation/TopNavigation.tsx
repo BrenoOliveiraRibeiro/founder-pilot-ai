@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, CircuitBoard, LogOut, User } from "lucide-react";
+import { BanknoteIcon, Brain, CircuitBoard, LogOut, User } from "lucide-react";
 
 export const TopNavigation = () => {
   const { user, signOut, currentEmpresa } = useAuth();
@@ -63,7 +63,10 @@ export const TopNavigation = () => {
               to="/advisor"
               className="text-sm font-medium transition-colors hover:text-primary"
             >
-              IA Assistant
+              <div className="flex items-center gap-1">
+                <Brain className="h-4 w-4" />
+                Co-Founder IA
+              </div>
             </Link>
           </nav>
         </div>
