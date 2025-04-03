@@ -8,13 +8,13 @@ import { Link } from "react-router-dom";
 
 export const AIAdvisorCard = () => {
   return (
-    <Card className="overflow-hidden border-none apple-card">
+    <Card className="overflow-hidden border-none shadow-apple hover:shadow-apple-hover dark:shadow-apple-dark dark:hover:shadow-apple-dark-hover transition-all duration-300 bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-apple-silver/20 dark:border-apple-spacegray/40">
         <div className="flex items-center gap-3">
-          <div className="apple-icon-container">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-apple-gold/80 to-apple-silver shadow-sm animate-float">
             <Brain className="h-5 w-5 text-apple-spacegray dark:text-apple-white" />
           </div>
-          <CardTitle className="text-xl font-medium gradient-text">
+          <CardTitle className="text-xl font-medium bg-gradient-to-r from-apple-black to-apple-spacegray bg-clip-text text-transparent dark:from-apple-white dark:to-apple-silver">
             Co-Founder IA
           </CardTitle>
         </div>
