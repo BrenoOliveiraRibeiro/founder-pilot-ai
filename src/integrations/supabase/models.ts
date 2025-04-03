@@ -5,6 +5,7 @@ export type Profile = {
   nome: string | null;
   email: string | null;
   cargo: string | null;
+  bio: string | null;
   created_at: string;
   updated_at: string;
 }
