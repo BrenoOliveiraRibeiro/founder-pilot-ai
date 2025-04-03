@@ -5,26 +5,26 @@
 
 @layer base {
   :root {
-    --background: 220 33% 98%;
-    --foreground: 215 25% 27%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card-foreground: 0 0% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover-foreground: 0 0% 12%;
 
-    --primary: 220 14% 40%;
+    --primary: 0 0% 12%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 94%;
-    --secondary-foreground: 215 25% 27%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 10% 56%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 210 20% 94%;
-    --accent-foreground: 215 25% 27%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 12%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -32,34 +32,34 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 215 25% 27%;
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 0 0% 12%;
 
     --radius: 1rem;
   }
 
   .dark {
-    --background: 215 28% 17%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 96%;
 
-    --card: 215 25% 22%;
-    --card-foreground: 210 20% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 215 25% 22%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 210 20% 80%;
-    --primary-foreground: 215 25% 27%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 12%;
 
-    --secondary: 215 25% 27%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 215 25% 27%;
-    --muted-foreground: 210 20% 80%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 215 25% 27%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 96%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
@@ -67,9 +67,9 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 10%;
 
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 210 20% 80%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 80%;
   }
 }
 
@@ -88,33 +88,39 @@
   }
 
   .apple-card {
-    @apply rounded-2xl shadow-apple hover:shadow-apple-hover transition-all duration-300;
+    @apply rounded-2xl shadow-apple hover:shadow-apple-hover transition-all duration-300 dark:shadow-apple-dark dark:hover:shadow-apple-dark-hover;
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-apple-black to-apple-spacegray bg-clip-text text-transparent dark:from-apple-white dark:to-apple-silver;
   }
 }
 
 @layer components {
   .ai-card-gradient {
-    background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,240,245,0.7) 100%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(228,228,228,0.9) 100%);
     backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.2);
   }
   
   .dark .ai-card-gradient {
-    background: linear-gradient(135deg, rgba(45,45,55,0.5) 0%, rgba(35,35,45,0.4) 100%);
+    background: linear-gradient(135deg, rgba(45,45,45,0.8) 0%, rgba(29,29,31,0.7) 100%);
     backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
   }
   
   .btn-apple {
     @apply rounded-full py-2 px-4 font-medium transition-all duration-300 
-      bg-gradient-to-b from-white/90 to-white/80 dark:from-gray-800 dark:to-gray-900
-      border border-white/20 dark:border-gray-700
+      bg-gradient-to-b from-apple-silver to-apple-white dark:from-apple-spacegray dark:to-apple-black
+      border border-white/20 dark:border-white/5
       shadow-sm hover:shadow-md hover:scale-105;
   }
   
   .card-apple {
-    @apply rounded-xl border border-border/50 bg-gradient-to-br from-card to-card/90 shadow-sm hover:shadow-md transition-all duration-300;
+    @apply rounded-xl border border-apple-silver/20 dark:border-apple-spacegray/20 bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 shadow-apple hover:shadow-apple-hover dark:shadow-apple-dark dark:hover:shadow-apple-dark-hover transition-all duration-300;
+  }
+
+  .apple-icon-container {
+    @apply flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-apple-gold/80 to-apple-silver shadow-sm animate-float;
   }
 }

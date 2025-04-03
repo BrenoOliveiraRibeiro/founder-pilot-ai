@@ -8,13 +8,13 @@ import { Link } from "react-router-dom";
 
 export const AIAdvisorCard = () => {
   return (
-    <Card className="overflow-hidden border-none shadow-apple hover:shadow-apple-hover transition-all duration-300 bg-gradient-to-br from-white/90 to-secondary/60 dark:from-card dark:to-card/70 backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/30">
+    <Card className="overflow-hidden border-none ai-card-gradient">
+      <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-apple-silver/20 dark:border-apple-spacegray/40">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-secondary/60 shadow-sm animate-float">
-            <Brain className="h-5 w-5 text-primary" />
+          <div className="apple-icon-container">
+            <Brain className="h-5 w-5 text-apple-spacegray dark:text-apple-white" />
           </div>
-          <CardTitle className="text-xl font-medium">
+          <CardTitle className="text-xl font-medium gradient-text">
             Co-Founder IA
           </CardTitle>
         </div>
@@ -22,7 +22,7 @@ export const AIAdvisorCard = () => {
           variant="ghost" 
           size="sm" 
           asChild 
-          className="rounded-full shadow-sm transition-all hover:shadow-md hover:bg-white/80 dark:hover:bg-card"
+          className="rounded-full shadow-sm transition-all hover:shadow-md hover:bg-apple-silver/20 dark:hover:bg-apple-spacegray/60"
         >
           <Link to="/advisor" className="flex items-center gap-2 px-4">
             <span>Acessar</span> 

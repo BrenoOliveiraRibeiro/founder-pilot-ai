@@ -65,6 +65,13 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground, var(--foreground)))",
           ring: "hsl(var(--sidebar-ring, var(--ring)))",
         },
+        apple: {
+          silver: "#E4E4E4",
+          gold: "#F3D9A1",
+          spacegray: "#424245",
+          black: "#1D1D1F",
+          white: "#FFFFFF",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -135,8 +142,10 @@ export default {
         "shimmer": "shimmer 2s infinite linear"
       },
       boxShadow: {
-        'apple': '0 4px 24px -8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-        'apple-hover': '0 8px 32px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+        'apple': '0 2px 12px rgba(0, 0, 0, 0.08)',
+        'apple-hover': '0 4px 24px rgba(0, 0, 0, 0.12)',
+        'apple-dark': '0 2px 12px rgba(255, 255, 255, 0.05)',
+        'apple-dark-hover': '0 4px 24px rgba(255, 255, 255, 0.08)'
       }
     },
   },
