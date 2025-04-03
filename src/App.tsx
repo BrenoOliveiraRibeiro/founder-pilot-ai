@@ -15,6 +15,7 @@ import Market from "./pages/Market";
 import Reports from "./pages/Reports";
 import Finances from "./pages/Finances";
 import Runway from "./pages/Runway";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -102,6 +103,12 @@ const App = () => (
             <Route path="/runway" element={
               <ProtectedRoute>
                 <Runway />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             
