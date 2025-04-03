@@ -8,7 +8,13 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Advisor from "./pages/Advisor";
 import Connect from "./pages/Connect";
-import OpenFinance from "./pages/OpenFinance"; // Nova página
+import OpenFinance from "./pages/OpenFinance";
+import Calendar from "./pages/Calendar";
+import Team from "./pages/Team";
+import Market from "./pages/Market";
+import Reports from "./pages/Reports";
+import Finances from "./pages/Finances";
+import Runway from "./pages/Runway";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -60,6 +66,42 @@ const App = () => (
             <Route path="/open-finance" element={
               <ProtectedRoute>
                 <OpenFinance />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/calendar" element={
+              <ProtectedRoute>
+                <Calendar />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/team" element={
+              <ProtectedRoute>
+                <Team />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/market" element={
+              <ProtectedRoute>
+                <Market />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports" element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/finances" element={
+              <ProtectedRoute>
+                <Finances />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/runway" element={
+              <ProtectedRoute>
+                <Runway />
               </ProtectedRoute>
             } />
             
