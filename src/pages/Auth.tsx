@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -72,73 +72,94 @@ const Auth = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mr-3">
-              <span className="text-primary-foreground font-bold text-xl">FP</span>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card>
+          <CardHeader className="space-y-1">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="flex items-center justify-center mb-6"
+            >
+              <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mr-3">
+                <span className="text-primary-foreground font-bold text-xl">FP</span>
+              </div>
+              <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
+            </motion.div>
+            <CardDescription className="text-center">
+              {isLogin ? "Entre com sua conta para continuar" : "Crie sua conta para começar"}
+            </CardDescription>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="text-center text-sm font-medium text-muted-foreground mt-2"
+            >
+              Para fundadores que pensam grande e agem rápido.
+            </motion.p>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="seu@email.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="******" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Aguarde..." : isLogin ? "Entrar" : "Cadastrar"}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex flex-col">
+            <div className="mt-2 text-center text-sm">
+              {isLogin ? (
+                <p>
+                  Não tem uma conta?{" "}
+                  <Button variant="link" className="p-0" onClick={() => setIsLogin(false)}>
+                    Cadastre-se
+                  </Button>
+                </p>
+              ) : (
+                <p>
+                  Já tem uma conta?{" "}
+                  <Button variant="link" className="p-0" onClick={() => setIsLogin(true)}>
+                    Faça login
+                  </Button>
+                </p>
+              )}
             </div>
-            <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
-          </div>
-          <CardDescription className="text-center">
-            {isLogin ? "Entre com sua conta para continuar" : "Crie sua conta para começar"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="seu@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="******" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Aguarde..." : isLogin ? "Entrar" : "Cadastrar"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="flex flex-col">
-          <div className="mt-2 text-center text-sm">
-            {isLogin ? (
-              <p>
-                Não tem uma conta?{" "}
-                <Button variant="link" className="p-0" onClick={() => setIsLogin(false)}>
-                  Cadastre-se
-                </Button>
-              </p>
-            ) : (
-              <p>
-                Já tem uma conta?{" "}
-                <Button variant="link" className="p-0" onClick={() => setIsLogin(true)}>
-                  Faça login
-                </Button>
-              </p>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
   );
 };
