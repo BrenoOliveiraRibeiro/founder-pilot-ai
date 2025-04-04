@@ -11,7 +11,7 @@ export const AIAdvisorCard = () => {
   return (
     <OnboardingTooltip
       id="cofounder-ia-card"
-      title="Seu Co-Founder IA"
+      title="Seu FounderPilot Co-Founder"
       description="Aqui você encontra insights e recomendações da IA baseadas em seus dados financeiros e de mercado."
     >
       <Card className="overflow-hidden border-none shadow-md hover:shadow-lg dark:shadow-none dark:border dark:border-border/40 transition-all duration-300 bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 rounded-2xl">
@@ -21,7 +21,7 @@ export const AIAdvisorCard = () => {
               <Brain className="h-5 w-5 text-apple-spacegray dark:text-apple-white" />
             </div>
             <CardTitle className="text-xl font-medium text-foreground">
-              Co-Founder IA
+              FounderPilot Co-Founder
             </CardTitle>
           </div>
           <Button 

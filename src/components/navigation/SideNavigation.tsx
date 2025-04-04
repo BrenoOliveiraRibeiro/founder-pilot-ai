@@ -59,9 +59,9 @@ export const SideNavigation = () => {
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">8</span>
+            <span className="text-primary-foreground font-bold">FP</span>
           </div>
-          <h1 className="font-bold text-xl text-foreground">Eight AI</h1>
+          <h1 className="font-bold text-xl text-foreground">FounderPilot AI</h1>
         </Link>
       </div>
 

@@ -40,7 +40,7 @@ export const FloatingAIButton = () => {
               onClick={() => navigate("/advisor")}
             >
               <Brain className="h-6 w-6" />
-              <span className="sr-only">Abrir Co-Founder IA</span>
+              <span className="sr-only">Abrir FounderPilot Co-Founder IA</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left" align="center" className="relative">
@@ -52,7 +52,7 @@ export const FloatingAIButton = () => {
             >
               <X className="h-3 w-3" />
             </Button>
-            <p className="font-medium">Converse com seu Co-Founder IA</p>
+            <p className="font-medium">Converse com seu FounderPilot Co-Founder</p>
             <p className="text-xs text-muted-foreground">
               Clique para obter insights e recomendações
             </p>

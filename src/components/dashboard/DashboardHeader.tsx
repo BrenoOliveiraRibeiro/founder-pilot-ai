@@ -93,7 +93,7 @@ export const DashboardHeader = () => {
           className="whitespace-nowrap bg-primary/90 hover:bg-primary transition-colors"
           onClick={handleAskAI}
         >
-          Perguntar ao Co-Founder IA
+          Perguntar ao FounderPilot Co-Founder
         </Button>
       </div>
     </div>

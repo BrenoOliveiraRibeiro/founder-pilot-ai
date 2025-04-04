@@ -40,7 +40,7 @@ export const TopNavigation = () => {
           <Link to="/dashboard" className="hidden items-center gap-2 md:flex">
             <CircuitBoard className="h-6 w-6" />
             <span className="text-xl font-bold tracking-tight">
-              {currentEmpresa?.nome || "Eight AI"}
+              {currentEmpresa?.nome || "FounderPilot AI"}
             </span>
           </Link>
           <nav className="flex items-center gap-4 lg:gap-6">

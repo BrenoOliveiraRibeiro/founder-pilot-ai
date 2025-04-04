@@ -21,9 +21,9 @@ const Index = () => {
     <div className="flex h-screen w-full items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-2xl">SC</span>
+          <span className="text-primary-foreground font-bold text-2xl">FP</span>
         </div>
-        <h1 className="text-2xl font-bold">Sync Co-Founder IA</h1>
+        <h1 className="text-2xl font-bold">FounderPilot AI</h1>
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
     </div>
