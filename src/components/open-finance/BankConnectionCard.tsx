@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, ChevronRight } from "lucide-react";
+import { AlertCircle, ChevronRight, ExternalLink, LockIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
@@ -82,7 +82,7 @@ export const BankConnectionCard = ({
         )}
         
         <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
-          <Lock className="h-4 w-4" />
+          <LockIcon className="h-4 w-4" />
           <p>Utilizamos criptografia e tecnologia de ponta para manter seus dados seguros</p>
         </div>
         
@@ -123,3 +123,4 @@ export const BankConnectionCard = ({
     </Card>
   );
 };
+
