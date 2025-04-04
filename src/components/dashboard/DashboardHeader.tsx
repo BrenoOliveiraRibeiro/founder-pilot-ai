@@ -1,11 +1,12 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Brain, Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { OnboardingTooltip } from "../ui/onboarding-tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { FriendlyLoadingMessage } from "../ui/friendly-loading-message";
 
 export const DashboardHeader = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -78,10 +79,16 @@ export const DashboardHeader = () => {
         </div>
       </div>
       
-      <div className="bg-primary/5 border border-primary/10 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6">
+      {isRefreshing && (
+        <div className="mt-2">
+          <FriendlyLoadingMessage isLoading={isRefreshing} />
+        </div>
+      )}
+      
+      <div className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm border border-primary/10 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6 shadow-sm">
         <div className="flex-1">
           <h3 className="font-medium text-foreground mb-1 flex items-center gap-2">
-            <Brain className="h-4 w-4 text-primary" />
+            <Sparkles className="h-4 w-4 text-primary" />
             Insight do dia da IA
           </h3>
           <p className="text-sm text-foreground/80">
@@ -90,10 +97,10 @@ export const DashboardHeader = () => {
         </div>
         <Button 
           size="sm" 
-          className="whitespace-nowrap bg-primary/90 hover:bg-primary transition-colors"
+          className="whitespace-nowrap bg-gradient-to-br from-primary to-primary/80 hover:from-primary hover:to-primary transition-all duration-300 shadow-sm"
           onClick={handleAskAI}
         >
-          Perguntar ao FounderPilot Co-Founder
+          Perguntar ao FounderPilot AI
         </Button>
       </div>
     </div>

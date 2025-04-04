@@ -3,13 +3,13 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   BarChart3, 
-  Brain, 
   Calendar, 
   DollarSign, 
   FileText, 
   HomeIcon, 
   LogOut,
   Settings, 
+  Sparkles, 
   TrendingUp, 
   Users2 
 } from "lucide-react";
@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { title: "Saúde Financeira", href: "/finances", icon: DollarSign },
   { title: "Análise de Runway", href: "/runway", icon: TrendingUp },
-  { title: "FounderPilot AI", href: "/advisor", icon: Brain },
+  { title: "FounderPilot AI", href: "/advisor", icon: Sparkles },
   { title: "Relatórios", href: "/reports", icon: FileText },
   { title: "Dados de Mercado", href: "/market", icon: BarChart3 },
   { title: "Equipe", href: "/team", icon: Users2 },
@@ -54,10 +54,10 @@ export const SideNavigation = () => {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border h-screen flex flex-col">
+    <aside className="w-64 bg-gradient-to-b from-card to-background/90 border-r border-border h-screen flex flex-col">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
+          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
             <span className="text-primary-foreground font-bold">FP</span>
           </div>
           <h1 className="font-bold text-xl text-foreground">FounderPilot AI</h1>
@@ -66,7 +66,7 @@ export const SideNavigation = () => {
 
       {currentEmpresa && (
         <div className="px-3 mb-4">
-          <div className="bg-primary/5 rounded-md p-3">
+          <div className="bg-primary/5 backdrop-blur-sm rounded-md p-3">
             <h3 className="font-medium text-sm truncate">{currentEmpresa.nome}</h3>
             <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
           </div>
@@ -95,7 +95,7 @@ export const SideNavigation = () => {
       </nav>
 
       <div className="p-4 border-t border-border">
-        <div className="rounded-md bg-primary/5 p-3 mb-3">
+        <div className="rounded-md bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm p-3 mb-3">
           <h3 className="font-medium text-sm text-primary mb-1">
             Conecte seus dados
           </h3>
@@ -104,7 +104,7 @@ export const SideNavigation = () => {
           </p>
           <Link 
             to="/open-finance"
-            className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium"
+            className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium"
           >
             Conectar Open Finance
           </Link>

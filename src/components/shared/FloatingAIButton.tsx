@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +39,7 @@ export const FloatingAIButton = () => {
               )}
               onClick={() => navigate("/advisor")}
             >
-              <Brain className="h-6 w-6" />
+              <Sparkles className="h-6 w-6" />
               <span className="sr-only">Abrir FounderPilot AI</span>
             </Button>
           </TooltipTrigger>

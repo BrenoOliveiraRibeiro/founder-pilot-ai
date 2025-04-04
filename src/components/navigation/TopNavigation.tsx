@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, Brain, CircuitBoard, LogOut, Settings } from "lucide-react";
+import { BanknoteIcon, CircuitBoard, LogOut, Settings, Sparkles } from "lucide-react";
 
 export const TopNavigation = () => {
   const { user, signOut, currentEmpresa } = useAuth();
@@ -64,8 +64,8 @@ export const TopNavigation = () => {
               className="text-sm font-medium transition-colors hover:text-primary"
             >
               <div className="flex items-center gap-1">
-                <Brain className="h-4 w-4" />
-                Co-Founder IA
+                <Sparkles className="h-4 w-4" />
+                FounderPilot AI
               </div>
             </Link>
           </nav>

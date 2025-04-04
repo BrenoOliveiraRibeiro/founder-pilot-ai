@@ -4,8 +4,9 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Brain, ArrowRight, SendIcon } from "lucide-react";
+import { Brain, ArrowRight, SendIcon, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { FriendlyLoadingMessage } from "@/components/ui/friendly-loading-message";
 
 // Sample suggestions and responses
 const suggestions = [
@@ -79,7 +80,7 @@ const Advisor = () => {
     <AppLayout>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center mb-8">
-          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mr-5">
+          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center mr-5 shadow-sm">
             <Brain className="h-7 w-7 text-primary" />
           </div>
           <div>
@@ -90,14 +91,14 @@ const Advisor = () => {
           </div>
         </div>
 
-        <Card className="mb-6 overflow-hidden border border-border/40 shadow-md">
+        <Card className="mb-6 overflow-hidden border-none shadow-md hover:shadow-lg dark:shadow-none dark:border dark:border-border/40 transition-all duration-300 bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 rounded-2xl">
           <CardContent className="p-0">
             <div className="min-h-[70vh] flex flex-col">
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {messages.length === 0 ? (
                   <div className="text-center py-20">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Brain className="h-8 w-8 text-primary/80" />
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 flex items-center justify-center shadow-sm animate-float">
+                      <Sparkles className="h-10 w-10 text-primary/90" />
                     </div>
                     <h2 className="text-2xl font-medium mb-3">Como posso ajudar hoje?</h2>
                     <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
@@ -110,7 +111,7 @@ const Advisor = () => {
                         <Button
                           key={index}
                           variant="outline"
-                          className="justify-between rounded-xl py-3 h-auto border-primary/20 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
+                          className="justify-between rounded-xl py-3 h-auto border-primary/20 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 backdrop-blur-sm"
                           onClick={() => handleSuggestionClick(suggestion)}
                         >
                           <span>{suggestion}</span>
@@ -128,8 +129,8 @@ const Advisor = () => {
                       <div
                         className={`max-w-[80%] rounded-2xl p-4 animate-fade-in shadow-sm ${
                           message.sender === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-card border border-border/40"
+                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
+                            : "bg-gradient-to-br from-card to-apple-silver/20 dark:from-apple-spacegray/80 dark:to-apple-black/60 border border-border/40"
                         }`}
                       >
                         <div className="whitespace-pre-line text-[15px]">{message.content}</div>
@@ -143,15 +144,8 @@ const Advisor = () => {
                 
                 {isLoading && (
                   <div className="flex justify-start animate-fade-in">
-                    <div className="bg-card rounded-2xl p-4 max-w-[80%] border border-border/40 shadow-sm">
-                      <div className="flex gap-2 items-center">
-                        <div className="flex space-x-1">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse delay-150"></div>
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse delay-300"></div>
-                        </div>
-                        <span className="text-sm">Analisando seus dados...</span>
-                      </div>
+                    <div className="bg-gradient-to-br from-card to-apple-silver/20 dark:from-apple-spacegray/80 dark:to-apple-black/60 rounded-2xl p-5 max-w-[80%] border border-border/40 shadow-sm">
+                      <FriendlyLoadingMessage isLoading={isLoading} />
                     </div>
                   </div>
                 )}
@@ -169,7 +163,7 @@ const Advisor = () => {
                   <Button 
                     type="submit" 
                     disabled={isLoading}
-                    className="rounded-xl px-5"
+                    className="rounded-xl px-5 bg-gradient-to-br from-primary to-primary/80 hover:from-primary hover:to-primary/90 transition-all duration-300 shadow-sm hover:shadow-md"
                   >
                     <SendIcon className="h-4 w-4 mr-2" />
                     Enviar

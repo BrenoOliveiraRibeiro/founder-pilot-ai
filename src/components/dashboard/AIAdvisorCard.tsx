@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AIAdvisorEngine } from "./AIAdvisorEngine";
-import { ArrowRight, Brain } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { OnboardingTooltip } from "../ui/onboarding-tooltip";
 
@@ -18,7 +18,7 @@ export const AIAdvisorCard = () => {
         <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-apple-silver/20 dark:border-apple-spacegray/40">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-apple-gold/80 to-apple-silver shadow-sm animate-float">
-              <Brain className="h-5 w-5 text-apple-spacegray dark:text-apple-white" />
+              <Sparkles className="h-5 w-5 text-apple-spacegray dark:text-apple-white" />
             </div>
             <CardTitle className="text-xl font-medium text-foreground">
               FounderPilot AI
