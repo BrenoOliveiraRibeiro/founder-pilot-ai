@@ -1,25 +1,21 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Brain, ArrowRight, SendIcon, Sparkles } from "lucide-react";
+import { Brain, ArrowRight, SendIcon, Sparkles, ShieldAlert } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { FriendlyLoadingMessage } from "@/components/ui/friendly-loading-message";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Sample suggestions and responses
+// Sample suggestions - mantemos as sugestões existentes
 const suggestions = [
   "Como posso estender meu runway?",
   "Devo priorizar crescimento ou lucratividade?",
   "Quando devo começar meu processo de captação?",
   "Como meu burn rate se compara a outras startups?",
-];
-
-const sampleResponses = [
-  "Com base em seus dados financeiros, recomendo focar em estender seu runway. Seu burn rate atual de R$ 12.733 por semana oferece aproximadamente 3,5 meses de runway. Para estender isso, considere:\n\n1. **Revisar Assinaturas SaaS**: Seus custos de software aumentaram 28% no último trimestre.\n\n2. **Otimizar Estrutura de Equipe**: Suas despesas de engenharia são maiores que startups similares no seu estágio.\n\n3. **Priorizar Atividades Geradoras de Receita**: Foque em canais de aquisição de clientes com o maior ROI.\n\nImplementar essas mudanças poderia estender seu runway por 2-3 meses adicionais, o que seria crucial para seu próximo ciclo de captação.",
-  
-  "No seu estágio atual com R$ 45.800 em receita mensal e taxa de crescimento de 12,5%, recomendo uma abordagem equilibrada que favoreça ligeiramente o crescimento. Aqui está o porquê:\n\n1. **Timing de Mercado**: Sua indústria tipicamente vê avaliações mais altas para empresas crescendo a 15%+ MoM.\n\n2. **Análise de Concorrentes**: Seus concorrentes diretos estão crescendo a uma média de 18% MoM.\n\n3. **Economia da Unidade**: Seu CAC:LTV é saudável em 1:4, indicando espaço para aquisição mais agressiva.\n\nConsidere aumentar seu gasto de marketing em 20% enquanto mantém controle rigoroso sobre despesas não relacionadas ao crescimento. Isso deve ajudar a atingir uma taxa de crescimento ideal sem reduzir significativamente seu runway.",
 ];
 
 interface Message {
@@ -33,43 +29,88 @@ const Advisor = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
   const { toast } = useToast();
+  const { currentEmpresa } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Scroll para o final das mensagens quando novas forem adicionadas
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && !isLoading) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
-      content: input,
+      content: input.trim(),
       sender: "user",
       timestamp: new Date()
     };
 
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setIsError(false);
 
-    // Simulate AI thinking and response
-    setTimeout(() => {
-      const randomResponse = sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
-      
-      const aiMessage: Message = {
+    try {
+      // Chamar nossa função edge do Supabase
+      const { data, error } = await supabase.functions.invoke('ai-advisor', {
+        body: {
+          message: userMessage.content,
+          userData: {
+            empresaId: currentEmpresa?.id || null,
+            empresaNome: currentEmpresa?.nome || null
+          },
+          // Poderíamos incluir dados financeiros reais aqui se disponíveis
+          financialData: null
+        }
+      });
+
+      if (error) throw error;
+
+      const aiResponse: Message = {
         id: `ai-${Date.now()}`,
-        content: randomResponse,
+        content: data.response,
         sender: "ai",
         timestamp: new Date()
       };
 
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsLoading(false);
+      setMessages(prev => [...prev, aiResponse]);
       
       toast({
         title: "Análise concluída",
         description: "Seus dados foram analisados pela IA",
         duration: 3000,
       });
-    }, 2000);
+    } catch (error) {
+      console.error("Erro ao processar consulta:", error);
+      setIsError(true);
+      
+      toast({
+        title: "Erro ao processar consulta",
+        description: "Não foi possível analisar sua consulta. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+      
+      // Adicionar mensagem de erro
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        content: "Desculpe, não consegui processar sua consulta neste momento. Por favor, tente novamente mais tarde.",
+        sender: "ai",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -149,6 +190,17 @@ const Advisor = () => {
                     </div>
                   </div>
                 )}
+                
+                {isError && (
+                  <div className="flex justify-center animate-fade-in my-4">
+                    <div className="flex items-center gap-2 text-warning py-2 px-3 bg-warning/10 rounded-lg border border-warning/20">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span className="text-sm">Ocorreu um erro ao processar sua consulta. Tente novamente.</span>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
               </div>
               
               <form onSubmit={handleSendMessage} className="p-4 border-t bg-card/50 backdrop-blur-sm">
