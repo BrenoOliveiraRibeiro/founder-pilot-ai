@@ -83,7 +83,7 @@ const Advisor = () => {
             <Brain className="h-7 w-7 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-medium tracking-tight">Co-Founder IA</h1>
+            <h1 className="text-3xl font-medium tracking-tight">FounderPilot AI</h1>
             <p className="text-muted-foreground mt-1">
               Seu assistente estratégico com acesso aos seus dados e análises
             </p>
@@ -101,7 +101,7 @@ const Advisor = () => {
                     </div>
                     <h2 className="text-2xl font-medium mb-3">Como posso ajudar hoje?</h2>
                     <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                      Sou seu co-founder IA, especializado em estratégia de startup, análise financeira, 
+                      Sou seu FounderPilot AI, especializado em estratégia de startup, análise financeira, 
                       e suporte à decisão. Tenho acesso aos seus dados financeiros e insights de mercado.
                     </p>
                     

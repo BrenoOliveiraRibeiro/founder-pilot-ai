@@ -76,9 +76,9 @@ const Auth = () => {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-6">
             <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mr-3">
-              <span className="text-primary-foreground font-bold text-xl">SC</span>
+              <span className="text-primary-foreground font-bold text-xl">FP</span>
             </div>
-            <CardTitle className="text-2xl font-bold">Sync Co-Founder IA</CardTitle>
+            <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
           </div>
           <CardDescription className="text-center">
             {isLogin ? "Entre com sua conta para continuar" : "Crie sua conta para começar"}
