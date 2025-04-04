@@ -1,13 +1,17 @@
 
 import React, { useEffect, useState } from "react";
 
+// Mensagens de carregamento focadas em estratégia e mentoria
 const friendlyMessages = [
-  "Pensando com carinho no que é melhor pra sua startup...",
-  "Analisando seus dados. Um segundo de foco pode mudar o jogo.",
-  "Seu copiloto está traçando o melhor caminho. Aguenta aí.",
-  "Conectando dados financeiros com sabedoria de mercado...",
-  "Calibrando insights para seu momento atual...",
-  "Preparando recomendações exclusivas para você..."
+  "Analisando o contexto financeiro da sua startup...",
+  "Processando benchmarks de mercado para comparações precisas...",
+  "Calculando o impacto no seu runway e estratégia de crescimento...",
+  "Integrando indicadores de negócio ao seu caso específico...",
+  "Estruturando recomendações baseadas na sua fase atual...",
+  "Avaliando oportunidades estratégicas para seu setor...",
+  "Formulando insights personalizados para seu momento...",
+  "Conectando sua pergunta às melhores práticas do ecossistema...",
+  "Seu copiloto está preparando uma resposta estratégica...",
 ];
 
 interface FriendlyLoadingMessageProps {
@@ -30,7 +34,7 @@ export const FriendlyLoadingMessage: React.FC<FriendlyLoadingMessageProps> = ({
     const interval = setInterval(() => {
       const newIndex = Math.floor(Math.random() * friendlyMessages.length);
       setMessage(friendlyMessages[newIndex]);
-    }, 5000);
+    }, 4000);
     
     return () => clearInterval(interval);
   }, [isLoading]);

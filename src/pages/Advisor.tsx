@@ -4,18 +4,21 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Brain, ArrowRight, SendIcon, Sparkles, ShieldAlert } from "lucide-react";
+import { Brain, ArrowRight, SendIcon, Sparkles, ShieldAlert, Clock, BookOpen } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { FriendlyLoadingMessage } from "@/components/ui/friendly-loading-message";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
-// Sample suggestions - mantemos as sugestões existentes
+// Sugestões expandidas para cobrir mais áreas estratégicas
 const suggestions = [
-  "Como posso estender meu runway?",
-  "Devo priorizar crescimento ou lucratividade?",
-  "Quando devo começar meu processo de captação?",
-  "Como meu burn rate se compara a outras startups?",
+  "Como posso estender meu runway nos próximos 6 meses?",
+  "Quais métricas devo priorizar no meu estágio atual?",
+  "Quando é o melhor momento para iniciar minha captação série A?",
+  "Como otimizar meu CAC mantendo a qualidade das conversões?",
+  "Quais critérios devo usar para priorizar features no roadmap?",
+  "Como estruturar meu pitch para investidores anjo?",
 ];
 
 interface Message {
@@ -30,9 +33,27 @@ const Advisor = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<boolean>(false);
   const { toast } = useToast();
-  const { currentEmpresa } = useAuth();
+  const { currentEmpresa, profile } = useAuth();
+  const { metrics, insights } = useFinanceData(currentEmpresa?.id || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Carregar histórico de conversas quando disponível
+  useEffect(() => {
+    const loadConversationHistory = async () => {
+      if (!currentEmpresa?.id) return;
+      
+      try {
+        // Futura implementação: carregar conversas da API
+        setConversationHistory(true);
+      } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+      }
+    };
+    
+    loadConversationHistory();
+  }, [currentEmpresa?.id]);
 
   useEffect(() => {
     // Scroll para o final das mensagens quando novas forem adicionadas
@@ -60,16 +81,33 @@ const Advisor = () => {
     setIsError(false);
 
     try {
-      // Chamar nossa função edge do Supabase
+      // Preparar dados de contexto avançados para a IA
+      const contextData = {
+        userData: {
+          empresaId: currentEmpresa?.id || null,
+          empresaNome: currentEmpresa?.nome || null,
+          website: currentEmpresa?.website || null,
+          segmento: currentEmpresa?.segmento || null,
+          estagio: currentEmpresa?.estagio || null,
+          userNome: profile?.nome || null,
+          userCargo: profile?.cargo || null
+        },
+        financialData: metrics ? {
+          caixaAtual: metrics.caixa_atual,
+          burnRate: metrics.burn_rate,
+          runwayMeses: metrics.runway_meses,
+          receitaMensal: metrics.receita_mensal,
+          mrrGrowth: metrics.mrr_growth,
+          dataReferencia: metrics.data_referencia
+        } : null
+      };
+
+      // Chamar nossa função edge do Supabase com contexto avançado
       const { data, error } = await supabase.functions.invoke('ai-advisor', {
         body: {
           message: userMessage.content,
-          userData: {
-            empresaId: currentEmpresa?.id || null,
-            empresaNome: currentEmpresa?.nome || null
-          },
-          // Poderíamos incluir dados financeiros reais aqui se disponíveis
-          financialData: null
+          userData: contextData.userData,
+          financialData: contextData.financialData
         }
       });
 
@@ -86,9 +124,11 @@ const Advisor = () => {
       
       toast({
         title: "Análise concluída",
-        description: "Seus dados foram analisados pela IA",
+        description: "Seus dados foram analisados pelo FounderPilot AI",
         duration: 3000,
       });
+      
+      // Futura implementação: salvar conversa no histórico
     } catch (error) {
       console.error("Erro ao processar consulta:", error);
       setIsError(true);
@@ -127,7 +167,7 @@ const Advisor = () => {
           <div>
             <h1 className="text-3xl font-medium tracking-tight">FounderPilot AI</h1>
             <p className="text-muted-foreground mt-1">
-              Seu assistente estratégico com acesso aos seus dados e análises
+              {currentEmpresa?.nome ? `Seu copiloto estratégico para ${currentEmpresa.nome}` : 'Seu copiloto estratégico com acesso aos seus dados e análises'}
             </p>
           </div>
         </div>
@@ -141,10 +181,10 @@ const Advisor = () => {
                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 flex items-center justify-center shadow-sm animate-float">
                       <Sparkles className="h-10 w-10 text-primary/90" />
                     </div>
-                    <h2 className="text-2xl font-medium mb-3">Como posso ajudar hoje?</h2>
+                    <h2 className="text-2xl font-medium mb-3">Como posso ajudar hoje, {profile?.nome?.split(' ')[0] || 'empreendedor'}?</h2>
                     <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                      Sou seu FounderPilot AI, especializado em estratégia de startup, análise financeira, 
-                      e suporte à decisão. Tenho acesso aos seus dados financeiros e insights de mercado.
+                      Sou seu FounderPilot AI, especializado em estratégia de startups, análise financeira,
+                      e suporte à tomada de decisões. Estou conectado aos seus dados financeiros e insights de mercado.
                     </p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto text-left">
@@ -175,7 +215,8 @@ const Advisor = () => {
                         }`}
                       >
                         <div className="whitespace-pre-line text-[15px]">{message.content}</div>
-                        <div className="text-xs opacity-70 mt-2">
+                        <div className="text-xs opacity-70 mt-2 flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
@@ -221,6 +262,18 @@ const Advisor = () => {
                     Enviar
                   </Button>
                 </div>
+                {conversationHistory && (
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs text-muted-foreground flex items-center gap-1"
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      Ver histórico
+                    </Button>
+                  </div>
+                )}
               </form>
             </div>
           </CardContent>

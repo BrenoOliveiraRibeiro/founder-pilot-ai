@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,17 +10,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const FloatingAIButton = () => {
   const navigate = useNavigate();
   const [showTooltip, setShowTooltip] = useState(true);
+  const { profile } = useAuth();
+  const firstName = profile?.nome?.split(' ')[0];
 
   // Hide tooltip after 5 seconds
   React.useEffect(() => {
     if (showTooltip) {
       const timer = setTimeout(() => {
         setShowTooltip(false);
-      }, 5000);
+      }, 6000);
       return () => clearTimeout(timer);
     }
   }, [showTooltip]);
@@ -33,17 +36,18 @@ export const FloatingAIButton = () => {
             <Button
               size="lg"
               className={cn(
-                "rounded-full h-14 w-14 shadow-lg hover:shadow-xl transition-all duration-300",
+                "rounded-full h-16 w-16 shadow-lg hover:shadow-xl transition-all duration-300",
                 "bg-gradient-to-br from-primary to-primary/80",
-                "hover:scale-105 active:scale-95"
+                "hover:scale-105 active:scale-95",
+                "animate-pulse-subtle"
               )}
               onClick={() => navigate("/advisor")}
             >
-              <Sparkles className="h-6 w-6" />
+              <Brain className="h-7 w-7" />
               <span className="sr-only">Abrir FounderPilot AI</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center" className="relative">
+          <TooltipContent side="left" align="center" className="relative max-w-[220px]">
             <Button
               variant="ghost"
               size="sm"
@@ -52,9 +56,11 @@ export const FloatingAIButton = () => {
             >
               <X className="h-3 w-3" />
             </Button>
-            <p className="font-medium">Converse com seu FounderPilot AI</p>
+            <p className="font-medium">
+              {firstName ? `Olá ${firstName}!` : 'Olá empreendedor!'}
+            </p>
             <p className="text-xs text-muted-foreground">
-              Clique para obter insights e recomendações
+              Precisa de um conselho estratégico? Seu copiloto FounderPilot AI está à disposição.
             </p>
           </TooltipContent>
         </Tooltip>
