@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/use-toast";
-import { BanknoteIcon, CalendarIcon, PlusIcon } from "lucide-react";
+import { BanknoteIcon, CalendarIcon, PlusIcon, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { InvestorsConnectionManager } from "../investors/InvestorsConnectionManager";
 
 const apiKeySchema = z.object({
   googleCalendarApiKey: z.string().optional(),
@@ -37,6 +38,13 @@ export function ApiIntegrationSettingsTab() {
       status: "pending", 
       lastSync: "Nunca sincronizado", 
       icon: CalendarIcon 
+    },
+    { 
+      id: "investors", 
+      name: "Investidores", 
+      status: "connected", 
+      lastSync: "Hoje, 10:15", 
+      icon: Users 
     },
   ];
 
@@ -92,10 +100,14 @@ export function ApiIntegrationSettingsTab() {
                   size="sm" 
                   className="w-full"
                   onClick={() => {
-                    navigate("/connect");
+                    if (service.id === "investors") {
+                      navigate("/settings/investors");
+                    } else {
+                      navigate("/connect");
+                    }
                   }}
                 >
-                  {service.status === "connected" ? "Resincronizar" : "Conectar"}
+                  {service.status === "connected" ? "Gerenciar" : "Conectar"}
                 </Button>
               </CardFooter>
             </Card>
@@ -116,6 +128,10 @@ export function ApiIntegrationSettingsTab() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="border-t border-border/60 pt-6 mt-6">
+        <InvestorsConnectionManager />
       </div>
 
       <Form {...form}>
