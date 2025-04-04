@@ -1,11 +1,14 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Brain, Download, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { OnboardingTooltip } from "../ui/onboarding-tooltip";
+import { useToast } from "@/components/ui/use-toast";
 
 export const DashboardHeader = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const lastUpdated = new Date().toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "short",
@@ -15,9 +18,28 @@ export const DashboardHeader = () => {
 
   const { currentEmpresa } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleRefresh = () => {
-    window.location.reload();
+    setIsRefreshing(true);
+    
+    // Show toast to improve feedback
+    toast({
+      title: "Atualizando dados",
+      description: "Seus dados estão sendo atualizados...",
+    });
+    
+    // Simulate refresh
+    setTimeout(() => {
+      setIsRefreshing(false);
+      
+      toast({
+        title: "Dados atualizados",
+        description: "Seus dados foram atualizados com sucesso.",
+      });
+      
+      window.location.reload();
+    }, 1500);
   };
 
   const handleAskAI = () => {
@@ -35,10 +57,16 @@ export const DashboardHeader = () => {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <OnboardingTooltip
+            id="refresh-button"
+            title="Atualizar Dados"
+            description="Clique aqui para atualizar seus dados financeiros e obter insights mais recentes."
+          >
+            <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? "Atualizando..." : "Atualizar"}
+            </Button>
+          </OnboardingTooltip>
         </div>
       </div>
       
@@ -60,7 +88,11 @@ export const DashboardHeader = () => {
             Seu burn rate aumentou 15% este mês. Considere revisar suas assinaturas recentes.
           </p>
         </div>
-        <Button size="sm" className="whitespace-nowrap" onClick={handleAskAI}>
+        <Button 
+          size="sm" 
+          className="whitespace-nowrap bg-primary/90 hover:bg-primary transition-colors"
+          onClick={handleAskAI}
+        >
           Perguntar ao Co-Founder IA
         </Button>
       </div>

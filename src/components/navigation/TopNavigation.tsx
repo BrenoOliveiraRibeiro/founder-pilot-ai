@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, Brain, CircuitBoard, LogOut, Settings, User } from "lucide-react";
+import { BanknoteIcon, Brain, CircuitBoard, LogOut, Settings } from "lucide-react";
 
 export const TopNavigation = () => {
   const { user, signOut, currentEmpresa } = useAuth();
@@ -40,7 +40,7 @@ export const TopNavigation = () => {
           <Link to="/dashboard" className="hidden items-center gap-2 md:flex">
             <CircuitBoard className="h-6 w-6" />
             <span className="text-xl font-bold tracking-tight">
-              {currentEmpresa?.nome || "Co-Founder IA"}
+              {currentEmpresa?.nome || "Eight AI"}
             </span>
           </Link>
           <nav className="flex items-center gap-4 lg:gap-6">

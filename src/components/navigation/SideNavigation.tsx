@@ -9,6 +9,7 @@ import {
   FileText, 
   HomeIcon, 
   LogOut,
+  MessageSquareText,
   Settings, 
   TrendingUp, 
   Users2 
@@ -58,9 +59,9 @@ export const SideNavigation = () => {
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">SC</span>
+            <span className="text-primary-foreground font-bold">8</span>
           </div>
-          <h1 className="font-bold text-xl text-foreground">Sync AI</h1>
+          <h1 className="font-bold text-xl text-foreground">Eight AI</h1>
         </Link>
       </div>
 
@@ -103,10 +104,10 @@ export const SideNavigation = () => {
             Vincule suas contas financeiras para desbloquear insights poderosos
           </p>
           <Link 
-            to="/connect"
+            to="/open-finance"
             className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium"
           >
-            Conectar Contas
+            Conectar Open Finance
           </Link>
         </div>
         

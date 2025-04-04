@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegracaoBancaria } from "@/integrations/supabase/models";
-import { AlertCircle, AlertTriangle, Building, Check, ChevronRight, Database, ExternalLink, Lock, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, AlertTriangle, Building, Check, ChevronRight, Database, ExternalLink, Info, Lock, RefreshCw, Shield } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 
@@ -277,19 +276,43 @@ const OpenFinance = () => {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Conectar Open Finance</h1>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Open Finance</h1>
+            <p className="text-muted-foreground mt-1">
+              Conecte seus dados financeiros para análises do Co-Founder IA
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Os dados são utilizados exclusivamente para análise
+            </p>
+          </div>
+        </div>
         
         {activeIntegrations.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl">Integrações Ativas</CardTitle>
-              <CardDescription>
-                Gerencie suas conexões de Open Finance
-              </CardDescription>
+          <Card className="mb-8 border-none shadow-md">
+            <CardHeader className="border-b border-border pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Integrações Ativas</CardTitle>
+                  <CardDescription>
+                    Gerencie suas conexões de Open Finance
+                  </CardDescription>
+                </div>
+                <div className="flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2 text-xs font-medium text-primary">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span>Conectado</span>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-4 space-y-4">
               {activeIntegrations.map((integration) => (
-                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:shadow-sm transition-all duration-200">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold">
                       {integration.nome_banco.charAt(0).toUpperCase()}
@@ -300,7 +323,7 @@ const OpenFinance = () => {
                         Última sincronização: {formatDate(integration.ultimo_sincronismo)}
                       </p>
                       {isRunwayCritical(integration) && (
-                        <div className="flex items-center gap-1 text-xs text-destructive mt-1">
+                        <div className="flex items-center gap-1 text-xs text-destructive mt-1 animate-pulse">
                           <AlertTriangle className="h-3 w-3" />
                           <span>Runway crítico: ação necessária</span>
                         </div>
@@ -309,7 +332,8 @@ const OpenFinance = () => {
                   </div>
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size="sm"
+                    className="transition-all duration-200 hover:bg-primary/5"
                     onClick={() => handleSyncData(integration.id)}
                     disabled={syncing === integration.id}
                   >
@@ -322,8 +346,8 @@ const OpenFinance = () => {
           </Card>
         )}
         
-        <Card>
-          <CardHeader>
+        <Card className="border-none shadow-md">
+          <CardHeader className="border-b border-border pb-3">
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-xl">Conectar Nova Conta</CardTitle>
@@ -343,12 +367,12 @@ const OpenFinance = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {useSandbox && (
-              <Alert variant="info" className="mb-4">
+              <Alert variant="info" className="mb-4 border-none bg-primary/5 text-primary">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Modo Sandbox Ativado</AlertTitle>
-                <AlertDescription>
+                <AlertDescription className="text-primary/80">
                   No modo sandbox, utilize as credenciais de teste: "fake-user" e "fake-password"
                   <a 
                     href="https://developers.belvo.com/docs/test-in-sandbox" 
@@ -370,8 +394,8 @@ const OpenFinance = () => {
             {connecting && connectionProgress > 0 && (
               <div className="mb-6 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>{connectionStatus}</span>
-                  <span>{connectionProgress}%</span>
+                  <span className="font-medium">{connectionStatus}</span>
+                  <span className="text-muted-foreground">{connectionProgress}%</span>
                 </div>
                 <Progress value={connectionProgress} className="h-2" />
               </div>
@@ -384,10 +408,10 @@ const OpenFinance = () => {
                   {providers.map((provider) => (
                     <div
                       key={provider.id}
-                      className={`border rounded-md p-3 flex items-center gap-3 cursor-pointer transition-colors ${
+                      className={`border rounded-md p-3 flex items-center gap-3 cursor-pointer transition-all duration-200 ${
                         selectedProvider === provider.id 
-                          ? "border-primary bg-primary/5" 
-                          : "hover:border-primary/30"
+                          ? "border-primary bg-primary/5 shadow-sm" 
+                          : "hover:border-primary/30 hover:bg-accent/5"
                       }`}
                       onClick={() => setSelectedProvider(provider.id)}
                     >
@@ -438,12 +462,15 @@ const OpenFinance = () => {
               <div ref={belvoContainerRef} className="belvo-widget-container"></div>
               
               <Button 
-                className="w-full" 
+                className="w-full group transition-all duration-200 relative overflow-hidden"
                 disabled={!selectedProvider || connecting || !belvoWidgetLoaded}
                 onClick={handleConnect}
               >
-                {connecting ? "Conectando..." : "Conectar Conta Bancária"}
-                <ChevronRight className="h-4 w-4 ml-2" />
+                <span className="relative z-10 flex items-center">
+                  {connecting ? "Conectando..." : "Conectar Conta Bancária"}
+                  <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </span>
+                <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
               </Button>
             </div>
           </CardContent>
