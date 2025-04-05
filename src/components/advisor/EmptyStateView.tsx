@@ -58,7 +58,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
 
   return (
     <motion.div 
-      className="text-center py-20 relative overflow-hidden"
+      className="text-center py-12 relative overflow-hidden"
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -71,7 +71,7 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
         className="relative"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 blur-3xl rounded-full"></div>
-        <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 flex items-center justify-center shadow-xl relative overflow-hidden">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/80 to-primary/20 flex items-center justify-center shadow-xl relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent opacity-60"></div>
           <motion.div
             animate={{ 
@@ -89,21 +89,20 @@ export const EmptyStateView: React.FC<EmptyStateViewProps> = ({
       </motion.div>
 
       <motion.h2 
-        className="text-3xl font-medium mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
+        className="text-2xl sm:text-3xl font-medium mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent px-4"
         variants={itemVariants}
       >
-        Como posso ajudar hoje, {userName || 'empreendedor'}?
+        Como posso ajudar hoje?
       </motion.h2>
       
       <motion.p 
-        className="text-muted-foreground mb-10 max-w-lg mx-auto"
+        className="text-sm sm:text-base text-muted-foreground mb-8 max-w-lg mx-auto px-4"
         variants={itemVariants}
       >
-        Sou seu FounderPilot AI, especializado em estratégia de startups, análise financeira,
-        e suporte à tomada de decisões com base nos seus dados e insights de mercado.
+        Sou seu FounderPilot AI, especializado em estratégia, finanças, e suporte à tomada de decisões com base nos seus dados.
       </motion.p>
       
-      <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants} className="px-4">
         <SuggestionButtons 
           suggestions={suggestions}
           onSuggestionClick={onSuggestionClick}

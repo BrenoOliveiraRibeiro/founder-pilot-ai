@@ -4,14 +4,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/components/advisor/ChatMessage";
 
-// Sugestões mais estratégicas e modernas para startups
+// Sugestões mais concisas e estratégicas para startups
 const initialSuggestions = [
-  "Como otimizar meu runway com base nos dados financeiros atuais?",
-  "Quais KPIs devo monitorar no meu estágio atual de crescimento?",
-  "Qual o melhor timing para iniciar minha próxima rodada?",
-  "Como reduzir meu CAC mantendo a qualidade de aquisição?",
-  "Qual a melhor estrutura de equity para minha próxima contratação C-level?",
-  "Como estruturar meu pitch deck para investidores de venture capital?"
+  "Como otimizar meu runway atual?",
+  "Quais KPIs devo priorizar agora?",
+  "Quando iniciar minha próxima captação?",
+  "Como reduzir meu CAC?",
+  "Como estruturar equity para C-level?",
+  "Como criar um pitch deck eficiente?"
 ];
 
 export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNome?: string | null; userNome?: string | null }) => {

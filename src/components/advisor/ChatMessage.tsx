@@ -27,7 +27,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     >
       <div 
         className={cn(
-          "max-w-[85%] sm:max-w-[75%] rounded-2xl p-5 shadow-md transition-all",
+          "max-w-[85%] sm:max-w-[75%] rounded-2xl p-5 shadow-md transition-all break-words",
           isUser 
             ? "bg-primary text-primary-foreground ml-4" 
             : "relative glass-effect border border-primary/10"
@@ -41,7 +41,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <span className="text-sm font-medium text-primary/70">FounderPilot AI</span>
           </div>
         )}
-        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        <div className="whitespace-pre-wrap break-words text-sm sm:text-base">{message.content}</div>
         <div className={cn(
           "text-xs mt-2 opacity-70",
           isUser ? "text-right" : "text-left"

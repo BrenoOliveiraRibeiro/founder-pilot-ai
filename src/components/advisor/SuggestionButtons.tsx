@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SuggestionButtonsProps {
@@ -54,13 +54,13 @@ export const SuggestionButtons: React.FC<SuggestionButtonsProps> = ({
         >
           <Button
             variant="outline"
-            className="justify-between rounded-xl py-4 px-5 h-auto w-full border-primary/20 hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent transition-all duration-300 backdrop-blur-sm group"
+            className="justify-between rounded-xl py-3 px-4 h-auto w-full border-primary/20 hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent transition-all duration-300 backdrop-blur-sm group"
             onClick={() => onSuggestionClick(suggestion)}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-left">{suggestion}</span>
+            <div className="flex items-start">
+              <span className="text-sm text-left line-clamp-2">{suggestion}</span>
             </div>
-            <div className="group-hover:translate-x-1 transition-transform duration-300">
+            <div className="group-hover:translate-x-1 transition-transform duration-300 flex-shrink-0 ml-2">
               <ArrowRight className="h-4 w-4 opacity-70" />
             </div>
           </Button>
