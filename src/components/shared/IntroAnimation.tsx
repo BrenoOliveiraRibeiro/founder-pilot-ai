@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 
 interface IntroAnimationProps {
   onComplete?: () => void;
@@ -16,7 +15,6 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
   const [showAnimation, setShowAnimation] = useState(true);
   const [playSound, setPlaySound] = useState(false);
   const [showTagline, setShowTagline] = useState(false);
-  const [showLogo, setShowLogo] = useState(false);
 
   useEffect(() => {
     // Verifica se a animação já foi mostrada recentemente
@@ -33,12 +31,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       setPlaySound(true);
     }, 800);
 
-    // Mostrar o logo após um delay
-    const logoTimer = setTimeout(() => {
-      setShowLogo(true);
-    }, 1200);
-
-    // Exibe o slogan após o logo
+    // Exibe o slogan após um delay
     const taglineTimer = setTimeout(() => {
       setShowTagline(true);
     }, 2400);
@@ -52,7 +45,6 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
 
     return () => {
       clearTimeout(soundTimer);
-      clearTimeout(logoTimer);
       clearTimeout(taglineTimer);
       clearTimeout(animationTimer);
     };
@@ -79,30 +71,6 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5, duration: 1.0, ease: "easeOut" }}
       >
-        {showLogo && (
-          <motion.div
-            className="rounded-full bg-gradient-to-br from-primary/20 to-primary/10 p-8 mb-8"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8, type: "spring" }}
-          >
-            <motion.div
-              className="w-24 h-24 flex items-center justify-center"
-              animate={{ 
-                rotate: [0, 10, -10, 5, -5, 0],
-                scale: [1, 1.05, 0.98, 1.02, 1]
-              }}
-              transition={{ duration: 2, delay: 1.5, ease: "easeInOut" }}
-            >
-              <img 
-                src="/lovable-uploads/54a4acf9-cdb2-49db-8cb9-4fd8754d0e84.png"
-                alt="Logo" 
-                className="w-full h-full object-contain"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-
         <motion.div
           className="text-center space-y-6"
           initial={{ y: 20, opacity: 0 }}
@@ -115,7 +83,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.8 }}
           >
-            Sync Partners
+            FounderPilot
           </motion.h1>
           
           {showTagline && (
