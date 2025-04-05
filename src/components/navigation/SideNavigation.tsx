@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: HomeIcon, group: "principal" },
   { title: "Finanças", href: "/finances", icon: DollarSign, highlight: true, group: "principal" },
   { title: "Runway", href: "/runway", icon: TrendingUp, badge: "Crítico", group: "principal" },
-  { title: "AI Advisor", href: "/advisor", icon: Sparkles, highlight: true, group: "principal" },
+  { title: "Co-Founder AI", href: "/advisor", icon: Sparkles, highlight: true, group: "principal" },
   { title: "Relatórios", href: "/reports", icon: FileText, group: "análise" },
   { title: "Mercado", href: "/market", icon: BarChart3, group: "análise" },
   { title: "Equipe", href: "/team", icon: Users2, group: "gestão" },

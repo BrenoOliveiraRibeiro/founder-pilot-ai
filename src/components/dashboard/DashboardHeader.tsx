@@ -79,7 +79,7 @@ export const DashboardHeader = () => {
           variants={itemVariants}
         >
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-balance">
-            {currentEmpresa ? `Dashboard: ${currentEmpresa.nome}` : "Dashboard"}
+            {currentEmpresa ? `${currentEmpresa.nome}` : "Dashboard"}
           </h1>
         </motion.div>
         <motion.div className="flex items-center gap-2" variants={itemVariants}>
@@ -151,7 +151,7 @@ export const DashboardHeader = () => {
               <MessageSquare className="h-4 w-4 text-primary" />
             </div>
             <h3 className="font-medium text-foreground flex items-center gap-2">
-              <span className="gradient-text">FounderPilot</span>
+              <span className="gradient-text">Co-Founder AI</span>
             </h3>
           </div>
           <p className="text-sm text-foreground/80 leading-relaxed text-pretty">
@@ -170,7 +170,7 @@ export const DashboardHeader = () => {
                    hover:-translate-y-0.5 shadow-sm micro-feedback text-white focus-ring"
         >
           <Sparkles className="h-4 w-4 mr-1.5" />
-          Perguntar ao FounderPilot
+          Perguntar ao Co-Founder
         </Button>
       </motion.div>
       

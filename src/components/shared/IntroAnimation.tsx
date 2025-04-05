@@ -72,20 +72,12 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
       >
-        <motion.div 
-          className="w-24 h-24 rounded-xl bg-gradient-to-br from-founderpilot-primary to-founderpilot-primary/80 
-                     flex items-center justify-center shadow-premium overflow-hidden"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.8, duration: 0.5 }}
-          >
-            <Sparkles className="text-white h-10 w-10" />
-          </motion.div>
+        <motion.div className="w-40 h-auto mb-4">
+          <img 
+            src="/sync-partners-logo.png" 
+            alt="Sync Partners" 
+            className="w-full h-auto object-contain"
+          />
         </motion.div>
         
         <motion.div
@@ -100,7 +92,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.5 }}
           >
-            FounderPilot AI
+            Co-Founder AI
           </motion.h1>
           
           {showTagline && (

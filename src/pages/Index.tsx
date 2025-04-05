@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { IntroAnimation } from "@/components/shared/IntroAnimation";
 import { FriendlyLoadingMessage } from "@/components/ui/friendly-loading-message";
+import { motion } from "framer-motion";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -29,14 +30,37 @@ const Index = () => {
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-2xl">FP</span>
-        </div>
-        <h1 className="text-2xl font-bold">FounderPilot AI</h1>
-        <FriendlyLoadingMessage isLoading={true} className="mt-4" />
-      </div>
+    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-background to-background/95">
+      <motion.div 
+        className="flex flex-col items-center gap-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div 
+          className="w-32 h-auto"
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <img 
+            src="/sync-partners-logo.png" 
+            alt="Sync Partners" 
+            className="w-full h-auto object-contain"
+          />
+        </motion.div>
+        
+        <motion.h1 
+          className="text-2xl font-bold"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          Co-Founder AI
+        </motion.h1>
+        
+        <FriendlyLoadingMessage isLoading={true} className="mt-2" />
+      </motion.div>
     </div>
   );
 };

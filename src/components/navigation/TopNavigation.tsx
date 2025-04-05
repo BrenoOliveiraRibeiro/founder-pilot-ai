@@ -50,14 +50,6 @@ export const TopNavigation = () => {
             alt="Sync Partners" 
             className="h-8 w-auto object-contain"
           />
-          <motion.span 
-            className="text-xl font-bold tracking-tight ml-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            {currentEmpresa?.nome || "FounderPilot AI"}
-          </motion.span>
         </Link>
         
         <nav className="flex items-center gap-4 lg:gap-6 ml-6">
@@ -68,10 +60,10 @@ export const TopNavigation = () => {
               <span>Open Finance</span>
             </div>
           </NavLink>
-          <NavLink to="/advisor" label="FounderPilot AI">
+          <NavLink to="/advisor" label="Co-Founder AI">
             <div className="flex items-center gap-1">
               <Sparkles className="h-4 w-4" />
-              <span>FounderPilot AI</span>
+              <span>Co-Founder AI</span>
             </div>
           </NavLink>
         </nav>
