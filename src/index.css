@@ -86,7 +86,7 @@
 
 @layer utilities {
   .text-gradient {
-    @apply bg-gradient-to-r from-apple-black to-apple-spacegray bg-clip-text text-transparent dark:from-apple-white dark:to-apple-silver;
+    @apply bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent dark:from-primary dark:to-primary/70;
   }
   
   .glass-effect {
