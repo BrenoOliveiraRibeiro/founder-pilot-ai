@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, TestTube } from "lucide-react";
+import { RefreshCw, Flask } from "lucide-react";
 
 interface ActionButtonsProps {
   onTestConnection: () => Promise<void>;
@@ -25,11 +25,11 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         variant="outline" 
         onClick={onTestConnection}
         disabled={testingConnection || disabled}
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto rounded-full px-4"
       >
         {testingConnection ? 
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
-          <TestTube className="h-4 w-4 mr-2" />
+          <Flask className="h-4 w-4 mr-2" />
         }
         {testingConnection ? "Testando..." : "Testar Belvo"}
       </Button>
@@ -38,7 +38,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         variant="outline" 
         onClick={onSyncData}
         disabled={syncingData || disabled}
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto rounded-full px-4"
       >
         {syncingData ? 
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 

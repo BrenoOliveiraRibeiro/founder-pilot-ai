@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, Sparkles } from "lucide-react";
 import { useInsights } from "@/hooks/useInsights";
 import { InsightsList } from "./insights/InsightsList";
 import { ConnectionTestResults } from "./insights/ConnectionTestResults";
@@ -21,11 +21,13 @@ export const AIAdvisorEngine = () => {
   } = useInsights(currentEmpresa?.id);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Motor de Análise IA</h3>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+          </div>
+          <h3 className="text-xl font-medium">Motor de Análise IA</h3>
         </div>
         <ActionButtons 
           onTestConnection={testBelvoConnection}

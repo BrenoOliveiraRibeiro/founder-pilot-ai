@@ -62,7 +62,7 @@ export const AIAdvisorCard = () => {
               </Link>
             </Button>
           </CardHeader>
-          <CardContent className="p-4 bg-transparent">
+          <CardContent className="p-6 bg-transparent">
             <motion.div 
               className="animate-fade-in"
               initial={{ opacity: 0, y: 10 }}
