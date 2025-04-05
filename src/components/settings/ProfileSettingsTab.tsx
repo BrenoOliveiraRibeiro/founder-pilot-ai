@@ -19,7 +19,7 @@ const profileFormSchema = z.object({
   email: z.string().email({
     message: "Email inválido.",
   }),
-  bio: z.string().max(160).optional(),
+  bio: z.string().max(500).optional(), // Aumentado de 160 para 500 caracteres
   role: z.string().min(2, {
     message: "Cargo deve ter pelo menos 2 caracteres.",
   }),
@@ -162,12 +162,12 @@ export function ProfileSettingsTab() {
                 <FormControl>
                   <Textarea
                     placeholder="Escreva uma breve biografia..."
-                    className="resize-none"
+                    className="resize-none min-h-[120px]"
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
-                  Você pode escrever uma breve descrição sobre você mesmo.
+                  Você pode escrever uma descrição sobre você mesmo (máximo de 500 caracteres).
                 </FormDescription>
                 <FormMessage />
               </FormItem>
