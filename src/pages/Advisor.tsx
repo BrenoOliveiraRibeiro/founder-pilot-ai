@@ -12,10 +12,12 @@ import { EmptyStateView } from "@/components/advisor/EmptyStateView";
 import { ChatInputForm } from "@/components/advisor/ChatInputForm";
 import { ErrorMessage } from "@/components/advisor/ErrorMessage";
 import { Sparkles } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Advisor = () => {
   const { currentEmpresa, profile } = useAuth();
   const { metrics } = useFinanceData(currentEmpresa?.id || null);
+  const isMobile = useIsMobile();
   
   const {
     messages,
@@ -58,22 +60,22 @@ const Advisor = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto px-1 sm:px-0">
         <motion.div 
-          className="flex items-center mb-8"
+          className="flex items-center mb-4 sm:mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center mr-5 shadow-lg relative z-10">
-              <Sparkles className="h-8 w-8 text-white" />
+            <div className={`${isMobile ? "h-12 w-12" : "h-16 w-16"} rounded-full bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center mr-3 sm:mr-5 shadow-lg relative z-10`}>
+              <Sparkles className={`${isMobile ? "h-6 w-6" : "h-8 w-8"} text-white`} />
             </div>
           </div>
           <div>
             <motion.h1 
-              className="text-gradient text-3xl md:text-4xl font-medium tracking-tight"
+              className="text-gradient text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
@@ -81,12 +83,12 @@ const Advisor = () => {
               FounderPilot AI
             </motion.h1>
             <motion.p 
-              className="text-muted-foreground mt-1"
+              className="text-xs sm:text-sm text-muted-foreground mt-0 sm:mt-1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.8 }}
             >
-              {currentEmpresa?.nome ? `Seu copiloto estratégico para ${currentEmpresa.nome}` : 'Seu copiloto estratégico com acesso aos seus dados e análises'}
+              {currentEmpresa?.nome ? `Seu copiloto estratégico para ${currentEmpresa.nome}` : 'Seu copiloto estratégico com acesso aos seus dados'}
             </motion.p>
           </div>
         </motion.div>
@@ -96,10 +98,10 @@ const Advisor = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2 }}
         >
-          <Card className="mb-6 overflow-hidden border-none shadow-xl hover:shadow-2xl dark:shadow-none dark:border dark:border-border/40 transition-all duration-500 bg-gradient-to-br from-white to-gray-50/30 dark:from-slate-800/90 dark:to-slate-900/90 rounded-3xl backdrop-blur-sm">
+          <Card className="mb-6 overflow-hidden border-none shadow-xl hover:shadow-2xl dark:shadow-none dark:border dark:border-border/40 transition-all duration-500 bg-gradient-to-br from-white to-gray-50/30 dark:from-slate-800/90 dark:to-slate-900/90 rounded-2xl sm:rounded-3xl backdrop-blur-sm">
             <CardContent className="p-0">
-              <div className="min-h-[70vh] flex flex-col">
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="min-h-[75vh] sm:min-h-[70vh] flex flex-col">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
                   {messages.length === 0 ? (
                     <EmptyStateView
                       userName={profile?.nome?.split(' ')[0]}
@@ -111,7 +113,7 @@ const Advisor = () => {
                       variants={containerVariants}
                       initial="hidden"
                       animate="show"
-                      className="space-y-6"
+                      className="space-y-4 sm:space-y-6"
                     >
                       {messages.map((message) => (
                         <motion.div key={message.id} variants={itemVariants}>
@@ -128,7 +130,7 @@ const Advisor = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="glass-effect rounded-2xl p-5 max-w-[80%] border border-primary/10 shadow-lg">
+                      <div className="glass-effect rounded-2xl p-3 sm:p-5 max-w-[90%] sm:max-w-[80%] border border-primary/10 shadow-lg">
                         <FriendlyLoadingMessage isLoading={isLoading} />
                       </div>
                     </motion.div>
