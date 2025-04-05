@@ -37,26 +37,13 @@ const Index = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <motion.div 
-          className="w-32 h-auto"
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <img 
-            src="/sync-partners-logo.png" 
-            alt="Sync Partners" 
-            className="w-full h-auto object-contain"
-          />
-        </motion.div>
-        
         <motion.h1 
-          className="text-2xl font-bold"
+          className="text-3xl font-bold"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          Co-Founder AI
+          FounderPilot
         </motion.h1>
         
         <FriendlyLoadingMessage isLoading={true} className="mt-2" />

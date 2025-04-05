@@ -112,7 +112,7 @@ export const FloatingAIButton = () => {
               onClick={handleClick}
             >
               <MessageSquare className="h-7 w-7" />
-              <span className="sr-only">Abrir FounderPilot AI</span>
+              <span className="sr-only">Abrir FounderPilot</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left" align="center" className="relative max-w-[220px]">
@@ -128,7 +128,7 @@ export const FloatingAIButton = () => {
               {firstName ? `Olá ${firstName}!` : 'Olá empreendedor!'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Precisa de um conselho estratégico? Seu copiloto FounderPilot AI está à disposição.
+              Precisa de um conselho estratégico? Seu FounderPilot está à disposição.
             </p>
           </TooltipContent>
         </Tooltip>

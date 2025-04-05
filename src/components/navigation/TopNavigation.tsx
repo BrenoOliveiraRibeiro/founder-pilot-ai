@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, CircuitBoard, LogOut, Settings, Sparkles, HelpCircle } from "lucide-react";
+import { BanknoteIcon, CircuitBoard, LogOut, Settings, Sparkles, HelpCircle, LayoutDashboard } from "lucide-react";
 import { motion } from "framer-motion";
 
 export const TopNavigation = () => {
@@ -45,25 +45,26 @@ export const TopNavigation = () => {
     <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/80 backdrop-blur-lg sticky top-0 z-10">
       <div className="flex h-16 items-center px-4 md:px-6">
         <Link to="/dashboard" className="hidden items-center gap-2 md:flex group">
-          <img 
-            src="/sync-partners-logo.png" 
-            alt="Sync Partners" 
-            className="h-8 w-auto object-contain"
-          />
+          <span className="text-xl font-bold">FounderPilot</span>
         </Link>
         
         <nav className="flex items-center gap-4 lg:gap-6 ml-6">
-          <NavLink to="/dashboard" label="Dashboard" />
+          <NavLink to="/dashboard" label="Dashboard">
+            <div className="flex items-center gap-1">
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Dashboard</span>
+            </div>
+          </NavLink>
           <NavLink to="/open-finance" label="Open Finance">
             <div className="flex items-center gap-1">
               <BanknoteIcon className="h-4 w-4" />
               <span>Open Finance</span>
             </div>
           </NavLink>
-          <NavLink to="/advisor" label="Co-Founder AI">
+          <NavLink to="/advisor" label="FounderPilot">
             <div className="flex items-center gap-1">
               <Sparkles className="h-4 w-4" />
-              <span>Co-Founder AI</span>
+              <span>FounderPilot</span>
             </div>
           </NavLink>
         </nav>

@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare } from "lucide-react";
+import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { OnboardingTooltip } from "../ui/onboarding-tooltip";
@@ -78,9 +78,12 @@ export const DashboardHeader = () => {
           className="flex items-center gap-3"
           variants={itemVariants}
         >
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-balance">
-            {currentEmpresa ? `${currentEmpresa.nome}` : "Dashboard"}
-          </h1>
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-balance">
+              Dashboard
+            </h1>
+          </div>
         </motion.div>
         <motion.div className="flex items-center gap-2" variants={itemVariants}>
           <Button 
@@ -151,7 +154,7 @@ export const DashboardHeader = () => {
               <MessageSquare className="h-4 w-4 text-primary" />
             </div>
             <h3 className="font-medium text-foreground flex items-center gap-2">
-              <span className="gradient-text">Co-Founder AI</span>
+              <span className="gradient-text">FounderPilot</span>
             </h3>
           </div>
           <p className="text-sm text-foreground/80 leading-relaxed text-pretty">
@@ -170,7 +173,7 @@ export const DashboardHeader = () => {
                    hover:-translate-y-0.5 shadow-sm micro-feedback text-white focus-ring"
         >
           <Sparkles className="h-4 w-4 mr-1.5" />
-          Perguntar ao Co-Founder
+          Perguntar ao FounderPilot
         </Button>
       </motion.div>
       
