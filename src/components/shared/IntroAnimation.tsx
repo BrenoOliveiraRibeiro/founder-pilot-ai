@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 
 interface IntroAnimationProps {
   onComplete?: () => void;
@@ -14,6 +15,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
 }) => {
   const [showAnimation, setShowAnimation] = useState(true);
   const [playSound, setPlaySound] = useState(false);
+  const [showTagline, setShowTagline] = useState(false);
 
   useEffect(() => {
     // Verifica se a animação já foi mostrada recentemente
@@ -30,15 +32,21 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       setPlaySound(true);
     }, 300);
 
+    // Exibe o slogan após o logo
+    const taglineTimer = setTimeout(() => {
+      setShowTagline(true);
+    }, 1200);
+
     // Define o tempo total da animação
     const animationTimer = setTimeout(() => {
       setShowAnimation(false);
       sessionStorage.setItem('hasShownIntro', 'true');
       if (onComplete) onComplete();
-    }, 3200);
+    }, 3800);
 
     return () => {
       clearTimeout(soundTimer);
+      clearTimeout(taglineTimer);
       clearTimeout(animationTimer);
     };
   }, [onComplete]);
@@ -48,7 +56,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
   return (
     <motion.div 
       className={cn(
-        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background",
+        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-founderpilot-background",
         className
       )}
       initial={{ opacity: 0 }}
@@ -59,36 +67,52 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       {playSound && <IntroSound />}
       
       <motion.div
-        className="flex flex-col items-center justify-center space-y-6"
+        className="flex flex-col items-center justify-center space-y-7"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
+        transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
       >
         <motion.div 
-          className="w-24 h-24 rounded-xl bg-gradient-to-br from-primary to-primary/80 
-                    flex items-center justify-center shadow-lg"
+          className="w-24 h-24 rounded-xl bg-gradient-to-br from-founderpilot-primary to-founderpilot-primary/80 
+                     flex items-center justify-center shadow-premium overflow-hidden"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
+          transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
         >
-          <span className="text-primary-foreground font-bold text-4xl">FP</span>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+          >
+            <Sparkles className="text-white h-10 w-10" />
+          </motion.div>
         </motion.div>
         
         <motion.div
-          className="text-center space-y-2"
+          className="text-center space-y-3"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <h1 className="text-3xl font-bold tracking-tight">FounderPilot AI</h1>
-          <motion.p 
-            className="text-lg text-muted-foreground"
+          <motion.h1 
+            className="text-3xl font-bold tracking-tight font-display"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 0.8 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
           >
-            Para fundadores que pensam grande e agem rápido.
-          </motion.p>
+            FounderPilot AI
+          </motion.h1>
+          
+          {showTagline && (
+            <motion.p 
+              className="text-lg text-founderpilot-primary/90 font-medium"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
+              Para fundadores que pensam grande e agem rápido.
+            </motion.p>
+          )}
         </motion.div>
       </motion.div>
     </motion.div>
@@ -100,9 +124,9 @@ const IntroSound = () => {
   useEffect(() => {
     try {
       const audio = new Audio();
-      // Som suave e elegante de startup
-      audio.src = "https://assets.mixkit.co/active_storage/sfx/2568/2568.wav";
-      audio.volume = 0.5;
+      // Som suave e sofisticado similar ao do macOS/Superhuman
+      audio.src = "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3";
+      audio.volume = 0.4;
       audio.play().catch(e => console.log("Erro ao reproduzir som:", e));
     } catch (error) {
       console.log("Erro ao criar objeto de áudio:", error);

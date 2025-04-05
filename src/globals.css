@@ -6,25 +6,25 @@
 @layer base {
   :root {
     --background: 0 0% 98%;
-    --foreground: 0 0% 12%;
+    --foreground: 0 0% 17%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 0 0% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 0 0% 17%;
 
-    --primary: 0 0% 12%;
+    --primary: 200 100% 18%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary-foreground: 0 0% 17%;
 
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
 
     --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 12%;
+    --accent-foreground: 0 0% 17%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -34,9 +34,9 @@
 
     --border: 0 0% 92%;
     --input: 0 0% 92%;
-    --ring: 0 0% 12%;
+    --ring: 200 100% 18%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -49,7 +49,7 @@
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 0 0% 96%;
+    --primary: 200 100% 70%;
     --primary-foreground: 0 0% 12%;
 
     --secondary: 0 0% 16%;
@@ -77,30 +77,37 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-founderpilot-background text-founderpilot-text font-sans leading-relaxed tracking-tight antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Apple-inspired styles */
-  .glass-effect {
-    @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border border-white/20 dark:border-white/10;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-founderpilot-text;
   }
 
-  .apple-card {
-    @apply rounded-2xl bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 transition-all duration-300;
+  /* Premium glassmorphism effects */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border border-white/20 dark:border-white/10 shadow-premium;
+  }
+
+  .premium-card {
+    @apply rounded-xl bg-gradient-to-br from-white to-gray-50/30 dark:from-slate-800/90 dark:to-slate-900/90 
+           border border-gray-100/80 dark:border-gray-800/50 shadow-premium hover:shadow-premium-hover transition-all duration-300;
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-apple-black to-apple-spacegray bg-clip-text text-transparent dark:from-apple-white dark:to-apple-silver;
+    @apply bg-gradient-to-r from-founderpilot-primary to-founderpilot-primary/80 bg-clip-text text-transparent;
   }
 }
 
 @layer components {
   .ai-card-gradient {
-    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(228,228,228,0.9) 100%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(250,250,250,0.9) 100%);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(0, 59, 92, 0.05);
+    box-shadow: 0 8px 30px rgba(0, 59, 92, 0.1);
   }
   
   .dark .ai-card-gradient {
@@ -109,18 +116,49 @@
     border: 1px solid rgba(255,255,255,0.08);
   }
   
-  .btn-apple {
-    @apply rounded-full py-2 px-4 font-medium transition-all duration-300 
-      bg-gradient-to-b from-apple-silver to-apple-white dark:from-apple-spacegray dark:to-apple-black
-      border border-white/20 dark:border-white/5
-      shadow-sm hover:shadow-md hover:scale-105;
+  .btn-premium {
+    @apply rounded-md py-2 px-4 font-medium transition-all duration-300 
+      bg-founderpilot-primary text-white 
+      border border-white/10 
+      shadow-sm hover:shadow-md hover:brightness-110;
   }
   
-  .card-apple {
-    @apply rounded-xl border border-apple-silver/20 dark:border-apple-spacegray/20 bg-gradient-to-br from-white to-apple-silver/30 dark:from-apple-spacegray dark:to-apple-black/90 transition-all duration-300;
+  .card-premium {
+    @apply rounded-xl border border-gray-100/80 dark:border-gray-800/50 
+           bg-gradient-to-br from-white to-gray-50/30 dark:from-slate-800/90 dark:to-slate-900/90
+           shadow-premium hover:shadow-premium-hover transition-all duration-300;
   }
 
-  .apple-icon-container {
-    @apply flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-apple-gold/80 to-apple-silver shadow-sm animate-float;
+  .icon-container {
+    @apply flex h-10 w-10 items-center justify-center rounded-full 
+           bg-gradient-to-br from-founderpilot-primary/80 to-founderpilot-primary/60 
+           shadow-sm animate-float text-white;
   }
+
+  /* Micro-animations for interactive elements */
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-premium;
+  }
+  
+  .micro-feedback {
+    @apply transition-all duration-150 active:scale-95;
+  }
+}
+
+/* Improved scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
 }

@@ -19,6 +19,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'SF Pro Display', 'system-ui', 'sans-serif'],
+        display: ['SF Pro Display', 'Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -72,6 +76,13 @@ export default {
           black: "#1D1D1F",
           white: "#FFFFFF",
         },
+        founderpilot: {
+          background: "#FAFAFA",
+          text: "#2C2C2C",
+          primary: "#003B5C",
+          gold: "#B8A88A",
+          graphite: "#333333",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -82,7 +93,9 @@ export default {
         'apple': '0 2px 12px rgba(0, 0, 0, 0.08)',
         'apple-hover': '0 4px 24px rgba(0, 0, 0, 0.12)',
         'apple-dark': '0 2px 12px rgba(255, 255, 255, 0.05)',
-        'apple-dark-hover': '0 4px 24px rgba(255, 255, 255, 0.08)'
+        'apple-dark-hover': '0 4px 24px rgba(255, 255, 255, 0.08)',
+        'premium': '0 10px 25px -5px rgba(0, 59, 92, 0.1)',
+        'premium-hover': '0 20px 35px -10px rgba(0, 59, 92, 0.15)',
       },
       keyframes: {
         "accordion-down": {
@@ -136,7 +149,25 @@ export default {
           "100%": {
             backgroundPosition: "500px 0"
           }
-        }
+        },
+        "slide-up": {
+          "0%": {
+            transform: "translateY(20px)",
+            opacity: "0"
+          },
+          "100%": {
+            transform: "translateY(0)",
+            opacity: "1"
+          }
+        },
+        "micro-bounce": {
+          "0%, 100%": {
+            transform: "translateY(0)"
+          },
+          "50%": {
+            transform: "translateY(-2px)"
+          }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -145,7 +176,9 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "float": "float 3s ease-in-out infinite",
-        "shimmer": "shimmer 2s infinite linear"
+        "shimmer": "shimmer 2s infinite linear",
+        "slide-up": "slide-up 0.4s ease-out",
+        "micro-bounce": "micro-bounce 1.5s ease-in-out infinite",
       },
     },
   },
