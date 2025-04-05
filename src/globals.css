@@ -84,7 +84,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight text-foreground;
+    @apply font-sans tracking-tight text-foreground;
   }
 
   /* Premium glassmorphism effects */

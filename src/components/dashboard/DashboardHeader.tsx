@@ -38,7 +38,7 @@ export const DashboardHeader = () => {
       toast({
         title: "Dados atualizados",
         description: "Seus dados foram atualizados com sucesso.",
-        className: "bg-gradient-to-br from-founderpilot-primary/10 to-founderpilot-primary/5 border-founderpilot-primary/20",
+        className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
       });
       
       window.location.reload();
@@ -53,7 +53,7 @@ export const DashboardHeader = () => {
     <div className="mb-8 space-y-3">
       <div className="flex items-center justify-between">
         <motion.h1 
-          className="text-2xl sm:text-3xl font-bold tracking-tight font-display"
+          className="text-2xl sm:text-3xl font-bold tracking-tight"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -112,8 +112,8 @@ export const DashboardHeader = () => {
       )}
       
       <motion.div 
-        className="bg-gradient-to-br from-founderpilot-primary/10 to-founderpilot-primary/5 backdrop-blur-sm 
-                  border border-founderpilot-primary/10 p-5 rounded-xl 
+        className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm 
+                  border border-primary/10 p-5 rounded-xl 
                   flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6 shadow-premium"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -121,19 +121,19 @@ export const DashboardHeader = () => {
         whileHover={{ scale: 1.01, boxShadow: "0 15px 30px -10px rgba(0, 59, 92, 0.15)" }}
       >
         <div className="flex-1">
-          <h3 className="font-medium text-founderpilot-text mb-1 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-founderpilot-primary" />
+          <h3 className="font-medium text-foreground mb-1 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
             <span className="gradient-text">Insight do dia da IA</span>
           </h3>
-          <p className="text-sm text-founderpilot-text/80 leading-relaxed">
+          <p className="text-sm text-foreground/80 leading-relaxed">
             Seu burn rate aumentou 15% este mês. Considere revisar suas assinaturas recentes.
           </p>
         </div>
         <Button 
           size="sm"
           onClick={handleAskAI}
-          className="whitespace-nowrap bg-gradient-to-br from-founderpilot-primary to-founderpilot-primary/90 
-                   hover:from-founderpilot-primary hover:brightness-110 transition-all duration-300 
+          className="whitespace-nowrap bg-gradient-to-br from-primary to-primary/90 
+                   hover:from-primary hover:brightness-110 transition-all duration-300 
                    shadow-sm micro-feedback text-white"
         >
           Perguntar ao FounderPilot AI
