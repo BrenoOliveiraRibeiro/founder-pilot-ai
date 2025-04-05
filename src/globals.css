@@ -79,12 +79,12 @@
   }
 
   body {
-    @apply bg-founderpilot-background text-founderpilot-text font-sans leading-relaxed tracking-tight antialiased;
+    @apply bg-background text-foreground font-sans leading-relaxed tracking-tight antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight text-founderpilot-text;
+    @apply font-display tracking-tight text-foreground;
   }
 
   /* Premium glassmorphism effects */
@@ -98,7 +98,7 @@
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-founderpilot-primary to-founderpilot-primary/80 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent;
   }
 }
 
@@ -118,7 +118,7 @@
   
   .btn-premium {
     @apply rounded-md py-2 px-4 font-medium transition-all duration-300 
-      bg-founderpilot-primary text-white 
+      bg-primary text-white 
       border border-white/10 
       shadow-sm hover:shadow-md hover:brightness-110;
   }
@@ -131,7 +131,7 @@
 
   .icon-container {
     @apply flex h-10 w-10 items-center justify-center rounded-full 
-           bg-gradient-to-br from-founderpilot-primary/80 to-founderpilot-primary/60 
+           bg-gradient-to-br from-primary/80 to-primary/60 
            shadow-sm animate-float text-white;
   }
 

@@ -35,11 +35,11 @@ export const TopNavigation = () => {
   const userDisplayName = user?.email?.split("@")[0] || "Usuário";
 
   return (
-    <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-founderpilot-background/90 backdrop-blur-sm sticky top-0 z-10">
+    <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/90 backdrop-blur-sm sticky top-0 z-10">
       <div className="flex h-16 items-center px-4 md:px-6">
         <Link to="/dashboard" className="hidden items-center gap-2 md:flex">
           <motion.div 
-            className="w-8 h-8 rounded-md bg-gradient-to-br from-founderpilot-primary to-founderpilot-primary/80 
+            className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-primary/80 
                      flex items-center justify-center shadow-sm"
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.2 }}
@@ -87,9 +87,9 @@ export const TopNavigation = () => {
                 variant="ghost"
                 className="relative h-9 w-9 rounded-full hover-lift micro-feedback"
               >
-                <Avatar className="h-9 w-9 border border-founderpilot-primary/10">
+                <Avatar className="h-9 w-9 border border-primary/10">
                   <AvatarImage src="" alt={userDisplayName} />
-                  <AvatarFallback className="bg-gradient-to-br from-founderpilot-primary/80 to-founderpilot-primary/60 text-white">
+                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary/60 text-white">
                     {getInitials(userDisplayName)}
                   </AvatarFallback>
                 </Avatar>
@@ -136,13 +136,13 @@ const NavLink = ({ to, label, children }: { to: string, label: string, children:
     <Link
       to={to}
       className={`text-sm font-medium transition-colors relative group ${
-        isActive ? "text-founderpilot-primary" : "text-founderpilot-text/70 hover:text-founderpilot-text"
+        isActive ? "text-primary" : "text-foreground/70 hover:text-foreground"
       }`}
       aria-label={label}
     >
       {children}
       <motion.div 
-        className={`absolute bottom-[-2px] left-0 right-0 h-0.5 bg-founderpilot-primary/80 rounded-full ${
+        className={`absolute bottom-[-2px] left-0 right-0 h-0.5 bg-primary/80 rounded-full ${
           isActive ? "opacity-100" : "opacity-0 group-hover:opacity-60"
         }`}
         layoutId="navIndicator"
