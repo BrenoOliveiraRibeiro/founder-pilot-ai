@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Flask } from "lucide-react";
+import { RefreshCw, Beaker } from "lucide-react";
 
 interface ActionButtonsProps {
   onTestConnection: () => Promise<void>;
@@ -29,7 +29,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       >
         {testingConnection ? 
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
-          <Flask className="h-4 w-4 mr-2" />
+          <Beaker className="h-4 w-4 mr-2" />
         }
         {testingConnection ? "Testando..." : "Testar Belvo"}
       </Button>
