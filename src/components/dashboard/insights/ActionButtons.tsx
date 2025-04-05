@@ -1,38 +1,21 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Beaker } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 interface ActionButtonsProps {
-  onTestConnection: () => Promise<void>;
   onSyncData: () => Promise<void>;
-  testingConnection: boolean;
   syncingData: boolean;
   disabled: boolean;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
-  onTestConnection,
   onSyncData,
-  testingConnection,
   syncingData,
   disabled
 }) => {
   return (
-    <div className="flex gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-      <Button 
-        size="sm" 
-        variant="outline" 
-        onClick={onTestConnection}
-        disabled={testingConnection || disabled}
-        className="w-full sm:w-auto rounded-full px-4"
-      >
-        {testingConnection ? 
-          <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
-          <Beaker className="h-4 w-4 mr-2" />
-        }
-        {testingConnection ? "Testando..." : "Testar Belvo"}
-      </Button>
+    <div className="flex gap-2 w-full sm:w-auto">
       <Button 
         size="sm" 
         variant="outline" 
@@ -44,7 +27,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
           <RefreshCw className="h-4 w-4 mr-2" />
         }
-        {syncingData ? "Analisando..." : "Analisar Dados"}
+        {syncingData ? "Analisando..." : "Atualizar Dados"}
       </Button>
     </div>
   );
