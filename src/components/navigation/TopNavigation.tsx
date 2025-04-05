@@ -45,22 +45,13 @@ export const TopNavigation = () => {
     <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/80 backdrop-blur-lg sticky top-0 z-10">
       <div className="flex h-16 items-center px-4 md:px-6">
         <Link to="/dashboard" className="hidden items-center gap-2 md:flex group">
-          <motion.div 
-            className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-primary/80 
-                     flex items-center justify-center shadow-sm"
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.span 
-              className="text-white font-bold"
-              animate={{ y: [0, -2, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
-            >
-              FP
-            </motion.span>
-          </motion.div>
+          <img 
+            src="/sync-partners-logo.png" 
+            alt="Sync Partners" 
+            className="h-8 w-auto object-contain"
+          />
           <motion.span 
-            className="text-xl font-bold tracking-tight"
+            className="text-xl font-bold tracking-tight ml-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}

@@ -35,6 +35,7 @@ export const MetricsGrid = () => {
         icon={<DollarSign className="h-5 w-5 text-primary" />}
         tooltip="Seu saldo total em caixa em todas as contas conectadas"
         loading={loading}
+        className="border-primary/20 bg-primary/5"
       />
       
       <MetricCard
@@ -42,9 +43,10 @@ export const MetricsGrid = () => {
         value={`R$${monthlyRevenue.toLocaleString('pt-BR')}`}
         change={12}
         description="vs. mês anterior"
-        icon={<BanknoteIcon className="h-5 w-5 text-primary" />}
+        icon={<BanknoteIcon className="h-5 w-5 text-blue-500" />}
         tooltip="Sua receita total para o mês atual"
         loading={loading}
+        className="border-blue-200 bg-blue-50 dark:border-blue-900/30 dark:bg-blue-900/10"
       />
       
       <MetricCard
@@ -52,9 +54,10 @@ export const MetricsGrid = () => {
         value={`R$${monthlyBurn.toLocaleString('pt-BR')}`}
         change={-8}
         description="vs. mês anterior"
-        icon={<CreditCard className="h-5 w-5 text-primary" />}
+        icon={<CreditCard className="h-5 w-5 text-red-500" />}
         tooltip="Suas despesas totais para o mês atual"
         loading={loading}
+        className="border-red-200 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10"
       />
       
       <MetricCard
@@ -73,9 +76,9 @@ export const MetricsGrid = () => {
         value={`${mrrGrowth}%`}
         change={3.2}
         description="vs. mês anterior"
-        icon={<LineChart className="h-5 w-5 text-success" />}
+        icon={<LineChart className="h-5 w-5 text-green-500" />}
         tooltip="Crescimento mês a mês em receita recorrente"
-        className="border-success/20 bg-success/5"
+        className="border-green-200 bg-green-50 dark:border-green-900/30 dark:bg-green-900/10"
         loading={loading}
       />
       
@@ -94,9 +97,10 @@ export const MetricsGrid = () => {
         value={`R$${cashFlow.toLocaleString('pt-BR')}`}
         change={-22}
         description="vs. mês anterior"
-        icon={<Wallet className="h-5 w-5 text-primary" />}
+        icon={<Wallet className="h-5 w-5 text-amber-500" />}
         tooltip="Fluxo de caixa líquido (receita menos despesas)"
         loading={loading}
+        className="border-amber-200 bg-amber-50 dark:border-amber-900/30 dark:bg-amber-900/10"
       />
     </div>
   );

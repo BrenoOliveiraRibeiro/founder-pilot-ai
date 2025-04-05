@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
+import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { OnboardingTooltip } from "../ui/onboarding-tooltip";
@@ -74,12 +74,14 @@ export const DashboardHeader = () => {
       variants={containerVariants}
     >
       <div className="flex items-center justify-between">
-        <motion.h1 
-          className="text-2xl sm:text-3xl font-bold tracking-tight text-balance"
+        <motion.div 
+          className="flex items-center gap-3"
           variants={itemVariants}
         >
-          {currentEmpresa ? `Dashboard: ${currentEmpresa.nome}` : "Dashboard"}
-        </motion.h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-balance">
+            {currentEmpresa ? `Dashboard: ${currentEmpresa.nome}` : "Dashboard"}
+          </h1>
+        </motion.div>
         <motion.div className="flex items-center gap-2" variants={itemVariants}>
           <Button 
             variant="outline" 
@@ -144,12 +146,14 @@ export const DashboardHeader = () => {
         whileHover={{ scale: 1.01, boxShadow: "0 15px 30px -10px rgba(0, 59, 92, 0.15)" }}
       >
         <div className="flex-1">
-          <h3 className="font-medium text-foreground mb-1 flex items-center gap-2">
-            <span className="inline-flex p-1.5 rounded-full bg-primary/10">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </span>
-            <span className="gradient-text">Insight do dia</span>
-          </h3>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="font-medium text-foreground flex items-center gap-2">
+              <span className="gradient-text">FounderPilot</span>
+            </h3>
+          </div>
           <p className="text-sm text-foreground/80 leading-relaxed text-pretty">
             {currentEmpresa && currentEmpresa.nome === "Synapsia" ? (
               <>Seu burn rate aumentou 15% este mês. Considere revisar suas despesas de marketing que cresceram significativamente.</>
@@ -165,6 +169,7 @@ export const DashboardHeader = () => {
                    hover:from-primary hover:brightness-110 transition-all duration-300 
                    hover:-translate-y-0.5 shadow-sm micro-feedback text-white focus-ring"
         >
+          <Sparkles className="h-4 w-4 mr-1.5" />
           Perguntar ao FounderPilot
         </Button>
       </motion.div>

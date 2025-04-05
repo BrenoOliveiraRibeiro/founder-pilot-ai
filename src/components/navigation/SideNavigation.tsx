@@ -26,18 +26,19 @@ type NavItem = {
   icon: React.ElementType;
   badge?: string;
   highlight?: boolean;
+  group?: string;
 };
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { title: "Saúde Financeira", href: "/finances", icon: DollarSign, highlight: true },
-  { title: "Análise de Runway", href: "/runway", icon: TrendingUp, badge: "Crítico" },
-  { title: "FounderPilot AI", href: "/advisor", icon: Sparkles, highlight: true },
-  { title: "Relatórios", href: "/reports", icon: FileText },
-  { title: "Dados de Mercado", href: "/market", icon: BarChart3 },
-  { title: "Equipe", href: "/team", icon: Users2 },
-  { title: "Calendário", href: "/calendar", icon: Calendar },
-  { title: "Configurações", href: "/settings", icon: Settings },
+  { title: "Dashboard", href: "/dashboard", icon: HomeIcon, group: "principal" },
+  { title: "Finanças", href: "/finances", icon: DollarSign, highlight: true, group: "principal" },
+  { title: "Runway", href: "/runway", icon: TrendingUp, badge: "Crítico", group: "principal" },
+  { title: "AI Advisor", href: "/advisor", icon: Sparkles, highlight: true, group: "principal" },
+  { title: "Relatórios", href: "/reports", icon: FileText, group: "análise" },
+  { title: "Mercado", href: "/market", icon: BarChart3, group: "análise" },
+  { title: "Equipe", href: "/team", icon: Users2, group: "gestão" },
+  { title: "Agenda", href: "/calendar", icon: Calendar, group: "gestão" },
+  { title: "Config.", href: "/settings", icon: Settings, group: "sistema" },
 ];
 
 export const SideNavigation = () => {
@@ -45,6 +46,23 @@ export const SideNavigation = () => {
   const currentPath = location.pathname;
   const { signOut, currentEmpresa, profile } = useAuth();
   const { toast } = useToast();
+
+  // Agrupar itens de navegação
+  const groupedNavItems = navItems.reduce((groups, item) => {
+    const group = item.group || 'outros';
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(item);
+    return groups;
+  }, {} as Record<string, NavItem[]>);
+
+  const groupLabels: Record<string, string> = {
+    principal: "Principal",
+    análise: "Análise de Dados",
+    gestão: "Gestão",
+    sistema: "Sistema"
+  };
 
   const handleSignOut = async () => {
     try {
@@ -70,23 +88,12 @@ export const SideNavigation = () => {
       variants={sidebarVariants}
     >
       <div className="p-6">
-        <Link to="/" className="flex items-center gap-2 group hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center relative overflow-hidden">
-            <motion.span 
-              className="text-primary-foreground font-bold"
-              animate={{ y: [0, -1, 0] }}
-              transition={{ duration: 2, repeat: Infinity, repeatType: "loop" }}
-            >
-              FP
-            </motion.span>
-            <motion.div 
-              className="absolute inset-0 bg-white/20"
-              initial={{ y: "100%" }}
-              animate={{ y: ["-100%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
-            />
-          </div>
-          <h1 className="font-bold text-xl text-foreground">FounderPilot AI</h1>
+        <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
+          <img 
+            src="/sync-partners-logo.png" 
+            alt="Sync Partners" 
+            className="h-10 w-auto object-contain"
+          />
         </Link>
       </div>
 
@@ -100,47 +107,55 @@ export const SideNavigation = () => {
       )}
 
       <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <motion.li 
-              key={item.href}
-              whileHover={{ x: 3 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Link
-                to={item.href}
-                className={cn(
-                  "flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-300",
-                  currentPath === item.href 
-                    ? "bg-primary/10 text-primary font-medium" 
-                    : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  {item.highlight ? (
-                    <span className="relative">
-                      <item.icon className="h-4 w-4" />
-                      <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse-subtle" />
-                    </span>
-                  ) : (
-                    <item.icon className="h-4 w-4" />
-                  )}
-                  <span>{item.title}</span>
-                </div>
-                
-                {item.badge && (
-                  <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse-subtle">
-                    {item.badge}
-                  </span>
-                )}
-                
-                {currentPath === item.href && (
-                  <ChevronRight className="h-4 w-4 text-primary ml-auto" />
-                )}
-              </Link>
-            </motion.li>
-          ))}
-        </ul>
+        {Object.entries(groupedNavItems).map(([group, items]) => (
+          <div key={group} className="mb-4">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
+              {groupLabels[group] || group}
+            </h4>
+            <ul className="space-y-1">
+              {items.map((item) => (
+                <motion.li 
+                  key={item.href}
+                  whileHover={{ x: 3 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-all duration-300",
+                      currentPath === item.href 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
+                    )}
+                    title={item.title}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.highlight ? (
+                        <span className="relative">
+                          <item.icon className="h-4 w-4" />
+                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse-subtle" />
+                        </span>
+                      ) : (
+                        <item.icon className="h-4 w-4" />
+                      )}
+                      <span>{item.title}</span>
+                    </div>
+                    
+                    {item.badge && (
+                      <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse-subtle">
+                        {item.badge}
+                      </span>
+                    )}
+                    
+                    {currentPath === item.href && (
+                      <ChevronRight className="h-4 w-4 text-primary ml-auto" />
+                    )}
+                  </Link>
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="p-4 border-t border-border">
