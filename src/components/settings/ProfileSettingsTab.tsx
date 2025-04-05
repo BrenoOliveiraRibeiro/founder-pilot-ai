@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Upload } from "lucide-react";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -30,6 +31,9 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export function ProfileSettingsTab() {
   const { toast } = useToast();
   const { user, profile, currentEmpresa } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const defaultValues: Partial<ProfileFormValues> = {
     name: profile?.nome || "",
@@ -42,6 +46,13 @@ export function ProfileSettingsTab() {
     resolver: zodResolver(profileFormSchema),
     defaultValues,
   });
+
+  // Load avatar if profile has one
+  React.useEffect(() => {
+    if (profile?.avatar_url) {
+      setAvatarUrl(profile.avatar_url);
+    }
+  }, [profile]);
 
   async function onSubmit(data: ProfileFormValues) {
     try {
@@ -83,6 +94,63 @@ export function ProfileSettingsTab() {
       .substring(0, 2);
   }
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    try {
+      setIsUploading(true);
+
+      // Gera um nome de arquivo único
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload do arquivo para o bucket do Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obtém a URL pública do arquivo
+      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
+      const avatar_url = data.publicUrl;
+
+      // Atualiza o perfil do usuário com a URL do avatar
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(avatar_url);
+      toast({
+        title: "Foto atualizada",
+        description: "Sua foto de perfil foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao fazer upload da imagem:", error);
+      toast({
+        title: "Erro ao atualizar foto",
+        description: "Não foi possível atualizar sua foto de perfil. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset input to allow selecting the same file again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,11 +161,40 @@ export function ProfileSettingsTab() {
       </div>
       
       <div className="flex items-center gap-5">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src="" alt={profile?.nome || user?.email?.split('@')[0] || "User"} />
-          <AvatarFallback className="text-lg">{getInitials(profile?.nome || user?.email?.split('@')[0] || "User")}</AvatarFallback>
-        </Avatar>
-        <Button>Alterar foto</Button>
+        <div className="relative group">
+          <Avatar 
+            className="h-20 w-20 cursor-pointer group-hover:opacity-80 transition-opacity" 
+            onClick={handleAvatarClick}
+          >
+            <AvatarImage src={avatarUrl || ""} alt={profile?.nome || user?.email?.split('@')[0] || "User"} />
+            <AvatarFallback className="text-lg">
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                getInitials(profile?.nome || user?.email?.split('@')[0] || "User")
+              )}
+            </AvatarFallback>
+          </Avatar>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Upload className="h-6 w-6 text-white" />
+          </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={handleFileChange} 
+            accept="image/*"
+            disabled={isUploading}
+          />
+        </div>
+        <Button onClick={handleAvatarClick} disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : "Alterar foto"}
+        </Button>
       </div>
 
       <Form {...form}>
