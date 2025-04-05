@@ -1,4 +1,3 @@
-
 // Definição dos tipos para as tabelas do Supabase
 export type Profile = {
   id: string;
@@ -6,6 +5,7 @@ export type Profile = {
   email: string | null;
   cargo: string | null;
   bio: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
