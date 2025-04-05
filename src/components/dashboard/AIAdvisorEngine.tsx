@@ -22,7 +22,7 @@ export const AIAdvisorEngine = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChart2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-medium">Motor de Análise IA</h3>

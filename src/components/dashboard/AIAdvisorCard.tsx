@@ -39,7 +39,7 @@ export const AIAdvisorCard = () => {
           <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100/20 dark:border-gray-800/40">
             <div className="flex items-center gap-3">
               <motion.div 
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-400/80 to-amber-500/70 shadow-sm"
+                className="flex h-10 w-10 min-w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-400/80 to-amber-500/70 shadow-sm"
                 animate={{ y: [-2, 2, -2] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 {...glowAnimation}
@@ -54,7 +54,7 @@ export const AIAdvisorCard = () => {
               variant="ghost" 
               size="sm" 
               asChild 
-              className="rounded-full shadow-sm transition-all hover:shadow-md hover:bg-secondary dark:hover:bg-accent"
+              className="rounded-full shadow-sm transition-all hover:shadow-md hover:bg-secondary dark:hover:bg-accent hidden sm:flex"
             >
               <Link to="/advisor" className="flex items-center gap-2 px-4">
                 <span>Acessar</span> 
@@ -71,6 +71,19 @@ export const AIAdvisorCard = () => {
             >
               <AIAdvisorEngine />
             </motion.div>
+            <div className="mt-4 flex sm:hidden w-full">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                asChild 
+                className="rounded-full shadow-sm transition-all hover:shadow-md hover:bg-secondary dark:hover:bg-accent w-full"
+              >
+                <Link to="/advisor" className="flex items-center justify-center gap-2 px-4">
+                  <span>Acessar FounderPilot AI</span> 
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

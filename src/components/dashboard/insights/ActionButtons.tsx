@@ -19,12 +19,13 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   disabled
 }) => {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
       <Button 
         size="sm" 
         variant="outline" 
         onClick={onTestConnection}
         disabled={testingConnection || disabled}
+        className="w-full sm:w-auto"
       >
         {testingConnection ? 
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
@@ -37,6 +38,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         variant="outline" 
         onClick={onSyncData}
         disabled={syncingData || disabled}
+        className="w-full sm:w-auto"
       >
         {syncingData ? 
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : 
