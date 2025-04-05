@@ -74,6 +74,10 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        'premium': '0 10px 25px -5px rgba(0, 59, 92, 0.1)',
+        'premium-hover': '0 20px 35px -10px rgba(0, 59, 92, 0.15)',
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
