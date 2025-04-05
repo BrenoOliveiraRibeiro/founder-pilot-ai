@@ -43,7 +43,7 @@ const Index = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          FounderPilot
+          Sync Partners
         </motion.h1>
         
         <FriendlyLoadingMessage isLoading={true} className="mt-2" />

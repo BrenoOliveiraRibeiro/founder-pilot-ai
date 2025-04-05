@@ -10,8 +10,8 @@ import { motion } from "framer-motion";
 export const AIAdvisorCard = () => {
   return (
     <OnboardingTooltip
-      id="founderpilot-card"
-      title="Seu FounderPilot"
+      id="ai-advisor-card"
+      title="Seu AI Advisor"
       description="Aqui você encontra insights e recomendações da IA baseadas em seus dados financeiros e de mercado."
     >
       <motion.div
@@ -35,7 +35,7 @@ export const AIAdvisorCard = () => {
                 >
                   <img 
                     src="/lovable-uploads/d54bd52e-4802-4406-962d-c071db600dcd.png" 
-                    alt="FounderPilot AI" 
+                    alt="AI Advisor" 
                     className="w-12 h-12"
                   />
                 </motion.div>
@@ -46,7 +46,7 @@ export const AIAdvisorCard = () => {
               </h2>
               
               <p className="text-muted-foreground text-center mb-6 max-w-md mx-auto">
-                Sou seu FounderPilot, especializado em estratégia de startups, análise financeira,
+                Sou seu AI Advisor, especializado em estratégia de startups, análise financeira,
                 e suporte à tomada de decisões com base nos seus dados e insights de mercado.
               </p>
             </motion.div>
@@ -58,7 +58,7 @@ export const AIAdvisorCard = () => {
               className="w-full rounded-full shadow-sm transition-all hover:shadow-md hover:bg-secondary dark:hover:bg-accent mt-4"
             >
               <Link to="/advisor" className="flex items-center justify-center gap-2 px-4 py-2">
-                <span>Acessar FounderPilot</span> 
+                <span>Acessar AI Advisor</span> 
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

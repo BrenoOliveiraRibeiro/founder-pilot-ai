@@ -40,7 +40,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <div className="h-6 w-6 sm:h-6 sm:w-6 rounded-full bg-primary/10 flex items-center justify-center">
               <Bot className="h-3 w-3 sm:h-3 sm:w-3 text-primary/70" />
             </div>
-            <span className="text-xs sm:text-sm font-medium text-primary/70">FounderPilot</span>
+            <span className="text-xs sm:text-sm font-medium text-primary/70">AI Advisor</span>
           </div>
         )}
         <div className="whitespace-pre-wrap break-words text-sm">{message.content}</div>
