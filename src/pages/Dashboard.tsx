@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricsGrid } from "@/components/dashboard/MetricsGrid";
@@ -8,8 +8,29 @@ import { InsightsCard } from "@/components/dashboard/InsightsCard";
 import { TransactionsCard } from "@/components/dashboard/TransactionsCard";
 import { AIAdvisorCard } from "@/components/dashboard/AIAdvisorCard";
 import { motion } from "framer-motion";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
+  const { toast } = useToast();
+  const { currentEmpresa } = useAuth();
+  
+  useEffect(() => {
+    // Welcome toast na primeira visita
+    const hasVisitedDashboard = localStorage.getItem('hasVisitedDashboard');
+    if (!hasVisitedDashboard) {
+      setTimeout(() => {
+        toast({
+          title: "Bem-vindo ao FounderPilot AI",
+          description: "Seu copiloto estratégico para tomada de decisões de negócios.",
+          className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
+          duration: 5000,
+        });
+        localStorage.setItem('hasVisitedDashboard', 'true');
+      }, 500);
+    }
+  }, [toast]);
+
   // Configuração das animações
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -40,7 +61,7 @@ const Dashboard = () => {
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="space-y-6"
+        className="space-y-6 max-w-7xl mx-auto"
       >
         <motion.div variants={itemVariants}>
           <DashboardHeader />
@@ -50,40 +71,68 @@ const Dashboard = () => {
           <MetricsGrid />
         </motion.div>
         
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <motion.div
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="h-full premium-card overflow-hidden"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <motion.div 
+            variants={itemVariants} 
+            className="lg:col-span-2"
           >
-            <AIAdvisorCard />
+            <motion.div
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="h-full premium-card overflow-hidden"
+            >
+              <RunwayChart />
+            </motion.div>
           </motion.div>
           
-          <motion.div
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="h-full premium-card overflow-hidden"
+          <motion.div 
+            variants={itemVariants}
+            className="lg:col-span-1"
           >
-            <RunwayChart />
+            <motion.div
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="h-full premium-card overflow-hidden"
+            >
+              <AIAdvisorCard />
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
         
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <motion.div
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="h-full premium-card overflow-hidden"
-          >
-            <InsightsCard />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div variants={itemVariants} className="h-full">
+            <motion.div
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="h-full premium-card overflow-hidden"
+            >
+              <InsightsCard />
+            </motion.div>
           </motion.div>
           
-          <motion.div
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="h-full premium-card overflow-hidden"
-          >
-            <TransactionsCard />
+          <motion.div variants={itemVariants} className="h-full">
+            <motion.div
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="h-full premium-card overflow-hidden"
+            >
+              <TransactionsCard />
+            </motion.div>
           </motion.div>
+        </div>
+        
+        <motion.div
+          variants={itemVariants}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10 flex justify-center"
+        >
+          <div className="bg-gradient-to-r from-primary/80 to-primary/90 text-white px-4 py-2 rounded-full shadow-premium text-sm flex items-center gap-2 hover:shadow-premium-hover transition-all duration-300 cursor-pointer">
+            <span className="animate-pulse-subtle">●</span>
+            {currentEmpresa 
+              ? `Analisando os dados financeiros de ${currentEmpresa.nome}...` 
+              : "Conecte suas contas para mais insights"}
+          </div>
         </motion.div>
       </motion.div>
     </AppLayout>

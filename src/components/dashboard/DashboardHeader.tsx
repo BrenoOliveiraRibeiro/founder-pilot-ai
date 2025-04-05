@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Sparkles } from "lucide-react";
+import { Download, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { OnboardingTooltip } from "../ui/onboarding-tooltip";
@@ -29,6 +29,7 @@ export const DashboardHeader = () => {
     toast({
       title: "Atualizando dados",
       description: "Seus dados estão sendo atualizados...",
+      className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
     });
     
     // Simulate refresh
@@ -49,22 +50,41 @@ export const DashboardHeader = () => {
     navigate("/advisor");
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: -10, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  };
+
   return (
-    <div className="mb-8 space-y-3">
+    <motion.div 
+      className="mb-8 space-y-4"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       <div className="flex items-center justify-between">
         <motion.h1 
-          className="text-2xl sm:text-3xl font-bold tracking-tight"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          className="text-2xl sm:text-3xl font-bold tracking-tight text-balance"
+          variants={itemVariants}
         >
           {currentEmpresa ? `Dashboard: ${currentEmpresa.nome}` : "Dashboard"}
         </motion.h1>
-        <div className="flex items-center gap-2">
+        <motion.div className="flex items-center gap-2" variants={itemVariants}>
           <Button 
             variant="outline" 
             size="sm" 
-            className="hidden sm:flex hover-lift micro-feedback"
+            className="hidden sm:flex hover-lift micro-feedback focus-ring"
           >
             <Download className="h-4 w-4 mr-2" />
             Exportar
@@ -79,17 +99,20 @@ export const DashboardHeader = () => {
               size="sm" 
               onClick={handleRefresh} 
               disabled={isRefreshing}
-              className="hover-lift micro-feedback"
+              className="hover-lift micro-feedback focus-ring"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? "Atualizando..." : "Atualizar"}
             </Button>
           </OnboardingTooltip>
-        </div>
+        </motion.div>
       </div>
       
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-muted-foreground">
-        <p>Última atualização: {lastUpdated}</p>
+      <motion.div 
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-muted-foreground"
+        variants={itemVariants}
+      >
+        <p>Última atualização: <span className="text-foreground/80">{lastUpdated}</span></p>
         <div className="flex items-center gap-2">
           <motion.div 
             className="w-2 h-2 rounded-full bg-green-500" 
@@ -98,35 +121,41 @@ export const DashboardHeader = () => {
           ></motion.div>
           <span>Dados conectados</span>
         </div>
-      </div>
+      </motion.div>
       
       {isRefreshing && (
         <motion.div 
-          className="mt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          className="mt-2 px-4 py-3 bg-secondary/50 rounded-lg"
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.2 }}
         >
           <FriendlyLoadingMessage isLoading={isRefreshing} />
         </motion.div>
       )}
       
       <motion.div 
-        className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm 
-                  border border-primary/10 p-5 rounded-xl 
-                  flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6 shadow-premium"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
+        className="bg-gradient-to-br from-primary/10 via-primary/7 to-primary/5 backdrop-blur-sm 
+                  border border-primary/15 p-5 rounded-xl 
+                  flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6 shadow-card
+                  interactive-card"
+        variants={itemVariants}
         whileHover={{ scale: 1.01, boxShadow: "0 15px 30px -10px rgba(0, 59, 92, 0.15)" }}
       >
         <div className="flex-1">
           <h3 className="font-medium text-foreground mb-1 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="gradient-text">Insight do dia da IA</span>
+            <span className="inline-flex p-1.5 rounded-full bg-primary/10">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </span>
+            <span className="gradient-text">Insight do dia</span>
           </h3>
-          <p className="text-sm text-foreground/80 leading-relaxed">
-            Seu burn rate aumentou 15% este mês. Considere revisar suas assinaturas recentes.
+          <p className="text-sm text-foreground/80 leading-relaxed text-pretty">
+            {currentEmpresa && currentEmpresa.nome === "Synapsia" ? (
+              <>Seu burn rate aumentou 15% este mês. Considere revisar suas despesas de marketing que cresceram significativamente.</>
+            ) : (
+              <>Seu burn rate aumentou 15% este mês. Considere revisar suas assinaturas e despesas recentes.</>
+            )}
           </p>
         </div>
         <Button 
@@ -134,11 +163,19 @@ export const DashboardHeader = () => {
           onClick={handleAskAI}
           className="whitespace-nowrap bg-gradient-to-br from-primary to-primary/90 
                    hover:from-primary hover:brightness-110 transition-all duration-300 
-                   shadow-sm micro-feedback text-white"
+                   hover:-translate-y-0.5 shadow-sm micro-feedback text-white focus-ring"
         >
-          Perguntar ao FounderPilot AI
+          Perguntar ao FounderPilot
         </Button>
       </motion.div>
-    </div>
+      
+      <motion.div
+        className="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 ml-1"
+        variants={itemVariants}
+      >
+        <AlertCircle className="h-3.5 w-3.5" />
+        <span>Sua runway atual é de 3.2 meses – recomendamos ação imediata</span>
+      </motion.div>
+    </motion.div>
   );
 };

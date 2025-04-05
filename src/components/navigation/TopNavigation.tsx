@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -12,11 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { BanknoteIcon, CircuitBoard, LogOut, Settings, Sparkles } from "lucide-react";
+import { BanknoteIcon, CircuitBoard, LogOut, Settings, Sparkles, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export const TopNavigation = () => {
   const { user, signOut, currentEmpresa } = useAuth();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,11 +34,17 @@ export const TopNavigation = () => {
   };
 
   const userDisplayName = user?.email?.split("@")[0] || "Usuário";
+  
+  // Animation variants
+  const navItemVariants = {
+    initial: { opacity: 0, y: -5 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+  };
 
   return (
-    <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/90 backdrop-blur-sm sticky top-0 z-10">
+    <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/80 backdrop-blur-lg sticky top-0 z-10">
       <div className="flex h-16 items-center px-4 md:px-6">
-        <Link to="/dashboard" className="hidden items-center gap-2 md:flex">
+        <Link to="/dashboard" className="hidden items-center gap-2 md:flex group">
           <motion.div 
             className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-primary/80 
                      flex items-center justify-center shadow-sm"
@@ -63,24 +70,39 @@ export const TopNavigation = () => {
         </Link>
         
         <nav className="flex items-center gap-4 lg:gap-6 ml-6">
-          <NavLink to="/dashboard" label="Dashboard">
-            Dashboard
-          </NavLink>
+          <NavLink to="/dashboard" label="Dashboard" />
           <NavLink to="/open-finance" label="Open Finance">
             <div className="flex items-center gap-1">
               <BanknoteIcon className="h-4 w-4" />
-              Open Finance
+              <span>Open Finance</span>
             </div>
           </NavLink>
           <NavLink to="/advisor" label="FounderPilot AI">
             <div className="flex items-center gap-1">
               <Sparkles className="h-4 w-4" />
-              FounderPilot AI
+              <span>FounderPilot AI</span>
             </div>
           </NavLink>
         </nav>
         
         <div className="ml-auto flex items-center gap-2">
+          <motion.div
+            className="hidden md:flex"
+            {...navItemVariants}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-foreground/70 border-foreground/10 hover-lift micro-feedback"
+              asChild
+            >
+              <Link to="/settings">
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Suporte
+              </Link>
+            </Button>
+          </motion.div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -129,24 +151,25 @@ export const TopNavigation = () => {
 };
 
 // Componente de link de navegação com animação sutil
-const NavLink = ({ to, label, children }: { to: string, label: string, children: React.ReactNode }) => {
-  const isActive = window.location.pathname === to;
+const NavLink = ({ to, label, children }: { to: string, label: string, children?: React.ReactNode }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
   
   return (
     <Link
       to={to}
-      className={`text-sm font-medium transition-colors relative group ${
+      className={`text-sm font-medium transition-all duration-300 relative group ${
         isActive ? "text-primary" : "text-foreground/70 hover:text-foreground"
       }`}
       aria-label={label}
     >
-      {children}
+      {children || label}
       <motion.div 
         className={`absolute bottom-[-2px] left-0 right-0 h-0.5 bg-primary/80 rounded-full ${
           isActive ? "opacity-100" : "opacity-0 group-hover:opacity-60"
         }`}
         layoutId="navIndicator"
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.3, type: "spring", stiffness: 500 }}
       />
     </Link>
   );

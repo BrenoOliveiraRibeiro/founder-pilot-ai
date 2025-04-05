@@ -5,26 +5,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 17%;
+    --background: 210 50% 98%;
+    --foreground: 210 20% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 17%;
+    --card-foreground: 210 20% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 17%;
+    --popover-foreground: 210 20% 16%;
 
     --primary: 200 100% 18%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 17%;
+    --secondary: 210 30% 96%;
+    --secondary-foreground: 210 20% 16%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 210 30% 96%;
+    --muted-foreground: 210 20% 45%;
 
-    --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 17%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 210 20% 16%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -32,44 +32,44 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 0 0% 92%;
-    --input: 0 0% 92%;
+    --border: 210 20% 92%;
+    --input: 210 20% 92%;
     --ring: 200 100% 18%;
 
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 96%;
+    --background: 210 30% 8%;
+    --foreground: 210 20% 96%;
 
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 96%;
+    --card: 210 30% 12%;
+    --card-foreground: 210 20% 96%;
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 210 30% 12%;
+    --popover-foreground: 210 20% 96%;
 
     --primary: 200 100% 70%;
-    --primary-foreground: 0 0% 12%;
+    --primary-foreground: 210 30% 12%;
 
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 210 30% 16%;
+    --secondary-foreground: 210 20% 96%;
 
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 210 30% 16%;
+    --muted-foreground: 210 20% 70%;
 
-    --accent: 0 0% 18%;
-    --accent-foreground: 0 0% 96%;
+    --accent: 210 30% 18%;
+    --accent-foreground: 210 20% 96%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 10%;
+    --warning-foreground: 210 30% 10%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 80%;
+    --border: 210 30% 18%;
+    --input: 210 30% 18%;
+    --ring: 210 20% 80%;
   }
 }
 
@@ -108,6 +108,12 @@
     backdrop-filter: blur(20px);
     border: 1px solid rgba(0, 59, 92, 0.05);
     box-shadow: 0 8px 30px rgba(0, 59, 92, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .ai-card-gradient:hover {
+    box-shadow: 0 15px 35px rgba(0, 59, 92, 0.15);
+    transform: translateY(-2px);
   }
   
   .dark .ai-card-gradient {
@@ -118,9 +124,9 @@
   
   .btn-premium {
     @apply rounded-md py-2 px-4 font-medium transition-all duration-300 
-      bg-primary text-white 
+      bg-gradient-to-br from-primary to-primary/90 text-white 
       border border-white/10 
-      shadow-sm hover:shadow-md hover:brightness-110;
+      shadow-sm hover:shadow-md hover:brightness-110 hover:-translate-y-0.5;
   }
   
   .card-premium {
@@ -137,11 +143,28 @@
 
   /* Micro-animations for interactive elements */
   .hover-lift {
-    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-premium;
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-card;
   }
   
   .micro-feedback {
     @apply transition-all duration-150 active:scale-95;
+  }
+  
+  .subtle-hover {
+    @apply transition-all duration-300 hover:bg-secondary/70;
+  }
+  
+  .subtle-pulse {
+    @apply animate-pulse-subtle;
+  }
+  
+  .interactive-card {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover;
+  }
+  
+  .btn-icon {
+    @apply rounded-full p-2 flex items-center justify-center transition-all duration-200 
+      hover:bg-secondary active:scale-95 text-foreground/70 hover:text-foreground;
   }
 }
 
@@ -161,4 +184,25 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400 dark:bg-gray-600;
+}
+
+/* Tipografia refinada */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* Efeitos de foco melhorados */
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2;
+}
+
+/* Efeitos de loading */
+.shimmer-effect {
+  background: linear-gradient(90deg, var(--card) 0%, var(--secondary) 50%, var(--card) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
