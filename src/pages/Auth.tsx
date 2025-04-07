@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -10,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
+import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -86,9 +88,7 @@ const Auth = () => {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="flex items-center justify-center mb-6"
             >
-              <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mr-3">
-                <span className="text-primary-foreground font-bold text-xl">FP</span>
-              </div>
+              <FounderPilotLogo className="h-12 w-12 text-primary mr-3" />
               <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
             </motion.div>
             <CardDescription className="text-center">
