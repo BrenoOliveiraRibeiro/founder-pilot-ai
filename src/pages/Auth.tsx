@@ -25,8 +25,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  
-  // Não há useEffect de redirecionamento aqui, pois o ProtectedRoute já lida com isso
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,14 +73,14 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-background/95 p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card>
+        <Card className="border-border/50 shadow-xl backdrop-blur-sm bg-card/95">
           <CardHeader className="space-y-1">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -93,16 +91,22 @@ const Auth = () => {
               <FounderPilotLogo className="h-12 w-12 text-primary mr-3" />
               <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
             </motion.div>
+            
+            <CardTitle className="text-2xl text-center">
+              {isLogin ? "Bem-vindo ao seu copiloto estratégico" : "Crie sua conta"}
+            </CardTitle>
+            
             <CardDescription className="text-center">
-              {isLogin ? "Entre com sua conta para continuar" : "Crie sua conta para começar"}
+              {isLogin ? "Entre com suas credenciais para continuar" : "Preencha os dados abaixo para começar"}
             </CardDescription>
+            
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
               className="text-center text-sm font-medium text-muted-foreground mt-2"
             >
-              Para fundadores que pensam grande e agem rápido.
+              {isLogin ? "Seu copiloto para decisões estratégicas" : "Para fundadores que pensam grande e agem rápido"}
             </motion.p>
           </CardHeader>
           <CardContent>
@@ -135,8 +139,20 @@ const Auth = () => {
                     </FormItem>
                   )}
                 />
+                
+                {isLogin && (
+                  <div className="text-right">
+                    <Button variant="link" className="p-0 h-auto text-sm" onClick={(e) => {
+                      e.preventDefault();
+                      // Funcionalidade de redefinição de senha seria adicionada aqui
+                    }}>
+                      Esqueceu a senha?
+                    </Button>
+                  </div>
+                )}
+                
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Aguarde..." : isLogin ? "Entrar" : "Cadastrar"}
+                  {isLoading ? "Aguarde..." : isLogin ? "Entrar no painel" : "Criar conta"}
                 </Button>
               </form>
             </Form>
@@ -145,9 +161,9 @@ const Auth = () => {
             <div className="mt-2 text-center text-sm">
               {isLogin ? (
                 <p>
-                  Não tem uma conta?{" "}
+                  Ainda não tem uma conta?{" "}
                   <Button variant="link" className="p-0" onClick={() => setIsLogin(false)}>
-                    Cadastre-se
+                    Experimente gratuitamente
                   </Button>
                 </p>
               ) : (
