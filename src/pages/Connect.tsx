@@ -5,9 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { BanknoteIcon, CircuitBoard, CircleDollarSign, Database, LockIcon, ArrowRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Connect = () => {
   const navigate = useNavigate();
+  const { empresas } = useAuth();
+
+  // Check if empresas is loaded before rendering
+  React.useEffect(() => {
+    console.log("Empresas in Connect:", empresas);
+  }, [empresas]);
 
   return (
     <AppLayout>

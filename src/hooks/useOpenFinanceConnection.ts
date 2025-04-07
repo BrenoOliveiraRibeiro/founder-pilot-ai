@@ -1,11 +1,12 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/BankProviders';
 import { useBelvoWidget } from './useBelvoWidget';
 import { useOpenFinanceConnections } from './useOpenFinanceConnections';
+import { useNavigate } from 'react-router-dom';
 
 declare global {
   interface Window {
@@ -19,13 +20,21 @@ export const useOpenFinanceConnection = () => {
   const [useSandbox, setUseSandbox] = useState(true);
   const [connectionProgress, setConnectionProgress] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState("");
-  const { currentEmpresa } = useAuth();
+  const { currentEmpresa, refreshEmpresas } = useAuth();
   const { toast } = useToast();
   const belvoContainerRef = useRef<HTMLDivElement>(null);
   const { belvoWidgetLoaded } = useBelvoWidget();
   const { fetchIntegrations } = useOpenFinanceConnections();
+  const navigate = useNavigate();
 
   const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
+
+  // Auto-select first provider if none selected
+  useEffect(() => {
+    if (providers.length > 0 && !selectedProvider) {
+      setSelectedProvider(providers[0].id);
+    }
+  }, [providers, selectedProvider]);
 
   const handleConnect = async () => {
     if (!selectedProvider || !currentEmpresa?.id || !belvoWidgetLoaded) {
@@ -139,7 +148,14 @@ export const useOpenFinanceConnection = () => {
       });
 
       // Atualizar a lista de integrações
-      fetchIntegrations();
+      await fetchIntegrations();
+      await refreshEmpresas();
+      
+      // Redirect to dashboard after successful connection
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+      
     } catch (error: any) {
       console.error("Erro ao registrar conexão:", error);
       toast({

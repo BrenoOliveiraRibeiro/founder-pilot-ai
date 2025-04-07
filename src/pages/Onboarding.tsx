@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +15,7 @@ import { LogoStep } from "@/components/onboarding/LogoStep";
 import { DocumentsStep } from "@/components/onboarding/DocumentsStep";
 import { OnboardingFooter } from "@/components/onboarding/OnboardingFooter";
 import { z } from "zod";
+import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
 
 type EmpresaFormValues = z.infer<typeof empresaFormSchema>;
 
@@ -26,6 +26,7 @@ const Onboarding = () => {
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [documents, setDocuments] = useState<Array<{ file: File, preview?: string }>>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -162,11 +163,9 @@ const Onboarding = () => {
         title: "Empresa cadastrada com sucesso!",
         description: "Agora vamos conectar seus dados financeiros.",
       });
-      
-      // Usar setTimeout para garantir que o toast seja exibido antes do redirecionamento
-      setTimeout(() => {
-        navigate("/connect", { replace: true });
-      }, 100);
+
+      // Force reload the auth context to get updated empresas list
+      window.location.href = "/connect";
       
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
@@ -206,9 +205,7 @@ const Onboarding = () => {
       <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mr-3">
-              <span className="text-primary-foreground font-bold text-xl">FP</span>
-            </div>
+            <FounderPilotLogo className="w-12 h-12 text-primary mr-3" />
             <CardTitle className="text-2xl font-bold">FounderPilot AI</CardTitle>
           </div>
           <CardTitle className="text-xl text-center">Configuração Inicial</CardTitle>

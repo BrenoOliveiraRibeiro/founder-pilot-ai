@@ -9,11 +9,15 @@ export const useOpenFinanceConnections = () => {
   const [activeIntegrations, setActiveIntegrations] = useState<IntegracaoBancaria[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
-  const { currentEmpresa } = useAuth();
+  const { currentEmpresa, refreshEmpresas } = useAuth();
   const { toast } = useToast();
 
   const fetchIntegrations = async () => {
-    if (!currentEmpresa?.id) return;
+    if (!currentEmpresa?.id) {
+      setActiveIntegrations([]);
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     try {
@@ -59,6 +63,7 @@ export const useOpenFinanceConnections = () => {
 
       // Update the list of integrations to show the latest sync
       fetchIntegrations();
+      refreshEmpresas();
     } catch (error: any) {
       console.error("Erro ao sincronizar dados:", error);
       toast({
@@ -74,6 +79,8 @@ export const useOpenFinanceConnections = () => {
   useEffect(() => {
     if (currentEmpresa?.id) {
       fetchIntegrations();
+    } else {
+      setActiveIntegrations([]);
     }
   }, [currentEmpresa]);
 

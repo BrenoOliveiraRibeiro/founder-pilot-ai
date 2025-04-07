@@ -16,6 +16,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
+  refreshEmpresas: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +29,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentEmpresa, setCurrentEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      // Buscar perfil
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData as Profile);
+
+      // Buscar empresas
+      await refreshEmpresas();
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar seus dados. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshEmpresas = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: empresasData, error: empresasError } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (empresasError) throw empresasError;
+      
+      console.log("Empresas carregadas:", empresasData);
+      setEmpresas(empresasData as Empresa[]);
+
+      // Se houver empresas, definir a primeira como atual se nenhuma for selecionada
+      if (empresasData && empresasData.length > 0 && !currentEmpresa) {
+        setCurrentEmpresa(empresasData[0] as Empresa);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar empresas:', error);
+    }
+  };
 
   useEffect(() => {
     // Configurar listener para mudanças de autenticação
@@ -61,44 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  // Buscar perfil do usuário e suas empresas
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      // Buscar perfil
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) throw profileError;
-      setProfile(profileData as Profile);
-
-      // Buscar empresas
-      const { data: empresasData, error: empresasError } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (empresasError) throw empresasError;
-      setEmpresas(empresasData as Empresa[]);
-
-      // Se houver empresas, definir a primeira como atual
-      if (empresasData && empresasData.length > 0) {
-        setCurrentEmpresa(empresasData[0] as Empresa);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar dados do usuário:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar seus dados. Por favor, tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -131,7 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
-    loading
+    loading,
+    refreshEmpresas
   };
 
   return (
