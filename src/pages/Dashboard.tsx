@@ -10,10 +10,12 @@ import { AIAdvisorCard } from "@/components/dashboard/AIAdvisorCard";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const { currentEmpresa } = useAuth();
+  const { isRunwayCritical, metrics } = useFinanceData(currentEmpresa?.id || null);
   
   useEffect(() => {
     // Welcome toast na primeira visita
@@ -29,7 +31,19 @@ const Dashboard = () => {
         localStorage.setItem('hasVisitedDashboard', 'true');
       }, 500);
     }
-  }, [toast]);
+    
+    // Alerta de runway crítico
+    if (isRunwayCritical) {
+      setTimeout(() => {
+        toast({
+          title: "ALERTA: Runway Crítico",
+          description: `Seu runway atual é de apenas ${metrics?.runway_meses?.toFixed(1)} meses. Acesse a seção de Finanças para mais detalhes.`,
+          variant: "destructive",
+          duration: 8000,
+        });
+      }, 1500);
+    }
+  }, [toast, isRunwayCritical, metrics?.runway_meses]);
 
   // Configuração das animações
   const containerVariants = {

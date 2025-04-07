@@ -11,6 +11,7 @@ export const useFinanceData = (empresaId: string | null) => {
   const [transactions, setTransactions] = useState<Transacao[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [cashRunway, setCashRunway] = useState<any[]>([]);
+  const [isRunwayCritical, setIsRunwayCritical] = useState(false);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -31,6 +32,13 @@ export const useFinanceData = (empresaId: string | null) => {
 
         if (metricError) throw metricError;
         setMetrics(metricData as Metrica);
+        
+        // Verificar se o runway está em estado crítico (menos de 3 meses)
+        if (metricData?.runway_meses !== null && metricData?.runway_meses < 3) {
+          setIsRunwayCritical(true);
+        } else {
+          setIsRunwayCritical(false);
+        }
 
         // Buscar as transações recentes
         const { data: transactionData, error: transactionError } = await supabase
@@ -85,5 +93,5 @@ export const useFinanceData = (empresaId: string | null) => {
     fetchData();
   }, [empresaId]);
 
-  return { loading, error, metrics, transactions, insights, cashRunway };
+  return { loading, error, metrics, transactions, insights, cashRunway, isRunwayCritical };
 };
