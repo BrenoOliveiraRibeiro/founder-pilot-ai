@@ -14,13 +14,14 @@ export const useOnboardingUpload = () => {
     
     try {
       setIsUploading(true);
-      const logoFileName = `${userId}/${Date.now()}_${file.name}`;
+      // Use proper folder structure with userId as folder name
+      const logoFileName = `${userId}/${file.name.replace(/\s+/g, '_')}`;
       
       const { data: logoData, error: logoError } = await supabase.storage
         .from('logos')
         .upload(logoFileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Changed to true to allow overwriting if needed
         });
         
       if (logoError) {
@@ -59,12 +60,14 @@ export const useOnboardingUpload = () => {
       setIsUploading(true);
       
       for (const doc of documents) {
-        const docFileName = `${userId}/${Date.now()}_${doc.file.name}`;
+        // Use proper folder structure and sanitize filenames
+        const docFileName = `${userId}/${doc.file.name.replace(/\s+/g, '_')}`;
+        
         const { data: docData, error: docError } = await supabase.storage
           .from('documentos')
           .upload(docFileName, doc.file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: true // Changed to true to allow overwriting if needed
           });
           
         if (docError) {
