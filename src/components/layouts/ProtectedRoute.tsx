@@ -42,7 +42,7 @@ export const ProtectedRoute = ({
   }
 
   // Se estiver autenticado, verificar se precisa de onboarding
-  // Mas não redirecionar se já estiver no onboarding, connect ou open-finance
+  // Importante: Não redirecionar para onboarding se o usuário estiver no próprio onboarding ou nas páginas de conexão
   if (
     requireAuth && 
     user && 
@@ -54,8 +54,13 @@ export const ProtectedRoute = ({
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Se estiver autenticado e quiser acessar a página de autenticação
+  // Se NÃO precisar de autenticação (como na página de auth) mas o usuário já estiver autenticado
+  // Redirecionar para o dashboard
   if (!requireAuth && user) {
+    // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
+    if (empresas.length === 0) {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 

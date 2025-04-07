@@ -9,18 +9,23 @@ import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, empresas } = useAuth();
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     if (!loading && !showIntro) {
       if (user) {
-        navigate("/dashboard");
+        // Se o usuário está autenticado mas não tem empresa, enviar para onboarding
+        if (empresas.length === 0) {
+          navigate("/onboarding");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         navigate("/auth");
       }
     }
-  }, [navigate, user, loading, showIntro]);
+  }, [navigate, user, loading, showIntro, empresas]);
 
   const handleIntroComplete = () => {
     setShowIntro(false);

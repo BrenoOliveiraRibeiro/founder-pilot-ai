@@ -1,6 +1,5 @@
-
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,9 +20,18 @@ const formSchema = z.object({
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Redirecionar se o usuário já estiver autenticado
+  useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,19 +54,15 @@ const Auth = () => {
           description: "Bem-vindo de volta!",
         });
         
-        navigate("/dashboard");
+        // Não precisa fazer navigate aqui pois o useEffect acima fará isso
       } else {
         const { error } = await signUp(values.email, values.password);
         if (error) throw error;
         
         toast({
           title: "Conta criada com sucesso",
-          description: "Verifique seu email para confirmar o cadastro.",
+          description: "Verificação não é necessária em desenvolvimento. Você será redirecionado em instantes.",
         });
-        
-        // Em desenvolvimento, pode-se querer ir direto para o dashboard,
-        // mas em produção é melhor esperar a confirmação do email
-        navigate("/dashboard");
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
