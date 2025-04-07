@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { IntroAnimation } from "@/components/shared/IntroAnimation";
 import { FriendlyLoadingMessage } from "@/components/ui/friendly-loading-message";
 import { motion } from "framer-motion";
+import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -37,14 +38,15 @@ const Index = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <motion.h1 
-          className="text-3xl font-bold"
+        <motion.div 
+          className="flex items-center gap-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          FounderPilot
-        </motion.h1>
+          <FounderPilotLogo className="h-8 w-8 text-foreground" />
+          <h1 className="text-3xl font-bold">FounderPilot</h1>
+        </motion.div>
         
         <FriendlyLoadingMessage isLoading={true} className="mt-2" />
       </motion.div>

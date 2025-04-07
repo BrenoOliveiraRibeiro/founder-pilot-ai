@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare, LayoutDashboard } from "lucide-react";
@@ -8,6 +7,7 @@ import { OnboardingTooltip } from "../ui/onboarding-tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { FriendlyLoadingMessage } from "../ui/friendly-loading-message";
 import { motion } from "framer-motion";
+import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 
 export const DashboardHeader = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -151,7 +151,7 @@ export const DashboardHeader = () => {
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-primary" />
+              <FounderPilotLogo className="h-4 w-4 text-primary" />
             </div>
             <h3 className="font-medium text-foreground flex items-center gap-2">
               <span className="gradient-text">FounderPilot</span>

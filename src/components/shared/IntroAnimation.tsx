@@ -1,7 +1,7 @@
-
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { FounderPilotLogo } from "./FounderPilotLogo";
 
 interface IntroAnimationProps {
   onComplete?: () => void;
@@ -77,14 +77,17 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1.0, duration: 0.8 }}
         >
-          <motion.h1 
-            className="text-5xl font-bold tracking-tight font-display"
+          <motion.div 
+            className="flex items-center justify-center gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.8 }}
           >
-            FounderPilot
-          </motion.h1>
+            <FounderPilotLogo className="h-12 w-12 text-foreground" />
+            <h1 className="text-5xl font-bold tracking-tight font-display">
+              FounderPilot
+            </h1>
+          </motion.div>
           
           {showTagline && (
             <motion.p 

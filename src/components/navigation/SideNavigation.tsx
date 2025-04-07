@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -19,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 
 type NavItem = {
   title: string;
@@ -89,7 +89,10 @@ export const SideNavigation = () => {
     >
       <div className="p-6">
         <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
-          <h1 className="text-xl font-bold">FounderPilot</h1>
+          <div className="flex items-center gap-2">
+            <FounderPilotLogo className="h-8 w-8 text-foreground" />
+            <h1 className="text-xl font-bold">FounderPilot</h1>
+          </div>
         </Link>
       </div>
 
