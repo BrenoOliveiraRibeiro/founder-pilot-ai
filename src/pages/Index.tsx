@@ -19,18 +19,34 @@ const Index = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
+    // Simular menos tempo de carregamento da animação em desenvolvimento
+    const timer = setTimeout(() => {
+      setShowIntro(false);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     // Se carregamento da autenticação terminou e não está mostrando introdução
     if (!loading && !showIntro) {
       setCheckingAuth(false);
+      
       if (user) {
+        console.log("Usuário autenticado:", user.email);
+        console.log("Empresas:", empresas.length);
+        
         // Se o usuário está autenticado mas não tem empresa, enviar para onboarding
         if (empresas.length === 0) {
+          console.log("Redirecionando para onboarding");
           navigate("/onboarding");
         } else {
+          console.log("Redirecionando para dashboard");
           navigate("/dashboard");
         }
+      } else {
+        console.log("Usuário não autenticado, permanecendo na landing page");
       }
-      // Se não está autenticado, permanece na landing page
     }
   }, [navigate, user, loading, showIntro, empresas]);
 

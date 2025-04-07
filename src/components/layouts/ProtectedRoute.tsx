@@ -49,13 +49,17 @@ export const ProtectedRoute = ({
             <Skeleton className="h-4 w-[250px]" />
             <Skeleton className="h-4 w-[200px]" />
           </div>
+          <p className="text-sm text-muted-foreground mt-2">Verificando autenticação...</p>
         </motion.div>
       </div>
     );
   }
 
+  console.log("Auth state:", { user: !!user, empresas: empresas.length, path: location.pathname });
+
   // Se precisar de autenticação e não estiver autenticado
   if (requireAuth && !user) {
+    console.log("Redirecionando para autenticação:", redirectTo);
     // Salvar origem para redirecionamento posterior
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
@@ -69,6 +73,7 @@ export const ProtectedRoute = ({
     !location.pathname.includes("/connect") && 
     !location.pathname.includes("/open-finance")
   ) {
+    console.log("Redirecionando para onboarding");
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -77,9 +82,11 @@ export const ProtectedRoute = ({
   if (!requireAuth && user) {
     // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
     if (empresas.length === 0) {
+      console.log("Usuário autenticado sem empresas, redirecionando para onboarding");
       return <Navigate to="/onboarding" replace />;
     }
     // Caso contrário, enviar para o dashboard
+    console.log("Usuário autenticado com empresas, redirecionando para dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 

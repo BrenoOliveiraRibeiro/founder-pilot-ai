@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Buscando perfil do usuário:", userId);
       // Buscar perfil
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -39,8 +40,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (profileError) throw profileError;
-      setProfile(profileData as Profile);
+      if (profileError) {
+        if (profileError.code !== 'PGRST116') { // Ignore "não encontrado" para novos usuários
+          console.error("Erro ao buscar perfil:", profileError);
+          throw profileError;
+        }
+      }
+      
+      if (profileData) {
+        console.log("Perfil encontrado:", profileData);
+        setProfile(profileData as Profile);
+      } else {
+        console.log("Perfil não encontrado, usuário pode ser novo");
+      }
 
       // Buscar empresas
       await refreshEmpresas();
@@ -57,9 +69,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshEmpresas = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log("Não é possível buscar empresas sem usuário autenticado");
+      return;
+    }
     
     try {
+      console.log("Buscando empresas para o usuário:", user.id);
       const { data: empresasData, error: empresasError } = await supabase
         .from('empresas')
         .select('*')
@@ -72,17 +88,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Se houver empresas, definir a primeira como atual se nenhuma for selecionada
       if (empresasData && empresasData.length > 0 && !currentEmpresa) {
+        console.log("Definindo empresa atual:", empresasData[0]);
         setCurrentEmpresa(empresasData[0] as Empresa);
       }
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
   useEffect(() => {
+    console.log("AuthProvider inicializado");
     // Configurar listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Evento de autenticação:", event);
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -92,11 +116,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setEmpresas([]);
           setCurrentEmpresa(null);
         }
+        
+        // Se o usuário fizer login, buscar perfil e empresas
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          fetchUserProfile(session.user.id);
+        }
       }
     );
 
     // Verificar se já existe uma sessão
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Sessão existente:", session ? "sim" : "não");
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -108,29 +138,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("Limpando AuthProvider");
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log("Tentando login para:", email);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("Resposta de login:", data ? "sucesso" : "falha", error);
       return { error };
     } catch (error) {
+      console.error("Erro ao fazer login:", error);
       return { error };
     }
   };
 
   const signUp = async (email: string, password: string) => {
+    console.log("Tentando cadastro para:", email);
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      console.log("Resposta de cadastro:", data ? "sucesso" : "falha", error);
       return { error };
     } catch (error) {
+      console.error("Erro ao fazer cadastro:", error);
       return { error };
     }
   };
 
   const signOut = async () => {
+    console.log("Iniciando logout");
     await supabase.auth.signOut();
+    console.log("Logout concluído");
   };
 
   const value = {
