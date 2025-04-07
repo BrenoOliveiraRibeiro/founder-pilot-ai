@@ -312,8 +312,8 @@ const Onboarding = () => {
       }
       
       // 3. Fazer upload dos documentos
-      const documentUploadPromises = documents.map(async doc => {
-        if (!empresa) return null;
+      for (const doc of documents) {
+        if (!empresa) continue;
         
         const docFileName = `${user.id}/${Date.now()}_${doc.file.name}`;
         const { data: docData, error: docError } = await supabase.storage
@@ -328,7 +328,7 @@ const Onboarding = () => {
           .getPublicUrl(docFileName);
           
         // Salvar referência do documento no banco
-        const { data: documentoData, error: documentoError } = await supabase
+        const { error: documentoError } = await supabase
           .from('documentos')
           .insert({
             empresa_id: empresa.id,
@@ -339,11 +339,7 @@ const Onboarding = () => {
           });
           
         if (documentoError) throw documentoError;
-        
-        return documentoData;
-      });
-      
-      await Promise.all(documentUploadPromises);
+      }
       
       toast({
         title: "Empresa cadastrada com sucesso!",

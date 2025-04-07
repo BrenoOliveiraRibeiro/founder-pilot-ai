@@ -1,3 +1,4 @@
+
 // Definição dos tipos para as tabelas do Supabase
 export type Profile = {
   id: string;
@@ -19,6 +20,7 @@ export type Empresa = {
   num_funcionarios: number | null;
   data_fundacao: string | null;
   website: string | null;
+  logo_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -72,4 +74,15 @@ export type Insight = {
   status: 'pendente' | 'visto' | 'implementado' | 'ignorado';
   data_criacao: string;
   data_resolucao: string | null;
+}
+
+export type Documento = {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  tipo: string;
+  tamanho: number;
+  arquivo_url: string;
+  created_at: string;
+  updated_at: string | null;
 }
