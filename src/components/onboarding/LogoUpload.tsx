@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, X } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface LogoUploadProps {
   onLogoChange: (file: File | null, previewUrl: string) => void;
@@ -12,6 +13,7 @@ interface LogoUploadProps {
 export const LogoUpload: React.FC<LogoUploadProps> = ({ onLogoChange, existingLogo }) => {
   const [previewUrl, setPreviewUrl] = useState<string>(existingLogo || '');
   const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -19,7 +21,21 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ onLogoChange, existingLo
 
     // Verificar se é uma imagem
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione uma imagem.');
+      toast({
+        title: "Tipo de arquivo inválido",
+        description: "Por favor, selecione uma imagem (JPG, PNG, SVG ou GIF).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar tamanho do arquivo (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo permitido é 5MB.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -64,7 +80,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ onLogoChange, existingLo
             <Input
               id="logo-upload"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/svg+xml,image/gif"
               className="hidden"
               onChange={handleFileChange}
               disabled={isUploading}
@@ -82,7 +98,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({ onLogoChange, existingLo
         )}
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        Formatos aceitos: PNG, JPG ou SVG. Tamanho máximo: 2MB.
+        Formatos aceitos: PNG, JPG, SVG ou GIF. Tamanho máximo: 5MB.
       </p>
     </div>
   );

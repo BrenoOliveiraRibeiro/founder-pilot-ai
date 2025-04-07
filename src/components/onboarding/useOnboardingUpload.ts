@@ -18,9 +18,15 @@ export const useOnboardingUpload = () => {
       
       const { data: logoData, error: logoError } = await supabase.storage
         .from('logos')
-        .upload(logoFileName, file);
+        .upload(logoFileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
         
-      if (logoError) throw logoError;
+      if (logoError) {
+        console.error('Erro ao fazer upload do logo:', logoError);
+        throw logoError;
+      }
       
       // Obter URL pública
       const { data: publicUrlData } = supabase.storage
@@ -56,9 +62,15 @@ export const useOnboardingUpload = () => {
         const docFileName = `${userId}/${Date.now()}_${doc.file.name}`;
         const { data: docData, error: docError } = await supabase.storage
           .from('documentos')
-          .upload(docFileName, doc.file);
+          .upload(docFileName, doc.file, {
+            cacheControl: '3600',
+            upsert: false
+          });
           
-        if (docError) throw docError;
+        if (docError) {
+          console.error('Erro ao fazer upload do documento:', docError);
+          throw docError;
+        }
         
         // Obter URL pública
         const { data: publicDocUrlData } = supabase.storage
@@ -76,7 +88,10 @@ export const useOnboardingUpload = () => {
             arquivo_url: publicDocUrlData.publicUrl
           });
           
-        if (documentoError) throw documentoError;
+        if (documentoError) {
+          console.error('Erro ao salvar referência do documento:', documentoError);
+          throw documentoError;
+        }
       }
     } catch (error) {
       console.error('Erro ao fazer upload dos documentos:', error);

@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { File, X } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DocumentUploadProps {
   onDocumentChange: (file: File) => void;
@@ -15,14 +16,49 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   documents,
   onRemoveDocument 
 }) => {
+  const { toast } = useToast();
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
     // Adicionar cada arquivo selecionado
     Array.from(files).forEach(file => {
+      // Verificar tipo de arquivo
+      const acceptedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      ];
+      
+      if (!acceptedTypes.includes(file.type)) {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Por favor, selecione um arquivo nos formatos aceitos (PDF, DOC, XLS, PPT).",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Verificar tamanho (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O tamanho máximo permitido é 10MB por arquivo.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       onDocumentChange(file);
     });
+    
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
   };
 
   return (
