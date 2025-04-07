@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
+import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,6 +22,7 @@ export const ProtectedRoute = ({
   const [initialCheck, setInitialCheck] = useState(false);
 
   useEffect(() => {
+    // Marcar como verificado apenas se não estiver carregando
     if (!loading) {
       setInitialCheck(true);
     }
@@ -27,22 +31,36 @@ export const ProtectedRoute = ({
   // Aguardar a verificação de autenticação
   if (loading || !initialCheck) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <motion.div 
+          className="flex flex-col items-center gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <FounderPilotLogo className="h-12 w-12 text-primary" />
+          </motion.div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   // Se precisar de autenticação e não estiver autenticado
   if (requireAuth && !user) {
+    // Salvar origem para redirecionamento posterior
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // Se estiver autenticado, verificar se precisa de onboarding
-  // Importante: Não redirecionar para onboarding se o usuário estiver no próprio onboarding ou nas páginas de conexão
   if (
     requireAuth && 
     user && 
@@ -55,12 +73,13 @@ export const ProtectedRoute = ({
   }
 
   // Se NÃO precisar de autenticação (como na página de auth) mas o usuário já estiver autenticado
-  // Redirecionar para o dashboard
+  // Redirecionar para o dashboard ou onboarding conforme necessário
   if (!requireAuth && user) {
     // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
     if (empresas.length === 0) {
       return <Navigate to="/onboarding" replace />;
     }
+    // Caso contrário, enviar para o dashboard
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,18 +21,12 @@ const formSchema = z.object({
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   
-  // Redirecionar se o usuário já estiver autenticado
-  useEffect(() => {
-    if (user) {
-      const from = location.state?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
-    }
-  }, [user, navigate, location]);
+  // Não há useEffect de redirecionamento aqui, pois o ProtectedRoute já lida com isso
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,15 +49,18 @@ const Auth = () => {
           description: "Bem-vindo de volta!",
         });
         
-        // Não precisa fazer navigate aqui pois o useEffect acima fará isso
+        // O redirecionamento será feito pelo ProtectedRoute
       } else {
         const { error } = await signUp(values.email, values.password);
         if (error) throw error;
         
         toast({
           title: "Conta criada com sucesso",
-          description: "Verificação não é necessária em desenvolvimento. Você será redirecionado em instantes.",
+          description: "Por favor, faça login com suas credenciais.",
         });
+
+        // Após criar a conta, mudar para o modo de login
+        setIsLogin(true);
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
