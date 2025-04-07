@@ -11,14 +11,16 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 
 interface InsightItemProps {
   icon: React.ReactNode;
   title: string;
   status: "success" | "warning" | "danger" | "info";
+  index: number;
 }
 
-const InsightItem = ({ icon, title, status }: InsightItemProps) => {
+const InsightItem = ({ icon, title, status, index }: InsightItemProps) => {
   const getStatusClasses = () => {
     switch (status) {
       case "success":
@@ -33,10 +35,15 @@ const InsightItem = ({ icon, title, status }: InsightItemProps) => {
   };
 
   return (
-    <div className={`p-3 rounded-md border ${getStatusClasses()} flex items-center gap-3`}>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 + (index * 0.1) }}
+      className={`p-3 rounded-md border ${getStatusClasses()} flex items-center gap-3`}
+    >
       {icon}
       <p className="text-sm font-medium">{title}</p>
-    </div>
+    </motion.div>
   );
 };
 
@@ -127,32 +134,66 @@ export const InsightsCard = () => {
 
   const insightsToDisplay = insights.length > 0 ? insights : exampleInsights;
 
+  const headerVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const contentVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1,
+        delayChildren: 0.3
+      }
+    }
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-primary" />
-          Insights Gerados por IA
-        </CardTitle>
-      </CardHeader>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={headerVariants}
+      >
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <BarChart2 className="h-5 w-5 text-primary" />
+            Insights Gerados por IA
+          </CardTitle>
+        </CardHeader>
+      </motion.div>
       <CardContent>
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="w-full h-14" />
+              <Skeleton key={i} className="w-full h-14">
+                <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer"></div>
+              </Skeleton>
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
-            {insightsToDisplay.map((insight) => (
+          <motion.div
+            variants={contentVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3"
+          >
+            {insightsToDisplay.map((insight, index) => (
               <InsightItem
                 key={insight.id}
+                index={index}
                 icon={getIconFromType(insight.tipo)}
                 title={insight.titulo}
                 status={getStatusFromPriority(insight.prioridade)}
               />
             ))}
-          </div>
+          </motion.div>
         )}
       </CardContent>
     </Card>

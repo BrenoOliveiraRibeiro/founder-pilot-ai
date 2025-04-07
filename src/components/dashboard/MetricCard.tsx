@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 
 interface MetricCardProps {
   title: string;
@@ -36,7 +37,7 @@ export const MetricCard = ({
   loading = false,
 }: MetricCardProps) => {
   return (
-    <div className={cn("bg-card rounded-lg border p-6", className)}>
+    <div className={cn("bg-card rounded-lg border p-6 overflow-hidden", className)}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-2">
           <h3 className="font-medium text-sm text-foreground/80">{title}</h3>
@@ -60,16 +61,36 @@ export const MetricCard = ({
       <div className="space-y-1">
         {loading ? (
           <>
-            <Skeleton className="h-8 w-28 mb-2" />
+            <div className="h-8 flex items-center">
+              <Skeleton className="h-8 w-28 mb-2">
+                <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer" />
+              </Skeleton>
+            </div>
             {(description || typeof change !== 'undefined') && (
-              <Skeleton className="h-4 w-20" />
+              <div className="h-4 flex items-center">
+                <Skeleton className="h-4 w-20">
+                  <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer" />
+                </Skeleton>
+              </div>
             )}
           </>
         ) : (
           <>
-            <h2 className="text-2xl font-bold tracking-tight">{value}</h2>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-2xl font-bold tracking-tight"
+            >
+              {value}
+            </motion.h2>
             {(description || typeof change !== 'undefined') && (
-              <div className="flex items-center gap-2">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center gap-2"
+              >
                 {typeof change !== 'undefined' && (
                   <span
                     className={cn(
@@ -90,7 +111,7 @@ export const MetricCard = ({
                     {description}
                   </span>
                 )}
-              </div>
+              </motion.div>
             )}
           </>
         )}

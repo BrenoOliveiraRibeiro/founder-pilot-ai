@@ -16,6 +16,7 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle } from "lucide-react";
+import { motion } from "framer-motion";
 
 const formatCurrency = (value: number) => 
   new Intl.NumberFormat('pt-BR', {
@@ -27,7 +28,12 @@ const formatCurrency = (value: number) =>
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-background border border-border rounded-md shadow-sm p-2 text-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        className="bg-background border border-border rounded-md shadow-sm p-2 text-sm"
+      >
         <p className="font-medium">{label}</p>
         <p className="text-primary">
           Saldo: {formatCurrency(payload[0].value)}
@@ -37,7 +43,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             (Projeção)
           </p>
         )}
-      </div>
+      </motion.div>
     );
   }
 
@@ -60,16 +66,33 @@ export const RunwayChart = () => {
     item.future
   );
   
+  const animationVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: {
+        duration: 0.8,
+        delay: 0.3
+      }
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl">Projeção de Runway</CardTitle>
           {isRunwayCritical && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <AlertTriangle size={14} />
-              <span>Runway Crítico</span>
-            </Badge>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+            >
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <AlertTriangle size={14} />
+                <span>Runway Crítico</span>
+              </Badge>
+            </motion.div>
           )}
         </div>
         <CardDescription>
@@ -84,10 +107,17 @@ export const RunwayChart = () => {
       <CardContent>
         {loading ? (
           <div className="h-80">
-            <Skeleton className="w-full h-full" />
+            <Skeleton className="w-full h-full">
+              <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer"></div>
+            </Skeleton>
           </div>
         ) : (
-          <div className="h-80">
+          <motion.div 
+            variants={animationVariants}
+            initial="hidden"
+            animate="visible"
+            className="h-80"
+          >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={cashRunway}
@@ -143,11 +173,16 @@ export const RunwayChart = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </motion.div>
         )}
         
         {isRunwayCritical && (
-          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="mt-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md"
+          >
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
               <div>
@@ -158,7 +193,7 @@ export const RunwayChart = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </CardContent>
     </Card>

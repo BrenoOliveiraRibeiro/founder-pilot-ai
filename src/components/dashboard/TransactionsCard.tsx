@@ -6,6 +6,7 @@ import { Eye, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 
 export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
@@ -80,6 +81,26 @@ export const TransactionsCard = () => {
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  // Configuração de animações para lista
+  const listVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -100,18 +121,30 @@ export const TransactionsCard = () => {
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-center justify-between py-3 border-b border-border last:border-none">
                 <div className="flex-1">
-                  <Skeleton className="h-4 w-48 mb-2" />
-                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-48 mb-2">
+                    <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer"></div>
+                  </Skeleton>
+                  <Skeleton className="h-3 w-32">
+                    <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer"></div>
+                  </Skeleton>
                 </div>
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20">
+                  <div className="h-full w-full bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent animate-shimmer"></div>
+                </Skeleton>
               </div>
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
+          <motion.div 
+            className="space-y-2"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {transactionsToDisplay.map((tx) => (
-              <div 
+              <motion.div 
                 key={tx.id}
+                variants={itemVariants}
                 className="flex items-center justify-between py-3 border-b border-border last:border-none"
               >
                 <div className="flex-1">
@@ -137,17 +170,22 @@ export const TransactionsCard = () => {
                     currency: 'BRL'
                   }).format(tx.valor)}
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
         
-        <div className="mt-4 flex justify-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.3 }}
+          className="mt-4 flex justify-center"
+        >
           <Button variant="ghost" size="sm" className="text-primary">
             <Eye className="h-4 w-4 mr-2" />
             Ver Todas as Transações
           </Button>
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

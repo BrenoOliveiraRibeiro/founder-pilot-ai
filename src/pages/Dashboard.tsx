@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricsGrid } from "@/components/dashboard/MetricsGrid";
@@ -16,6 +16,16 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { currentEmpresa } = useAuth();
   const { isRunwayCritical, metrics } = useFinanceData(currentEmpresa?.id || null);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  
+  useEffect(() => {
+    // Simular um tempo de carregamento para a animação
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   useEffect(() => {
     // Welcome toast na primeira visita
@@ -29,7 +39,7 @@ const Dashboard = () => {
           duration: 5000,
         });
         localStorage.setItem('hasVisitedDashboard', 'true');
-      }, 500);
+      }, 2500);
     }
     
     // Alerta de runway crítico
@@ -41,7 +51,7 @@ const Dashboard = () => {
           variant: "destructive",
           duration: 8000,
         });
-      }, 1500);
+      }, 3000);
     }
   }, [toast, isRunwayCritical, metrics?.runway_meses]);
 
@@ -68,6 +78,48 @@ const Dashboard = () => {
       }
     }
   };
+
+  if (isPageLoading) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center min-h-[80vh]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center gap-4"
+          >
+            <div className="h-14 w-14 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-lg font-medium text-primary"
+            >
+              Carregando dados financeiros...
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 300 }}
+              transition={{ delay: 0.3, duration: 1 }}
+              className="h-1 bg-primary/20 rounded-full overflow-hidden"
+            >
+              <motion.div 
+                initial={{ x: -300 }}
+                animate={{ x: 300 }}
+                transition={{ 
+                  repeat: Infinity, 
+                  duration: 1.5,
+                  ease: "linear"
+                }}
+                className="h-full w-1/3 bg-primary rounded-full"
+              />
+            </motion.div>
+          </motion.div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
