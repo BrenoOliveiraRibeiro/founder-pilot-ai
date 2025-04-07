@@ -80,8 +80,11 @@ const Onboarding = () => {
         description: "Agora vamos conectar seus dados financeiros.",
       });
 
-      // Avançar para o próximo passo ou redirecionar
-      navigate("/connect");
+      // Usar setTimeout para garantir que o toast seja exibido antes do redirecionamento
+      setTimeout(() => {
+        navigate("/connect", { replace: true });
+      }, 100);
+      
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
       toast({
@@ -89,7 +92,6 @@ const Onboarding = () => {
         description: error.message || "Não foi possível cadastrar a empresa. Tente novamente.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };

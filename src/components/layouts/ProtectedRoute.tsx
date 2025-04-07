@@ -41,8 +41,10 @@ export const ProtectedRoute = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Se estiver autenticado, verificar se precisa de onboarding
-  if (requireAuth && user && empresas.length === 0 && location.pathname !== "/onboarding") {
+  // Se estiver autenticado, verificar se precisa de onboarding, mas não redirecionar se já estiver no onboarding ou connect
+  if (requireAuth && user && empresas.length === 0 && 
+      !location.pathname.includes("/onboarding") && 
+      !location.pathname.includes("/connect")) {
     return <Navigate to="/onboarding" replace />;
   }
 
