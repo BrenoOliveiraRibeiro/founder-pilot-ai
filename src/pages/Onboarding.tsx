@@ -1,210 +1,23 @@
 
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowRight, ArrowLeft, Briefcase, Building, Calendar, Users, Upload, File, X } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { StepIndicator } from "@/components/onboarding/StepIndicator";
+import { EmpresaInfoForm, empresaFormSchema } from "@/components/onboarding/EmpresaInfoForm";
+import { LogoStep } from "@/components/onboarding/LogoStep";
+import { DocumentsStep } from "@/components/onboarding/DocumentsStep";
+import { OnboardingFooter } from "@/components/onboarding/OnboardingFooter";
+import { z } from "zod";
 
-// Schema para cada etapa do formulário
-const empresaFormSchema = z.object({
-  nome: z.string().min(2, { message: "Nome da empresa é obrigatório" }),
-  segmento: z.string().optional(),
-  estagio: z.string().optional(),
-  num_funcionarios: z.coerce.number().optional(),
-  data_fundacao: z.string().optional(),
-  website: z.string().url({ message: "URL inválida" }).optional().or(z.literal('')),
-});
-
-// Componente para exibir o progresso entre etapas
-const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
-  const progress = ((currentStep) / (totalSteps - 1)) * 100;
-  
-  return (
-    <div className="mb-6">
-      <Progress value={progress} className="h-2" />
-      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-        <span>Dados Básicos</span>
-        <span>Logo</span>
-        <span>Documentos</span>
-      </div>
-    </div>
-  );
-};
-
-// Componente para upload de logo
-const LogoUpload = ({ onLogoChange, existingLogo }: { onLogoChange: (file: File | null, previewUrl: string) => void; existingLogo?: string }) => {
-  const [previewUrl, setPreviewUrl] = useState<string>(existingLogo || '');
-  const [isUploading, setIsUploading] = useState(false);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Verificar se é uma imagem
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione uma imagem.');
-      return;
-    }
-
-    // Criar preview
-    const fileUrl = URL.createObjectURL(file);
-    setPreviewUrl(fileUrl);
-    onLogoChange(file, fileUrl);
-  };
-
-  const handleRemoveLogo = () => {
-    setPreviewUrl('');
-    onLogoChange(null, '');
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-center p-4 border-2 border-dashed rounded-md">
-        {previewUrl ? (
-          <div className="relative">
-            <img 
-              src={previewUrl} 
-              alt="Logo preview" 
-              className="object-contain w-40 h-40"
-            />
-            <button 
-              type="button" 
-              onClick={handleRemoveLogo}
-              className="absolute top-0 right-0 p-1 bg-red-500 rounded-full text-white"
-              aria-label="Remover logo"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col items-center justify-center py-6">
-              <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-sm text-center text-muted-foreground">
-                {isUploading ? "Enviando..." : "Arraste e solte ou clique para fazer upload da sua logo"}
-              </p>
-            </div>
-            <Input
-              id="logo-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-              disabled={isUploading}
-            />
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => document.getElementById('logo-upload')?.click()}
-              disabled={isUploading}
-              className="w-full"
-            >
-              Selecionar arquivo
-            </Button>
-          </>
-        )}
-      </div>
-      <p className="text-xs text-muted-foreground text-center">
-        Formatos aceitos: PNG, JPG ou SVG. Tamanho máximo: 2MB.
-      </p>
-    </div>
-  );
-};
-
-// Componente para upload de documentos
-const DocumentUpload = ({ 
-  onDocumentChange, 
-  documents,
-  onRemoveDocument 
-}: { 
-  onDocumentChange: (file: File) => void; 
-  documents: Array<{ file: File, preview?: string }>;
-  onRemoveDocument: (index: number) => void;
-}) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    // Adicionar cada arquivo selecionado
-    Array.from(files).forEach(file => {
-      onDocumentChange(file);
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col p-4 border-2 border-dashed rounded-md">
-        <div className="flex flex-col items-center justify-center py-6">
-          <File className="h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-sm text-center text-muted-foreground">
-            Arraste e solte ou clique para adicionar pitch deck, planilhas ou documentos
-          </p>
-        </div>
-        <Input
-          id="document-upload"
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => document.getElementById('document-upload')?.click()}
-          className="w-full"
-        >
-          Selecionar arquivos
-        </Button>
-      </div>
-      
-      {documents.length > 0 && (
-        <div className="space-y-2 mt-4">
-          <h4 className="text-sm font-medium">Arquivos selecionados</h4>
-          <div className="max-h-60 overflow-y-auto">
-            {documents.map((doc, index) => (
-              <div key={index} className="flex items-center justify-between py-2 px-3 border rounded-md mb-2">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <File className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-sm truncate">{doc.file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {(doc.file.size / (1024 * 1024)).toFixed(2)} MB
-                  </span>
-                </div>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm"
-                  className="text-red-500 h-8 w-8 p-0"
-                  onClick={() => onRemoveDocument(index)}
-                  aria-label="Remover documento"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      <p className="text-xs text-muted-foreground text-center">
-        Formatos aceitos: PDF, DOC, XLS, PPT. Tamanho máximo: 10MB por arquivo.
-      </p>
-    </div>
-  );
-};
+type EmpresaFormValues = z.infer<typeof empresaFormSchema>;
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -217,7 +30,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof empresaFormSchema>>({
+  const form = useForm<EmpresaFormValues>({
     resolver: zodResolver(empresaFormSchema),
     defaultValues: {
       nome: "",
@@ -244,17 +57,21 @@ const Onboarding = () => {
 
   const goToNextStep = () => {
     if (step === 1) {
-      const isValid = form.trigger();
-      if (!isValid) return;
+      form.trigger().then(isValid => {
+        if (isValid) setStep(prev => Math.min(prev + 1, 3));
+      });
+    } else {
+      setStep(prev => Math.min(prev + 1, 3));
     }
-    setStep(prev => Math.min(prev + 1, 3));
   };
 
   const goToPrevStep = () => {
     setStep(prev => Math.max(prev - 1, 1));
   };
 
-  const onSubmit = async (values: z.infer<typeof empresaFormSchema>) => {
+  const handleSubmit = async () => {
+    const values = form.getValues();
+    
     if (!user) {
       toast({
         title: "Erro",
@@ -368,198 +185,20 @@ const Onboarding = () => {
   const renderStepContent = () => {
     switch (step) {
       case 1:
-        return (
-          <>
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da empresa</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center border rounded-md px-3 py-2">
-                      <Building className="h-5 w-5 text-muted-foreground mr-2" />
-                      <Input className="border-0 p-0 shadow-none focus-visible:ring-0" placeholder="Nome da sua startup" {...field} />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="segmento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Segmento</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o segmento" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="SaaS">SaaS</SelectItem>
-                        <SelectItem value="Marketplace">Marketplace</SelectItem>
-                        <SelectItem value="Fintech">Fintech</SelectItem>
-                        <SelectItem value="Healthtech">Healthtech</SelectItem>
-                        <SelectItem value="Edtech">Edtech</SelectItem>
-                        <SelectItem value="E-commerce">E-commerce</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="estagio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estágio</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o estágio" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Ideação">Ideação</SelectItem>
-                        <SelectItem value="MVP">MVP</SelectItem>
-                        <SelectItem value="Pre-seed">Pre-seed</SelectItem>
-                        <SelectItem value="Seed">Seed</SelectItem>
-                        <SelectItem value="Series A">Series A</SelectItem>
-                        <SelectItem value="Series B+">Series B+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="num_funcionarios"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de funcionários</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <Users className="h-5 w-5 text-muted-foreground mr-2" />
-                        <Input 
-                          className="border-0 p-0 shadow-none focus-visible:ring-0" 
-                          type="number" 
-                          placeholder="Quantos funcionários?" 
-                          {...field} 
-                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="data_fundacao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de fundação</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-                        <Input className="border-0 p-0 shadow-none focus-visible:ring-0" type="date" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website (opcional)</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center border rounded-md px-3 py-2">
-                      <Briefcase className="h-5 w-5 text-muted-foreground mr-2" />
-                      <Input className="border-0 p-0 shadow-none focus-visible:ring-0" placeholder="https://exemplo.com" {...field} />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        );
+        return <EmpresaInfoForm form={form} />;
       case 2:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Logo da empresa</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Adicione a logo da sua empresa para personalizar sua experiência
-              </p>
-            </div>
-            <LogoUpload onLogoChange={handleLogoChange} />
-          </div>
-        );
+        return <LogoStep onLogoChange={handleLogoChange} existingLogo={logoPreview} />;
       case 3:
         return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Documentos</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Adicione documentos importantes como pitch deck, planilhas financeiras ou outros materiais
-              </p>
-            </div>
-            <DocumentUpload 
-              onDocumentChange={handleDocumentChange} 
-              documents={documents}
-              onRemoveDocument={handleRemoveDocument}
-            />
-          </div>
+          <DocumentsStep
+            onDocumentChange={handleDocumentChange}
+            documents={documents}
+            onRemoveDocument={handleRemoveDocument}
+          />
         );
       default:
         return null;
     }
-  };
-
-  const renderFooter = () => {
-    return (
-      <div className="flex justify-between mt-6">
-        {step > 1 ? (
-          <Button type="button" variant="outline" onClick={goToPrevStep} disabled={isLoading}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        ) : (
-          <div></div> // Espaço vazio para manter o layout
-        )}
-        
-        {step < totalSteps ? (
-          <Button type="button" onClick={goToNextStep} disabled={isLoading}>
-            Continuar
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        ) : (
-          <Button type="button" onClick={() => form.handleSubmit(onSubmit)()} className="group" disabled={isLoading}>
-            <span className="flex items-center">
-              {isLoading ? "Salvando..." : "Finalizar"} 
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Button>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -581,9 +220,16 @@ const Onboarding = () => {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
               {renderStepContent()}
-              {renderFooter()}
+              <OnboardingFooter 
+                step={step}
+                totalSteps={totalSteps}
+                goToPrevStep={goToPrevStep}
+                goToNextStep={goToNextStep}
+                onSubmit={() => form.handleSubmit(handleSubmit)()}
+                isLoading={isLoading}
+              />
             </form>
           </Form>
         </CardContent>
