@@ -1,6 +1,6 @@
 
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { AlertTriangle, BarChart2, TrendingUp, DollarSign, BookOpen } from "lucide-react";
 
 const benefits = [
@@ -37,15 +37,33 @@ const benefits = [
 ];
 
 export const BenefitsSection = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+  
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+  
+  // Transformações com base no progresso do scroll
+  const scale = useTransform(scrollYProgress, [0, 0.6], [0.9, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 0.4], [0.6, 1]);
+  const y = useTransform(scrollYProgress, [0, 0.6], [60, 0]);
+  
   return (
-    <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-secondary/30">
-      <div className="container mx-auto max-w-7xl">
+    <section 
+      ref={sectionRef}
+      className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-secondary/30 overflow-hidden"
+    >
+      <motion.div 
+        className="container mx-auto max-w-7xl"
+        style={{ scale, opacity, y }}
+      >
         <motion.div 
           className="text-center mb-12 md:mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.7 }}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Benefícios Diretos</h2>
           <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
@@ -58,20 +76,34 @@ export const BenefitsSection = () => {
             <motion.div 
               key={index}
               className="p-6 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20, y: 20 }}
+              whileInView={{ opacity: 1, x: 0, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ 
+                duration: 0.5, 
+                delay: 0.1 * index,
+                type: "spring",
+                stiffness: 50 
+              }}
+              whileHover={{ 
+                scale: 1.03, 
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
+              }}
+              whileTap={{ scale: 0.98 }}
             >
-              <div className={`mb-4 p-2 rounded-full w-12 h-12 flex items-center justify-center bg-background ${benefit.color}`}>
+              <motion.div 
+                className={`mb-4 p-2 rounded-full w-12 h-12 flex items-center justify-center bg-background ${benefit.color}`}
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.7 }}
+              >
                 {benefit.icon}
-              </div>
+              </motion.div>
               <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
               <p className="text-foreground/70">{benefit.description}</p>
             </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };
