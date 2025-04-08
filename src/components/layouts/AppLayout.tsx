@@ -40,7 +40,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex overflow-hidden">
       <SideNavigation />
-      <div className="flex-1 flex flex-col w-full">
+      <div className="flex-1 flex flex-col w-full overflow-hidden">
         {!isMobile && <TopNavigation />}
         <AnimatePresence mode="wait">
           <motion.main 

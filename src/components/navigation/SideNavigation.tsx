@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -14,7 +13,8 @@ import {
   Users2,
   ChevronRight,
   MenuIcon,
-  X
+  X,
+  PanelLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type NavItem = {
   title: string;
@@ -53,13 +54,20 @@ export const SideNavigation = () => {
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("principal");
 
   useEffect(() => {
     // Close mobile menu when route changes
     setMobileOpen(false);
+
+    // Determine active section based on current path
+    const currentItem = navItems.find(item => item.href === currentPath);
+    if (currentItem?.group) {
+      setActiveSection(currentItem.group);
+    }
   }, [location]);
 
-  // Agrupar itens de navegação
+  // Group navigation items by their group
   const groupedNavItems = navItems.reduce((groups, item) => {
     const group = item.group || 'outros';
     if (!groups[group]) {
@@ -99,7 +107,7 @@ export const SideNavigation = () => {
       }
     },
     collapsed: { 
-      width: "80px",
+      width: "70px",
       transition: { 
         duration: 0.3,
         type: "spring",
@@ -129,11 +137,87 @@ export const SideNavigation = () => {
       }
     }
   };
+
+  const renderNavSection = (section: string) => {
+    const items = groupedNavItems[section] || [];
+
+    return (
+      <div key={section} className="mb-2 px-2">
+        {(expanded || isMobile) && (
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
+            {groupLabels[section] || section}
+          </h3>
+        )}
+        <ul className="space-y-1">
+          {items.map((item) => (
+            <motion.li 
+              key={item.href}
+              whileHover={{ x: 2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Link
+                to={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md text-sm transition-all duration-200",
+                  expanded || isMobile ? "px-3 py-2" : "p-2 justify-center",
+                  currentPath === item.href 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
+                )}
+                title={item.title}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  {item.highlight ? (
+                    <span className="relative">
+                      <item.icon className="h-4 w-4" />
+                      <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
+                    </span>
+                  ) : (
+                    <item.icon className="h-4 w-4" />
+                  )}
+                  {(expanded || isMobile) && <span>{item.title}</span>}
+                </div>
+                
+                {(expanded || isMobile) && item.badge && (
+                  <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400">
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            </motion.li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
   
-  const renderContent = () => (
+  // Mobile sidebar toggle button
+  const MobileToggle = () => (
+    <button 
+      className="fixed top-4 left-4 z-40 bg-background/80 backdrop-blur-sm border border-border p-2 rounded-md text-foreground"
+      onClick={() => setMobileOpen(true)}
+    >
+      <MenuIcon className="h-5 w-5" />
+    </button>
+  );
+
+  // Toggle button for expanded/collapsed states
+  const ToggleButton = () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="absolute top-4 right-[-12px] h-6 w-6 rounded-full border border-border bg-card opacity-0 group-hover:opacity-100 transition-opacity z-10"
+      onClick={() => setExpanded(!expanded)}
+    >
+      <ChevronRight className={cn("h-3 w-3", !expanded && "rotate-180")} />
+    </Button>
+  );
+
+  const renderSidebarContent = () => (
     <>
+      {/* Logo and Header */}
       <div className="p-4">
-        <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
+        <Link to="/" className="flex items-center justify-center mb-2">
           <div className="flex items-center gap-2">
             <FounderPilotLogo className="h-8 w-8 text-foreground" />
             {(expanded || isMobile) && (
@@ -150,6 +234,7 @@ export const SideNavigation = () => {
         </Link>
       </div>
 
+      {/* User Profile */}
       {currentEmpresa && (
         <div className="px-3 mb-4">
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm rounded-md p-3">
@@ -167,78 +252,44 @@ export const SideNavigation = () => {
         </div>
       )}
 
-      <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
-        {Object.entries(groupedNavItems).map(([group, items]) => (
-          <div key={group} className="mb-4">
-            {(expanded || isMobile) && (
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
-                {groupLabels[group] || group}
-              </h4>
-            )}
-            <ul className="space-y-1">
-              {items.map((item) => (
-                <motion.li 
-                  key={item.href}
-                  whileHover={{ x: 2 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      "flex items-center justify-between gap-3 rounded-md text-sm transition-all duration-200",
-                      expanded || isMobile ? "px-3 py-2" : "p-2 justify-center",
-                      currentPath === item.href 
-                        ? "bg-primary/10 text-primary font-medium" 
-                        : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
-                    )}
-                    title={item.title}
-                  >
-                    <div className={cn("flex items-center gap-3", !expanded && !isMobile && "justify-center")}>
-                      {item.highlight ? (
-                        <span className="relative">
-                          <item.icon className="h-4 w-4" />
-                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse-subtle" />
-                        </span>
-                      ) : (
-                        <item.icon className="h-4 w-4" />
-                      )}
-                      {(expanded || isMobile) && <span>{item.title}</span>}
-                    </div>
-                    
-                    {(expanded || isMobile) && item.badge && (
-                      <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse-subtle">
-                        {item.badge}
-                      </span>
-                    )}
-                    
-                    {(expanded || isMobile) && currentPath === item.href && (
-                      <ChevronRight className="h-4 w-4 text-primary ml-auto" />
-                    )}
-                  </Link>
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      {/* Navigation */}
+      <ScrollArea className="flex-1">
+        <div className="py-2">
+          {/* Fixed Principal Section - Always Visible */}
+          {renderNavSection('principal')}
+          
+          {/* Other Sections */}
+          {Object.keys(groupedNavItems)
+            .filter(group => group !== 'principal')
+            .map(group => renderNavSection(group))
+          }
+        </div>
+      </ScrollArea>
 
+      {/* Footer with Connect Button and Sign Out */}
       <div className={cn("p-3 border-t border-border", !expanded && !isMobile && "p-2")}>
         {(expanded || isMobile) && (
-          <div className="rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-primary/3 backdrop-blur-sm p-3 mb-3">
-            <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5 animate-pulse-subtle"></span>
-              Conecte seus dados
-            </h3>
-            <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
-              Vincule suas contas financeiras para insights precisos
-            </p>
-            <Link 
-              to="/connect"
-              className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
-            >
-              Conectar Open Finance
-            </Link>
-          </div>
+          <Link 
+            to="/connect"
+            className="block mb-3"
+          >
+            <div className="rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-primary/3 backdrop-blur-sm p-3">
+              <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                Conecte seus dados
+              </h3>
+              <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
+                Vincule suas contas financeiras para insights precisos
+              </p>
+              <Button 
+                variant="default"
+                size="sm" 
+                className="w-full bg-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center font-medium"
+              >
+                Conectar Open Finance
+              </Button>
+            </div>
+          </Link>
         )}
         
         <Button 
@@ -264,13 +315,7 @@ export const SideNavigation = () => {
   if (isMobile) {
     return (
       <>
-        {/* Mobile toggle button */}
-        <button 
-          className="fixed top-4 left-4 z-40 bg-background/80 backdrop-blur-sm border border-border p-2 rounded-md text-foreground"
-          onClick={() => setMobileOpen(true)}
-        >
-          <MenuIcon className="h-5 w-5" />
-        </button>
+        <MobileToggle />
         
         {/* Overlay */}
         {mobileOpen && (
@@ -300,7 +345,7 @@ export const SideNavigation = () => {
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              {renderContent()}
+              {renderSidebarContent()}
             </motion.aside>
           )}
         </AnimatePresence>
@@ -311,22 +356,13 @@ export const SideNavigation = () => {
   // Desktop sidebar
   return (
     <motion.aside 
-      className="bg-card border-r border-border h-screen flex flex-col overflow-hidden relative group"
+      className="bg-card border-r border-border flex-shrink-0 h-screen flex flex-col overflow-hidden relative group shadow-sm"
       initial="expanded"
       animate={expanded ? "expanded" : "collapsed"}
       variants={sidebarVariants}
     >
-      {/* Toggle button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-[-12px] h-6 w-6 rounded-full border border-border bg-card opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <ChevronRight className={cn("h-3 w-3", !expanded && "rotate-180")} />
-      </Button>
-      
-      {renderContent()}
+      <ToggleButton />
+      {renderSidebarContent()}
     </motion.aside>
   );
 };
