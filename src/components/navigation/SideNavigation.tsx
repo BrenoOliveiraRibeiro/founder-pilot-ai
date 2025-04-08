@@ -32,6 +32,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar
 } from "@/components/ui/sidebar";
 
 type NavItem = {
@@ -121,63 +122,70 @@ export const SideNavigation = () => {
           )}
         </SidebarHeader>
 
-        <SidebarContent>
-          {/* Principal section - Always visible */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Principal</SidebarGroupLabel>
-            <SidebarMenu>
-              {groupedNavItems['principal'].map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={currentPath === item.href}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.href} className="group">
-                      <div className="relative">
-                        <item.icon className="h-4 w-4" />
-                        {item.highlight && (
-                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
-                        )}
-                      </div>
-                      <span>{item.title}</span>
-                      {item.badge && (
-                        <span className="ml-auto px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-
-          {/* Other sections */}
-          {Object.keys(groupedNavItems)
-            .filter(group => group !== 'principal')
-            .map(group => (
-              <SidebarGroup key={group}>
-                <SidebarGroupLabel>{groupLabels[group] || group}</SidebarGroupLabel>
-                <SidebarMenu>
-                  {groupedNavItems[group].map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton 
-                        asChild
-                        isActive={currentPath === item.href}
-                        tooltip={item.title}
-                      >
-                        <Link to={item.href} className="group">
+        <SidebarContent className="flex flex-col overflow-hidden">
+          {/* Principal section - Always visible, fixed at the top */}
+          <div className="sticky top-0 z-10 bg-sidebar pt-1 pb-2">
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-3 mb-1">Principal</SidebarGroupLabel>
+              <SidebarMenu>
+                {groupedNavItems['principal'].map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={currentPath === item.href}
+                      tooltip={item.title}
+                    >
+                      <Link to={item.href} className="group flex items-center gap-3 w-full">
+                        <div className="relative">
                           <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroup>
-            ))
-          }
+                          {item.highlight && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
+                          )}
+                        </div>
+                        <span>{item.title}</span>
+                        {item.badge && (
+                          <span className="ml-auto text-xs px-1.5 py-0.5 rounded-md bg-red-500/20 text-red-600 dark:text-red-400">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+            {/* Divider after Principal section */}
+            <div className="mx-3 my-1 h-px bg-border opacity-50"></div>
+          </div>
+
+          {/* Scrollable area for other sections */}
+          <div className="overflow-y-auto flex-1 pb-2">
+            {/* Other sections */}
+            {Object.keys(groupedNavItems)
+              .filter(group => group !== 'principal')
+              .map(group => (
+                <SidebarGroup key={group}>
+                  <SidebarGroupLabel className="px-3 mb-1 mt-1">{groupLabels[group] || group}</SidebarGroupLabel>
+                  <SidebarMenu>
+                    {groupedNavItems[group].map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton 
+                          asChild
+                          isActive={currentPath === item.href}
+                          tooltip={item.title}
+                        >
+                          <Link to={item.href} className="group flex items-center gap-3 w-full">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroup>
+              ))
+            }
+          </div>
         </SidebarContent>
 
         <SidebarFooter>
@@ -295,8 +303,8 @@ const MobileSidebar = ({
 
         <div className="flex-1 overflow-y-auto py-2">
           <div className="space-y-4">
-            {/* Principal Section - Should be visible first */}
-            <div className="px-2">
+            {/* Principal Section - Sticky position */}
+            <div className="sticky top-0 z-10 bg-card px-2 pb-2">
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
                 {groupLabels['principal']}
               </h3>
@@ -333,6 +341,9 @@ const MobileSidebar = ({
                   </li>
                 ))}
               </ul>
+              
+              {/* Divider after Principal section */}
+              <div className="mx-2 my-2 h-px bg-border opacity-50"></div>
             </div>
             
             {/* Other Sections */}
