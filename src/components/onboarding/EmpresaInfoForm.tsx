@@ -3,9 +3,10 @@ import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Calendar, Users, Briefcase } from "lucide-react";
+import { Building, Users, Briefcase } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
+import { DatePicker } from "@/components/ui/date-picker";
 
 export const empresaFormSchema = z.object({
   nome: z.string().min(2, { message: "Nome da empresa é obrigatório" }),
@@ -127,8 +128,11 @@ export const EmpresaInfoForm: React.FC<EmpresaInfoFormProps> = ({ form }) => {
               <FormLabel>Data de fundação</FormLabel>
               <FormControl>
                 <div className="flex items-center border rounded-md px-3 py-2">
-                  <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-                  <Input className="border-0 p-0 shadow-none focus-visible:ring-0" type="date" {...field} />
+                  <DatePicker
+                    date={field.value ? new Date(field.value) : undefined}
+                    onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                    placeholder="Quando a empresa foi fundada?"
+                  />
                 </div>
               </FormControl>
               <FormMessage />
