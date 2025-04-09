@@ -1,12 +1,13 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { TrendingDown, AlertTriangle, Calendar, TrendingUp } from "lucide-react";
+import { TrendingDown, AlertTriangle, Calendar, TrendingUp, Calculator } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { LineChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { RunwaySimulator, SimulationResult } from "@/components/runway/RunwaySimulator";
 
 // Dados de exemplo para o gráfico de projeção
 const runwayProjectionData = [
@@ -23,11 +24,47 @@ const runwayProjectionData = [
 ];
 
 const RunwayPage = () => {
-  const runwayMonths = 4.2;
-  const cashReserve = 420000;
-  const burnRate = 100000;
+  // Estado inicial
+  const [cashReserve, setCashReserve] = useState(420000);
+  const [burnRate, setBurnRate] = useState(100000);
+  const [runwayMonths, setRunwayMonths] = useState(4.2);
+  const [projectionData, setProjectionData] = useState(runwayProjectionData);
+  
+  // Estado para controle do modal de simulação
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
+
+  // Calcular a data estimada de esgotamento
   const estimatedRunoutDate = new Date();
   estimatedRunoutDate.setDate(estimatedRunoutDate.getDate() + Math.floor(runwayMonths * 30));
+
+  // Função para aplicar os resultados da simulação
+  const applySimulation = (result: SimulationResult) => {
+    setCashReserve(result.cashReserve);
+    setBurnRate(result.burnRate);
+    setRunwayMonths(result.runwayMonths);
+    
+    // Criar novos dados de projeção com base nos valores simulados
+    const newProjectionData = [];
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    let currentDate = new Date();
+    let remainingCash = result.cashReserve;
+    
+    for (let i = 0; i < 10; i++) {
+      const monthIndex = (currentDate.getMonth() + i) % 12;
+      const month = monthNames[monthIndex];
+      
+      remainingCash -= result.burnRate;
+      
+      newProjectionData.push({
+        month,
+        cash: remainingCash,
+      });
+      
+      if (remainingCash < 0) break;
+    }
+    
+    setProjectionData(newProjectionData);
+  };
 
   return (
     <AppLayout>
@@ -38,7 +75,10 @@ const RunwayPage = () => {
             Previsões e análises sobre sua reserva financeira
           </p>
         </div>
-        <Button>Simular Cenários</Button>
+        <Button onClick={() => setSimulatorOpen(true)} className="gap-2">
+          <Calculator className="h-4 w-4" />
+          Simular Cenários
+        </Button>
       </div>
 
       {runwayMonths < 6 && (
@@ -113,9 +153,36 @@ const RunwayPage = () => {
           </CardHeader>
           <CardContent>
             <div className="h-80 w-full">
-              <LineChart width={800} height={300} data={runwayProjectionData}>
-                {/* Implementação completa do gráfico */}
-              </LineChart>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={projectionData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fontSize: 12 }} 
+                    tickLine={false}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => `${formatCurrency(value)}`}
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${formatCurrency(Number(value))}`, 'Saldo']}
+                    labelFormatter={(label) => `Mês: ${label}`}
+                  />
+                  <ReferenceLine y={0} stroke="red" strokeDasharray="3 3" />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cash" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -168,6 +235,14 @@ const RunwayPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de simulação */}
+      <RunwaySimulator 
+        open={simulatorOpen}
+        onOpenChange={setSimulatorOpen}
+        initialData={{ cashReserve, burnRate, runwayMonths }}
+        onSimulate={applySimulation}
+      />
     </AppLayout>
   );
 };
