@@ -6,7 +6,6 @@ import { FloatingAIButton } from "../shared/FloatingAIButton";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,7 +15,6 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
-  const isMobile = useIsMobile();
 
   // Page transition effect
   useEffect(() => {
@@ -38,14 +36,14 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex overflow-hidden">
+    <div className="min-h-screen bg-background flex">
       <SideNavigation />
-      <div className="flex-1 flex flex-col w-full overflow-hidden">
-        {!isMobile && <TopNavigation />}
+      <div className="flex-1 flex flex-col">
+        <TopNavigation />
         <AnimatePresence mode="wait">
           <motion.main 
             key={location.pathname}
-            className="flex-1 p-4 md:p-6 overflow-y-auto"
+            className="flex-1 p-6 overflow-y-auto"
             initial="initial"
             animate="animate"
             exit="exit"

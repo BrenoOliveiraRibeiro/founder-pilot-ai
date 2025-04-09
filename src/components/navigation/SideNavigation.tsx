@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   BarChart3, 
@@ -11,28 +12,14 @@ import {
   Sparkles, 
   TrendingUp, 
   Users2,
-  MenuIcon,
-  X
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarProvider,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
 
 type NavItem = {
   title: string;
@@ -60,9 +47,8 @@ export const SideNavigation = () => {
   const currentPath = location.pathname;
   const { signOut, currentEmpresa, profile } = useAuth();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  
-  // Group navigation items by their group
+
+  // Agrupar itens de navegação
   const groupedNavItems = navItems.reduce((groups, item) => {
     const group = item.group || 'outros';
     if (!groups[group]) {
@@ -90,314 +76,115 @@ export const SideNavigation = () => {
     }
   };
 
-  // Mobile sidebar
-  if (isMobile) {
-    return <MobileSidebar 
-      currentPath={currentPath}
-      currentEmpresa={currentEmpresa}
-      profile={profile}
-      groupedNavItems={groupedNavItems}
-      groupLabels={groupLabels}
-      handleSignOut={handleSignOut}
-    />;
-  }
+  const sidebarVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.4 } }
+  };
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <Sidebar variant="sidebar" side="left">
-        <SidebarHeader className="px-2 py-2">
-          <Link to="/" className="flex items-center gap-2 px-2">
+    <motion.aside 
+      className="w-60 bg-card border-r border-border h-screen flex flex-col overflow-hidden"
+      initial="hidden"
+      animate="visible"
+      variants={sidebarVariants}
+    >
+      <div className="p-4">
+        <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
+          <div className="flex items-center gap-2">
             <FounderPilotLogo className="h-8 w-8 text-foreground" />
-            <span className="text-xl font-bold">FounderPilot</span>
-          </Link>
-          
-          {currentEmpresa && (
-            <div className="px-2 mt-2">
-              <div className="bg-primary/10 rounded-md p-3">
-                <h3 className="font-medium text-sm truncate">{currentEmpresa.nome}</h3>
-                <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
-              </div>
-            </div>
-          )}
-        </SidebarHeader>
-
-        <SidebarContent>
-          {/* Principal section - Always visible */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Principal</SidebarGroupLabel>
-            <SidebarMenu>
-              {groupedNavItems['principal'].map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={currentPath === item.href}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.href} className="group">
-                      <div className="relative">
-                        <item.icon className="h-4 w-4" />
-                        {item.highlight && (
-                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
-                        )}
-                      </div>
-                      <span>{item.title}</span>
-                      {item.badge && (
-                        <span className="ml-auto px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-
-          {/* Other sections */}
-          {Object.keys(groupedNavItems)
-            .filter(group => group !== 'principal')
-            .map(group => (
-              <SidebarGroup key={group}>
-                <SidebarGroupLabel>{groupLabels[group] || group}</SidebarGroupLabel>
-                <SidebarMenu>
-                  {groupedNavItems[group].map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton 
-                        asChild
-                        isActive={currentPath === item.href}
-                        tooltip={item.title}
-                      >
-                        <Link to={item.href} className="group">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroup>
-            ))
-          }
-        </SidebarContent>
-
-        <SidebarFooter>
-          <div className="px-3 pb-3">
-            <Link to="/connect" className="block mb-3">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
-                  Conecte seus dados
-                </h3>
-                <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
-                  Vincule suas contas financeiras para insights precisos
-                </p>
-                <Button 
-                  variant="default"
-                  size="sm" 
-                  className="w-full bg-primary text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center font-medium"
-                >
-                  Conectar Open Finance
-                </Button>
-              </div>
-            </Link>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-muted-foreground hover:text-foreground/80"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <h1 className="text-xl font-bold">FounderPilot</h1>
           </div>
-        </SidebarFooter>
-      </Sidebar>
-    </SidebarProvider>
-  );
-};
+        </Link>
+      </div>
 
-// Separate component for mobile sidebar
-const MobileSidebar = ({ 
-  currentPath, 
-  currentEmpresa, 
-  profile, 
-  groupedNavItems, 
-  groupLabels, 
-  handleSignOut 
-}: {
-  currentPath: string;
-  currentEmpresa: any;
-  profile: any;
-  groupedNavItems: Record<string, NavItem[]>;
-  groupLabels: Record<string, string>;
-  handleSignOut: () => void;
-}) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    // Close mobile menu when route changes
-    setMobileOpen(false);
-  }, [currentPath]);
-
-  return (
-    <>
-      <button 
-        className="fixed top-4 left-4 z-40 bg-background/80 backdrop-blur-sm border border-border p-2 rounded-md text-foreground"
-        onClick={() => setMobileOpen(true)}
-      >
-        <MenuIcon className="h-5 w-5" />
-      </button>
-      
-      {/* Overlay */}
-      {mobileOpen && (
-        <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-          onClick={() => setMobileOpen(false)}
-        />
+      {currentEmpresa && (
+        <div className="px-3 mb-4">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 backdrop-blur-sm rounded-md p-3">
+            <h3 className="font-medium text-sm truncate">{currentEmpresa.nome}</h3>
+            <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+          </div>
+        </div>
       )}
-      
-      {/* Mobile sidebar */}
-      <motion.aside 
-        className={cn(
-          "fixed left-0 top-0 bottom-0 z-50 bg-card border-r border-border w-[280px] flex flex-col h-screen overflow-hidden shadow-xl",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-        animate={{ x: mobileOpen ? 0 : -280 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-      >
-        <div className="absolute top-4 right-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={() => setMobileOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
 
-        <div className="p-4 border-b border-border">
-          <Link to="/" className="flex items-center gap-2 mb-2">
-            <FounderPilotLogo className="h-8 w-8 text-foreground" />
-            <span className="text-xl font-bold">FounderPilot</span>
-          </Link>
-        </div>
-
-        {currentEmpresa && (
-          <div className="px-3 py-3 border-b border-border">
-            <div className="bg-primary/10 rounded-md p-3">
-              <h3 className="font-medium text-sm truncate">{currentEmpresa.nome}</h3>
-              <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto py-2">
-          <div className="space-y-4">
-            {/* Principal Section - Should be visible first */}
-            <div className="px-2">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
-                {groupLabels['principal']}
-              </h3>
-              <ul className="space-y-1">
-                {groupedNavItems['principal'].map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md text-sm px-3 py-2",
-                        currentPath === item.href 
-                          ? "bg-primary/10 text-primary font-medium" 
-                          : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
-                      )}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        {item.highlight ? (
-                          <span className="relative">
-                            <item.icon className="h-4 w-4" />
-                            <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
-                          </span>
-                        ) : (
+      <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
+        {Object.entries(groupedNavItems).map(([group, items]) => (
+          <div key={group} className="mb-4">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
+              {groupLabels[group] || group}
+            </h4>
+            <ul className="space-y-1">
+              {items.map((item) => (
+                <motion.li 
+                  key={item.href}
+                  whileHover={{ x: 2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200",
+                      currentPath === item.href 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
+                    )}
+                    title={item.title}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.highlight ? (
+                        <span className="relative">
                           <item.icon className="h-4 w-4" />
-                        )}
-                        <span>{item.title}</span>
-                      </div>
-                      
-                      {item.badge && (
-                        <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400">
-                          {item.badge}
+                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse-subtle" />
                         </span>
+                      ) : (
+                        <item.icon className="h-4 w-4" />
                       )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            {/* Other Sections */}
-            {Object.keys(groupedNavItems)
-              .filter(group => group !== 'principal')
-              .map(group => (
-                <div key={group} className="px-2">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
-                    {groupLabels[group] || group}
-                  </h3>
-                  <ul className="space-y-1">
-                    {groupedNavItems[group].map((item) => (
-                      <li key={item.href}>
-                        <Link
-                          to={item.href}
-                          className={cn(
-                            "flex items-center gap-3 rounded-md text-sm px-3 py-2",
-                            currentPath === item.href 
-                              ? "bg-primary/10 text-primary font-medium" 
-                              : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
-                          )}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))
-            }
+                      <span>{item.title}</span>
+                    </div>
+                    
+                    {item.badge && (
+                      <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse-subtle">
+                        {item.badge}
+                      </span>
+                    )}
+                    
+                    {currentPath === item.href && (
+                      <ChevronRight className="h-4 w-4 text-primary ml-auto" />
+                    )}
+                  </Link>
+                </motion.li>
+              ))}
+            </ul>
           </div>
-        </div>
+        ))}
+      </nav>
 
-        <div className="p-3 border-t border-border">
-          <Link to="/connect" className="block mb-3">
-            <div className="rounded-lg bg-primary/10 p-3">
-              <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
-                Conecte seus dados
-              </h3>
-              <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
-                Vincule suas contas financeiras para insights precisos
-              </p>
-              <Button 
-                variant="default"
-                size="sm" 
-                className="w-full bg-primary text-xs py-1.5 rounded-md inline-flex items-center justify-center font-medium"
-              >
-                Conectar Open Finance
-              </Button>
-            </div>
-          </Link>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full justify-start text-muted-foreground hover:text-foreground/80"
-            onClick={handleSignOut}
+      <div className="p-3 border-t border-border">
+        <div className="rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-primary/3 backdrop-blur-sm p-3 mb-3">
+          <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5 animate-pulse-subtle"></span>
+            Conecte seus dados
+          </h3>
+          <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
+            Vincule suas contas financeiras para insights precisos
+          </p>
+          <Link 
+            to="/connect"
+            className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+            Conectar Open Finance
+          </Link>
         </div>
-      </motion.aside>
-    </>
+        
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full justify-start text-muted-foreground hover:text-foreground/80"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sair
+        </Button>
+      </div>
+    </motion.aside>
   );
 };
