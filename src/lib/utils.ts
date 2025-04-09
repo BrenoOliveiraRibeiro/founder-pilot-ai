@@ -1,3 +1,4 @@
+
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -16,3 +17,18 @@ export const formatCurrency = (value: number) =>
     currency: 'BRL',
     maximumFractionDigits: 0,
   }).format(value);
+
+// Adicionar formatBelvoError para resolver o erro
+export const formatBelvoError = (error: any): string => {
+  if (!error) return "Erro desconhecido";
+  
+  if (typeof error === 'string') return error;
+  
+  if (error.message) return error.message;
+  
+  if (error.error && typeof error.error === 'string') return error.error;
+  
+  if (error.detail) return error.detail;
+  
+  return "Ocorreu um erro na conexão com os serviços financeiros";
+};
