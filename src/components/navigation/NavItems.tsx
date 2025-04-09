@@ -15,26 +15,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavItem } from "./types";
+import { motion } from "framer-motion";
 
 interface NavItemProps {
   item: NavItem;
   isActive: boolean;
 }
 
-const iconComponents: Record<string, React.ElementType> = {
-  HomeIcon,
-  DollarSign,
-  TrendingUp,
-  Sparkles,
-  FileText,
-  BarChart3,
-  Users2,
-  Calendar,
-  Settings
-};
-
 export const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive }) => {
-  const IconComponent = iconComponents[item.icon] || item.icon;
+  const IconComponent = item.icon;
   
   return (
     <motion.li 
