@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -83,12 +82,12 @@ export const SideNavigation = () => {
 
   return (
     <motion.aside 
-      className="w-60 bg-card border-r border-border h-screen flex flex-col overflow-hidden"
+      className="w-64 bg-gradient-to-b from-background to-background/90 border-r border-border h-screen flex flex-col"
       initial="hidden"
       animate="visible"
       variants={sidebarVariants}
     >
-      <div className="p-4">
+      <div className="p-6">
         <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
           <div className="flex items-center gap-2">
             <FounderPilotLogo className="h-8 w-8 text-foreground" />
@@ -106,7 +105,7 @@ export const SideNavigation = () => {
         </div>
       )}
 
-      <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
+      <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
         {Object.entries(groupedNavItems).map(([group, items]) => (
           <div key={group} className="mb-4">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1">
@@ -116,13 +115,13 @@ export const SideNavigation = () => {
               {items.map((item) => (
                 <motion.li 
                   key={item.href}
-                  whileHover={{ x: 2 }}
+                  whileHover={{ x: 3 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200",
+                      "flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-all duration-300",
                       currentPath === item.href 
                         ? "bg-primary/10 text-primary font-medium" 
                         : "text-foreground/70 hover:text-foreground hover:bg-accent/50"
@@ -158,17 +157,17 @@ export const SideNavigation = () => {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-border">
+      <div className="p-4 border-t border-border">
         <div className="rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-primary/3 backdrop-blur-sm p-3 mb-3">
           <h3 className="font-medium text-sm text-primary mb-1 flex items-center">
             <span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5 animate-pulse-subtle"></span>
             Conecte seus dados
           </h3>
           <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
-            Vincule suas contas financeiras para insights precisos
+            Vincule suas contas financeiras para desbloquear insights mais precisos
           </p>
           <Link 
-            to="/connect"
+            to="/open-finance"
             className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
           >
             Conectar Open Finance
@@ -176,7 +175,7 @@ export const SideNavigation = () => {
         </div>
         
         <Button 
-          variant="ghost" 
+          variant="outline" 
           size="sm" 
           className="w-full justify-start text-muted-foreground hover:text-foreground/80"
           onClick={handleSignOut}
