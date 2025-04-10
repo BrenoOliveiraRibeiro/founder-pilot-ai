@@ -62,11 +62,11 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Assegurando que todos os valores existam antes de calcular
     const simulationInputs = {
-      cashReserve: values.cashReserve,
-      burnRate: values.burnRate,
-      revenueIncrease: values.revenueIncrease,
-      costReduction: values.costReduction,
-      addFunding: values.addFunding,
+      cashReserve: values.cashReserve || 0,
+      burnRate: values.burnRate || 0,
+      revenueIncrease: values.revenueIncrease || 0,
+      costReduction: values.costReduction || 0,
+      addFunding: values.addFunding || 0,
     };
     
     const result = calculateSimulation(simulationInputs);
@@ -82,6 +82,10 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
     if (simulationResult) {
       onSimulate(simulationResult);
       onOpenChange(false);
+      toast({
+        title: "Simulação aplicada",
+        description: "Os valores foram atualizados com sucesso.",
+      });
     }
   };
 

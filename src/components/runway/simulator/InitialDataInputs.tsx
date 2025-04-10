@@ -3,6 +3,7 @@ import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
+import { Wallet, TrendingDown } from "lucide-react";
 
 interface InitialDataInputsProps {
   form: UseFormReturn<any>;
@@ -16,13 +17,17 @@ export const InitialDataInputs: React.FC<InitialDataInputsProps> = ({ form }) =>
         name="cashReserve"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Caixa Atual</FormLabel>
+            <FormLabel className="flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-blue-500" />
+              Caixa Atual
+            </FormLabel>
             <FormControl>
               <div className="flex items-center">
                 <Input
                   type="number"
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  className="w-full"
                 />
               </div>
             </FormControl>
@@ -38,13 +43,17 @@ export const InitialDataInputs: React.FC<InitialDataInputsProps> = ({ form }) =>
         name="burnRate"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Burn Rate Mensal</FormLabel>
+            <FormLabel className="flex items-center gap-1.5">
+              <TrendingDown className="h-4 w-4 text-red-500" />
+              Burn Rate Mensal
+            </FormLabel>
             <FormControl>
               <div className="flex items-center">
                 <Input
                   type="number"
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  className="w-full"
                 />
               </div>
             </FormControl>
