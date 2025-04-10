@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, LineChart, PieChart } from "recharts";
+import { BarChart, LineChart, PieChart, XAxis, YAxis, Tooltip, Legend, Line, Pie, CartesianGrid } from "recharts";
 import { BarChart3, TrendingUp, GraduationCap, Building2, Target } from "lucide-react";
 import { MarketSizeAnalysis } from "@/components/market/MarketSizeAnalysis";
 
@@ -65,10 +65,10 @@ const MarketPage = () => {
                   <LineChart width={500} height={300} data={fundingData}>
                     <XAxis dataKey="name" />
                     <YAxis />
-                    {/* <CartesianGrid stroke="#eee" strokeDasharray="5 5" /> */}
-                    {/* <Tooltip /> */}
-                    {/* <Legend /> */}
-                    {/* <Line type="monotone" dataKey="value" stroke="#8884d8" /> */}
+                    <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="value" stroke="#8884d8" />
                   </LineChart>
                 </div>
               </CardContent>
@@ -126,8 +126,8 @@ const MarketPage = () => {
                       dataKey="value"
                       label
                     />
-                    {/* <Tooltip /> */}
-                    {/* <Legend /> */}
+                    <Tooltip />
+                    <Legend />
                   </PieChart>
                 </div>
               </CardContent>
