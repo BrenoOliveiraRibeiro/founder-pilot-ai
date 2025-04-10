@@ -1,6 +1,6 @@
 
 import React from "react";
-import { ResponsiveContainer, PieChart, Pie, Cell, ChartLegend } from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Sparkles, TrendingUp, Lock, DollarSign } from "lucide-react";
 import { CustomPieTooltip } from "./PieChartTooltip";
 import { formatCurrency } from "../utils/formatters";
@@ -46,7 +46,7 @@ export const MarketOverviewTab: React.FC<MarketOverviewTabProps> = ({
                 ))}
               </Pie>
               <CustomPieTooltip />
-              <ChartLegend content={
+              <Legend content={
                 <div className="flex justify-center gap-4 mt-4">
                   {tamSamSomData.map((entry, index) => (
                     <div key={`legend-${index}`} className="flex items-center">
