@@ -1,10 +1,10 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, LineChart, Pie, PieChart } from "recharts";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart, LineChart, PieChart } from "recharts";
+import { BarChart3, TrendingUp, GraduationCap, Building2, Target } from "lucide-react";
+import { MarketSizeAnalysis } from "@/components/market/MarketSizeAnalysis";
 
 // Dados de exemplo
 const fundingData = [
@@ -63,7 +63,12 @@ const MarketPage = () => {
               <CardContent>
                 <div className="h-80 w-full">
                   <LineChart width={500} height={300} data={fundingData}>
-                    {/* Aqui seria implementado o gráfico completo do Recharts */}
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    {/* <CartesianGrid stroke="#eee" strokeDasharray="5 5" /> */}
+                    {/* <Tooltip /> */}
+                    {/* <Legend /> */}
+                    {/* <Line type="monotone" dataKey="value" stroke="#8884d8" /> */}
                   </LineChart>
                 </div>
               </CardContent>
@@ -121,7 +126,8 @@ const MarketPage = () => {
                       dataKey="value"
                       label
                     />
-                    {/* Implementação completa do gráfico */}
+                    {/* <Tooltip /> */}
+                    {/* <Legend /> */}
                   </PieChart>
                 </div>
               </CardContent>
@@ -158,36 +164,7 @@ const MarketPage = () => {
         </TabsContent>
 
         <TabsContent value="competitors">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análise Comparativa</CardTitle>
-              <CardDescription>Comparação com principais competidores do seu setor</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 w-full">
-                <BarChart width={800} height={300} data={competitorData}>
-                  {/* Implementação completa do gráfico */}
-                </BarChart>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                {[
-                  { title: "Receita Média", value: "R$ 1,2M/mês", change: "+12%" },
-                  { title: "Valuation Médio", value: "R$ 88M", change: "+24%" },
-                  { title: "CAC", value: "R$ 850", change: "-5%" }
-                ].map((metric, index) => (
-                  <div key={index} className="p-4 rounded-lg border bg-accent/50">
-                    <p className="text-sm font-medium mb-1">{metric.title}</p>
-                    <div className="flex items-end justify-between">
-                      <p className="text-2xl font-bold">{metric.value}</p>
-                      <span className={`text-sm ${metric.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                        {metric.change}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <MarketSizeAnalysis />
         </TabsContent>
       </Tabs>
     </AppLayout>
