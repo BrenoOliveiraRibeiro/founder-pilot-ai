@@ -4,6 +4,9 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Sparkles, TrendingUp, Lock, DollarSign } from "lucide-react";
 import { CustomPieTooltip } from "./PieChartTooltip";
 import { formatCurrency } from "../utils/formatters";
+import { FinancialContextInsight } from "./FinancialContextInsight";
+import { FinancialRecommendations } from "./FinancialRecommendations";
+import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 
 interface MarketOverviewTabProps {
   tamSamSomData: any[];
@@ -24,6 +27,9 @@ export const MarketOverviewTab: React.FC<MarketOverviewTabProps> = ({
   segment,
   aiEnriched
 }) => {
+  const { activeIntegrations } = useOpenFinanceConnections();
+  const hasOpenFinanceData = activeIntegrations.length > 0;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -129,6 +135,18 @@ export const MarketOverviewTab: React.FC<MarketOverviewTabProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Novos componentes baseados em dados financeiros */}
+      <FinancialContextInsight 
+        tamSamSomData={tamSamSomData}
+        segment={segment}
+      />
+      
+      <FinancialRecommendations
+        tamSamSomData={tamSamSomData}
+        growthProjection={growthProjection}
+        segment={segment}
+      />
       
       <div className="bg-muted/30 rounded-lg p-4 border border-dashed">
         <h3 className="text-sm font-medium mb-2">Glossário</h3>

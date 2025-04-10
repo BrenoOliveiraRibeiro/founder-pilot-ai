@@ -3,9 +3,11 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { MarketSizeAnalysis } from "@/components/market/MarketSizeAnalysis";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, LineChart, Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const MarketSizePage = () => {
   const { currentEmpresa } = useAuth();
@@ -28,20 +30,32 @@ const MarketSizePage = () => {
                 Conecte seus dados financeiros via Open Finance para obter insights personalizados 
                 que correlacionam suas finanças atuais com o potencial do mercado.
               </p>
-              <div className="flex items-center gap-2">
-                <a 
-                  href="/open-finance" 
-                  className="text-primary underline underline-offset-4 text-sm font-medium"
-                >
-                  Conectar dados financeiros
-                </a>
-                <button 
+              <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                <Button size="sm" className="gap-2" asChild>
+                  <Link to="/open-finance">
+                    <Wallet className="h-4 w-4" />
+                    Conectar dados financeiros
+                  </Link>
+                </Button>
+                <Button 
                   onClick={() => setShowFinancialAlert(false)} 
-                  className="text-muted-foreground text-xs"
+                  variant="outline"
+                  size="sm"
                 >
                   Dispensar
-                </button>
+                </Button>
               </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {hasOpenFinanceConnection && (
+          <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
+            <LineChart className="h-4 w-4 text-green-500" />
+            <AlertTitle>Análise Enriquecida com Dados Financeiros</AlertTitle>
+            <AlertDescription>
+              Seus dados financeiros estão sendo utilizados para enriquecer esta análise de mercado, 
+              fornecendo insights contextualizados e recomendações personalizadas para sua empresa.
             </AlertDescription>
           </Alert>
         )}
