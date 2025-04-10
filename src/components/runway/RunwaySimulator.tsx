@@ -60,7 +60,16 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const result = calculateSimulation(values);
+    // Assegurando que todos os valores existam antes de calcular
+    const simulationInputs = {
+      cashReserve: values.cashReserve,
+      burnRate: values.burnRate,
+      revenueIncrease: values.revenueIncrease,
+      costReduction: values.costReduction,
+      addFunding: values.addFunding,
+    };
+    
+    const result = calculateSimulation(simulationInputs);
     setSimulationResult(result);
     
     toast({
