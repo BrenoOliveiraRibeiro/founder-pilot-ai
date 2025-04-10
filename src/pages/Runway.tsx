@@ -82,7 +82,7 @@ const RunwayPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <ProjectionChart projectionData={projectionData} />
-        <RecommendationsPanel />
+        <RecommendationsPanel runwayMonths={runwayMonths} burnRate={burnRate} />
       </div>
 
       {/* Modal de simulação */}
