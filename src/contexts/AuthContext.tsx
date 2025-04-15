@@ -33,36 +33,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Buscando perfil do usuário:", userId);
+      
       // Buscar perfil
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Usando maybeSingle em vez de single para evitar erros quando não existir perfil
 
       if (profileError) {
-        if (profileError.code !== 'PGRST116') { // Ignore "não encontrado" para novos usuários
-          console.error("Erro ao buscar perfil:", profileError);
-          throw profileError;
-        }
+        console.error("Erro ao buscar perfil:", profileError);
+        // Não vamos lançar o erro aqui, apenas registrar
       }
       
       if (profileData) {
         console.log("Perfil encontrado:", profileData);
         setProfile(profileData as Profile);
       } else {
-        console.log("Perfil não encontrado, usuário pode ser novo");
+        console.log("Perfil não encontrado, criando um novo perfil");
+        
+        // Criar um perfil básico se não existir
+        if (user?.email) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([{ id: userId, email: user.email }])
+            .select()
+            .maybeSingle();
+            
+          if (createError) {
+            console.error("Erro ao criar perfil:", createError);
+          } else if (newProfile) {
+            console.log("Novo perfil criado:", newProfile);
+            setProfile(newProfile as Profile);
+          }
+        }
       }
 
       // Buscar empresas
       await refreshEmpresas();
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar seus dados. Por favor, tente novamente.",
-        variant: "destructive",
-      });
+      // Não mostrar toast aqui para evitar spam de mensagens
     } finally {
       setLoading(false);
     }
@@ -81,10 +92,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .eq('user_id', user.id);
 
-      if (empresasError) throw empresasError;
+      if (empresasError) {
+        console.error("Erro ao buscar empresas:", empresasError);
+        return; // Retorna sem lançar erro, apenas registra no console
+      }
       
       console.log("Empresas carregadas:", empresasData);
-      setEmpresas(empresasData as Empresa[]);
+      setEmpresas(empresasData as Empresa[] || []);
 
       // Se houver empresas, definir a primeira como atual se nenhuma for selecionada
       if (empresasData && empresasData.length > 0 && !currentEmpresa) {
@@ -93,16 +107,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
-        variant: "destructive",
-      });
+      // Não vamos mostrar toast aqui para evitar spam
+    }
+  };
+
+  // Esta função verifica se é necessário criar a tabela profiles caso não exista
+  const checkAndCreateProfilesTable = async () => {
+    try {
+      // Verifica se a tabela existe fazendo um select
+      const { error } = await supabase
+        .from('profiles')
+        .select('count', { count: 'exact', head: true });
+
+      // Se não houver erro, a tabela existe
+      if (!error) return;
+
+      // Se o erro for que a tabela não existe, podemos informar o usuário
+      if (error.code === '42P01') { // código postgres para "tabela não existe"
+        console.error("A tabela profiles não existe. Por favor, execute as migrações necessárias.");
+        toast({
+          title: "Configuração incompleta",
+          description: "As tabelas necessárias não foram encontradas. Contate o administrador do sistema.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao verificar tabela profiles:", error);
     }
   };
 
   useEffect(() => {
     console.log("AuthProvider inicializado");
+    // Verificar se as tabelas necessárias existem
+    checkAndCreateProfilesTable();
+    
     // Configurar listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -119,7 +157,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Se o usuário fizer login, buscar perfil e empresas
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          fetchUserProfile(session.user.id);
+          // Pequena pausa para evitar conflitos com outras operações do Supabase
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
         }
       }
     );
@@ -132,7 +173,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         // Buscar o perfil e empresas do usuário
-        fetchUserProfile(session.user.id);
+        // Pequena pausa para evitar conflitos com outras operações do Supabase
+        setTimeout(() => {
+          fetchUserProfile(session.user.id);
+        }, 0);
       } else {
         setLoading(false);
       }

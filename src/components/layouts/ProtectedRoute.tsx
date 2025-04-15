@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,12 +22,25 @@ export const ProtectedRoute = ({
   const { user, loading, empresas } = useAuth();
   const location = useLocation();
   const [initialCheck, setInitialCheck] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Definir um timeout para casos onde a autenticação demore muito
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.log("Timeout de autenticação atingido - verificação forçada");
+        setInitialCheck(true);
+        setError("A verificação de autenticação demorou muito. Tente novamente mais tarde.");
+      }
+    }, 10000); // 10 segundos
+
     // Marcar como verificado apenas se não estiver carregando
     if (!loading) {
       setInitialCheck(true);
+      clearTimeout(timeoutId);
     }
+
+    return () => clearTimeout(timeoutId);
   }, [loading]);
 
   // Aguardar a verificação de autenticação
@@ -50,6 +65,14 @@ export const ProtectedRoute = ({
             <Skeleton className="h-4 w-[200px]" />
           </div>
           <p className="text-sm text-muted-foreground mt-2">Verificando autenticação...</p>
+          
+          {error && (
+            <Alert variant="destructive" className="mt-4 max-w-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erro</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </motion.div>
       </div>
     );

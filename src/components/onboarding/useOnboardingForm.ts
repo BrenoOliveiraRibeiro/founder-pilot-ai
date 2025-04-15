@@ -81,6 +81,16 @@ export const useOnboardingForm = () => {
     setIsLoading(true);
     
     try {
+      console.log("Tentando cadastrar empresa com dados:", { 
+        user_id: user.id,
+        nome: values.nome,
+        segmento: values.segmento,
+        estagio: values.estagio,
+        num_funcionarios: values.num_funcionarios,
+        data_fundacao: values.data_fundacao,
+        website: values.website
+      });
+
       // 1. Criar empresa
       const { data: empresa, error } = await supabase
         .from('empresas')
@@ -98,7 +108,12 @@ export const useOnboardingForm = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao cadastrar empresa:", error);
+        throw error;
+      }
+      
+      console.log("Empresa cadastrada com sucesso:", empresa);
       
       // 2. Fazer upload do logo se existir
       if (logoFile && empresa) {
@@ -106,7 +121,7 @@ export const useOnboardingForm = () => {
       }
       
       // 3. Fazer upload dos documentos
-      if (documents.length > 0) {
+      if (documents.length > 0 && empresa) {
         await uploadDocuments(documents, user.id, empresa.id);
       }
       
