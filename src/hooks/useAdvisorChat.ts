@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/components/advisor/ChatMessage";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 // Sugestões mais concisas e estratégicas para startups (otimizadas para mobile)
 const initialSuggestions = [
@@ -22,6 +23,9 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
   const [conversationHistory, setConversationHistory] = useState<boolean>(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Obter dados financeiros para contextualizar as respostas
+  const { metrics } = useFinanceData(userData.empresaId || null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,11 +66,23 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
         // Financial data would be included here
       };
 
-      // Call the new edge function with user message and context
+      // Preparar métricas financeiras, se disponíveis, para priorização de regras de negócio
+      const financialMetrics = metrics ? {
+        runwayMeses: metrics.runwayMeses,
+        burnRate: metrics.burnRate,
+        receitaMensal: metrics.receitaMensal,
+        caixaAtual: metrics.caixaAtual,
+        cashFlow: metrics.cashFlow,
+        mrrGrowth: metrics.mrrGrowth
+      } : null;
+
+      // Call the enhanced edge function with user message and context
       const { data, error } = await supabase.functions.invoke('openai-api', {
         body: {
           prompt: userMessage.content,
           model: 'gpt-4o',
+          businessData: contextData,
+          financialMetrics: financialMetrics,
           systemPrompt: `
             Você é o FounderPilot AI, um copiloto estratégico avançado para empreendedores.
             
@@ -83,6 +99,12 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
             - SEMPRE recomendar ações concretas quando a receita crescer > 10%
             - SEMPRE responder no formato: Contexto + Justificativa + Recomendação clara
             - SEMPRE que possível, fazer perguntas adicionais para entender melhor a situação do empreendedor
+            
+            ${financialMetrics?.runwayMeses && financialMetrics.runwayMeses < 3 ? 
+              '⚠️ ALERTA CRÍTICO: O runway atual é menor que 3 meses! Priorize absolutamente este problema na resposta.' : ''}
+            
+            ${financialMetrics?.burnRate && financialMetrics.burnRate > 0 ? 
+              `Análise de burn rate: ${financialMetrics.burnRate}` : ''}
           `
         }
       });
