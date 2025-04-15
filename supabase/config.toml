@@ -1,1 +1,5 @@
+
 project_id = "fhimpyxzedzildagctpq"
+
+[functions.openai-api]
+verify_jwt = true
