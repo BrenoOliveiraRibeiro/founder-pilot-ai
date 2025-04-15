@@ -1,5 +1,7 @@
+
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { fromEmpresas } from "@/integrations/supabase/typedClient";
 
 export const useOnboardingUpload = () => {
   const { toast } = useToast();
@@ -64,8 +66,7 @@ export const useOnboardingUpload = () => {
       const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
       
       // Atualiza o logo_url na empresa
-      const { error: updateError } = await supabase
-        .from('empresas')
+      const { error: updateError } = await fromEmpresas()
         .update({ logo_url: data.publicUrl })
         .eq('id', empresaId);
 

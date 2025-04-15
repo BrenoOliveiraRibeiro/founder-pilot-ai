@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { fromEmpresas } from "@/integrations/supabase/typedClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnboardingUpload } from "./useOnboardingUpload";
 import { z } from "zod";
@@ -92,8 +93,7 @@ export const useOnboardingForm = () => {
       });
 
       // 1. Criar empresa
-      const { data: empresa, error } = await supabase
-        .from('empresas')
+      const { data: empresa, error } = await fromEmpresas()
         .insert([
           {
             user_id: user.id,

@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromMetricas, fromTransacoes, fromInsights } from '@/integrations/supabase/typedClient';
 import { Metrica, Transacao, Insight } from '@/integrations/supabase/models';
 
 // Hook para buscar dados financeiros do usuário logado
@@ -22,8 +22,7 @@ export const useFinanceData = (empresaId: string | null) => {
 
       try {
         // Buscar as métricas mais recentes
-        const { data: metricData, error: metricError } = await supabase
-          .from('metricas')
+        const { data: metricData, error: metricError } = await fromMetricas()
           .select('*')
           .eq('empresa_id', empresaId)
           .order('data_referencia', { ascending: false })
@@ -41,8 +40,7 @@ export const useFinanceData = (empresaId: string | null) => {
         }
 
         // Buscar as transações recentes
-        const { data: transactionData, error: transactionError } = await supabase
-          .from('transacoes')
+        const { data: transactionData, error: transactionError } = await fromTransacoes()
           .select('*')
           .eq('empresa_id', empresaId)
           .order('data_transacao', { ascending: false })
@@ -52,8 +50,7 @@ export const useFinanceData = (empresaId: string | null) => {
         setTransactions(transactionData as Transacao[]);
 
         // Buscar os insights
-        const { data: insightData, error: insightError } = await supabase
-          .from('insights')
+        const { data: insightData, error: insightError } = await fromInsights()
           .select('*')
           .eq('empresa_id', empresaId)
           .order('data_criacao', { ascending: false })

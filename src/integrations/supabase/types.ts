@@ -9,7 +9,307 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      documentos: {
+        Row: {
+          arquivo_url: string
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          tamanho: number
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_url: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          tamanho: number
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_url?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tamanho?: number
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          created_at: string
+          data_fundacao: string | null
+          estagio: string | null
+          id: string
+          logo_url: string | null
+          nome: string
+          num_funcionarios: number | null
+          segmento: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_fundacao?: string | null
+          estagio?: string | null
+          id?: string
+          logo_url?: string | null
+          nome: string
+          num_funcionarios?: number | null
+          segmento?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_fundacao?: string | null
+          estagio?: string | null
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          num_funcionarios?: number | null
+          segmento?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      insights: {
+        Row: {
+          data_criacao: string
+          data_resolucao: string | null
+          descricao: string
+          empresa_id: string
+          id: string
+          prioridade: string
+          status: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          data_criacao?: string
+          data_resolucao?: string | null
+          descricao: string
+          empresa_id: string
+          id?: string
+          prioridade: string
+          status: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          data_criacao?: string
+          data_resolucao?: string | null
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          prioridade?: string
+          status?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracoes_bancarias: {
+        Row: {
+          created_at: string
+          detalhes: Json | null
+          empresa_id: string
+          id: string
+          nome_banco: string
+          status: string
+          tipo_conexao: string
+          ultimo_sincronismo: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detalhes?: Json | null
+          empresa_id: string
+          id?: string
+          nome_banco: string
+          status: string
+          tipo_conexao: string
+          ultimo_sincronismo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detalhes?: Json | null
+          empresa_id?: string
+          id?: string
+          nome_banco?: string
+          status?: string
+          tipo_conexao?: string
+          ultimo_sincronismo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_bancarias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metricas: {
+        Row: {
+          burn_rate: number | null
+          caixa_atual: number | null
+          cash_flow: number | null
+          created_at: string
+          data_referencia: string
+          empresa_id: string
+          id: string
+          mrr_growth: number | null
+          receita_mensal: number | null
+          runway_meses: number | null
+          updated_at: string
+        }
+        Insert: {
+          burn_rate?: number | null
+          caixa_atual?: number | null
+          cash_flow?: number | null
+          created_at?: string
+          data_referencia: string
+          empresa_id: string
+          id?: string
+          mrr_growth?: number | null
+          receita_mensal?: number | null
+          runway_meses?: number | null
+          updated_at?: string
+        }
+        Update: {
+          burn_rate?: number | null
+          caixa_atual?: number | null
+          cash_flow?: number | null
+          created_at?: string
+          data_referencia?: string
+          empresa_id?: string
+          id?: string
+          mrr_growth?: number | null
+          receita_mensal?: number | null
+          runway_meses?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metricas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          cargo: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id: string
+          nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transacoes: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_transacao: string
+          descricao: string
+          empresa_id: string
+          id: string
+          metodo_pagamento: string | null
+          recorrente: boolean | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          data_transacao: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          metodo_pagamento?: string | null
+          recorrente?: boolean | null
+          tipo: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_transacao?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          metodo_pagamento?: string | null
+          recorrente?: boolean | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

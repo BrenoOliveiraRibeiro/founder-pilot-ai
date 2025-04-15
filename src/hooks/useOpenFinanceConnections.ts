@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { fromIntegracoesBancarias } from '@/integrations/supabase/typedClient';
 import { IntegracaoBancaria } from '@/integrations/supabase/models';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -21,8 +22,7 @@ export const useOpenFinanceConnections = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("integracoes_bancarias")
+      const { data, error } = await fromIntegracoesBancarias()
         .select("*")
         .eq("empresa_id", currentEmpresa?.id)
         .eq("tipo_conexao", "Open Finance");

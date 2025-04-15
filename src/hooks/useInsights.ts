@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fromInsights } from "@/integrations/supabase/typedClient";
 import { Insight } from "@/integrations/supabase/models";
 import { useToast } from "@/components/ui/use-toast";
 import { formatBelvoError } from "@/lib/utils";
@@ -23,8 +24,7 @@ export const useInsights = (empresaId: string | undefined) => {
   const fetchInsights = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("insights")
+      const { data, error } = await fromInsights()
         .select("*")
         .eq("empresa_id", empresaId)
         .order("prioridade", { ascending: true })

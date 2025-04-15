@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fromProfiles, fromEmpresas } from '@/integrations/supabase/typedClient';
 import { Session, User } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
 import { Empresa, Profile } from '@/integrations/supabase/models';
@@ -35,11 +35,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Buscando perfil do usuário:", userId);
       
       // Buscar perfil
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      const { data: profileData, error: profileError } = await fromProfiles()
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Usando maybeSingle em vez de single para evitar erros quando não existir perfil
+        .maybeSingle();
 
       if (profileError) {
         console.error("Erro ao buscar perfil:", profileError);
@@ -54,8 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Criar um perfil básico se não existir
         if (user?.email) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
+          const { data: newProfile, error: createError } = await fromProfiles()
             .insert([{ id: userId, email: user.email }])
             .select()
             .maybeSingle();
@@ -87,8 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       console.log("Buscando empresas para o usuário:", user.id);
-      const { data: empresasData, error: empresasError } = await supabase
-        .from('empresas')
+      const { data: empresasData, error: empresasError } = await fromEmpresas()
         .select('*')
         .eq('user_id', user.id);
 
@@ -115,8 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAndCreateProfilesTable = async () => {
     try {
       // Verifica se a tabela existe fazendo um select
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await fromProfiles()
         .select('count', { count: 'exact', head: true });
 
       // Se não houver erro, a tabela existe

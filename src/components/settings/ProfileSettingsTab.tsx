@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { fromProfiles } from "@/integrations/supabase/typedClient";
 import { Loader2, Upload } from "lucide-react";
 
 const profileFormSchema = z.object({
@@ -20,7 +20,7 @@ const profileFormSchema = z.object({
   email: z.string().email({
     message: "Email inválido.",
   }),
-  bio: z.string().max(500).optional(), // Aumentado de 160 para 500 caracteres
+  bio: z.string().max(500).optional(),
   role: z.string().min(2, {
     message: "Cargo deve ter pelo menos 2 caracteres.",
   }),
@@ -60,8 +60,7 @@ export function ProfileSettingsTab() {
         throw new Error("Usuário não encontrado");
       }
 
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await fromProfiles()
         .update({
           nome: data.name,
           bio: data.bio,
@@ -125,8 +124,7 @@ export function ProfileSettingsTab() {
       const avatar_url = data.publicUrl;
 
       // Atualiza o perfil do usuário com a URL do avatar
-      const { error: updateError } = await supabase
-        .from('profiles')
+      const { error: updateError } = await fromProfiles()
         .update({ avatar_url })
         .eq('id', user.id);
 
