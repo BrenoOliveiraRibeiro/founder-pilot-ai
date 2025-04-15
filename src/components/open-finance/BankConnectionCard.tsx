@@ -2,11 +2,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, ChevronRight, ExternalLink, LockIcon } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertCircle, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ExternalLink, ChevronRight, LockIcon } from "lucide-react";
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
+import { PluggyOAuthButton } from "./PluggyOAuthButton";
 
 interface Provider {
   id: string;
@@ -107,17 +108,26 @@ export const BankConnectionCard = ({
           {/* Container para o widget do Pluggy */}
           <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
           
-          <Button 
-            className="w-full group transition-all duration-200 relative overflow-hidden"
-            disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
-            onClick={handleConnect}
-          >
-            <span className="relative z-10 flex items-center">
-              {connecting ? "Conectando..." : "Conectar Conta Bancária"}
-              <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-            </span>
-            <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
-          </Button>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Widget-based connection */}
+            <Button 
+              className="w-full group transition-all duration-200 relative overflow-hidden"
+              disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
+              onClick={handleConnect}
+            >
+              <span className="relative z-10 flex items-center">
+                {connecting ? "Conectando..." : "Conectar com Widget"}
+                <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </span>
+              <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+            </Button>
+            
+            {/* OAuth-based connection */}
+            <PluggyOAuthButton 
+              useSandbox={useSandbox}
+              className="w-full"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -23,11 +23,20 @@ serve(async (req) => {
     console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
     console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
 
-    // Inicializa cliente do Supabase
+    // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
-    const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
+    const { 
+      action, 
+      empresa_id, 
+      institution, 
+      item_id,
+      code, // For OAuth flow
+      redirectUri, // For OAuth flow  
+      integration_id, 
+      sandbox = true 
+    } = requestData;
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
@@ -47,25 +56,26 @@ serve(async (req) => {
           institution, 
           sandbox, 
           pluggyClientId, 
-          pluggyClientSecret, 
-          corsHeaders
+          pluggyClientSecret,
+          redirectUri // Pass through the redirectUri for OAuth flow
         );
       
       case "callback":
         return await processCallback(
           empresa_id, 
-          item_id, 
+          item_id,
+          code, // Pass the authorization code for OAuth flow
+          redirectUri, // Pass the redirectUri for OAuth flow
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
-          supabase, 
-          corsHeaders
+          supabase
         );
       
       case "sync":
         return await syncData(
           empresa_id, 
-          requestData.integration_id, 
+          integration_id, 
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
@@ -84,8 +94,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: "Erro interno do servidor", 
-        message: error.message,
-        stack: error.stack 
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
