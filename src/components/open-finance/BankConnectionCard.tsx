@@ -2,8 +2,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertCircle, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExternalLink, ChevronRight, LockIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ExternalLink, ChevronRight, LockIcon, AlertCircle } from "lucide-react";
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
