@@ -1,195 +1,183 @@
-
-// Constants for Pluggy API
-export const PLUGGY_API_URL = "https://api.pluggy.ai";
-export const PLUGGY_SANDBOX_URL = "https://sandbox.pluggy.ai";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get Pluggy API token
-export async function getPluggyToken(clientId: string, clientSecret: string, sandbox: boolean) {
-  const apiBaseUrl = sandbox ? PLUGGY_SANDBOX_URL : PLUGGY_API_URL;
-  const url = `${apiBaseUrl}/auth`;
-  
-  console.log(`Getting Pluggy token from ${url}`);
-  
+export async function getPluggyToken(pluggyClientId: string, pluggyClientSecret: string, sandbox: boolean) {
   try {
-    const response = await fetch(url, {
+    // For debugging
+    console.log(`Getting Pluggy token with client ID: ${pluggyClientId.substring(0, 7)}... (sandbox: ${sandbox})`);
+    
+    const baseUrl = sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai';
+    
+    const response = await fetch(`${baseUrl}/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
       body: JSON.stringify({
-        clientId,
-        clientSecret,
+        clientId: pluggyClientId,
+        clientSecret: pluggyClientSecret,
       }),
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Pluggy API Error (${response.status}):`, errorText);
-      return { 
-        success: false, 
-        error: { message: `Failed to authenticate with Pluggy: ${response.status} ${response.statusText}` },
-        status: response.status,
-        errorType: response.status === 401 ? "authentication_failure" : "api_error" 
+      console.error(`Pluggy auth error: ${response.status} ${response.statusText}`, errorText);
+      return {
+        success: false,
+        error: {
+          status: response.status,
+          message: errorText || 'Failed to authenticate with Pluggy API'
+        }
       };
     }
     
     const data = await response.json();
-    console.log("Successfully retrieved Pluggy API token");
+    console.log('Successfully obtained Pluggy API key');
     
-    return { 
-      success: true, 
-      data: { apiKey: data.apiKey }
+    return {
+      success: true,
+      data: data
     };
   } catch (error) {
-    console.error("Network error calling Pluggy API:", error);
-    return { 
-      success: false, 
-      error: { message: error.message },
-      errorType: "network_error" 
+    console.error('Error in getPluggyToken:', error);
+    return {
+      success: false,
+      error: {
+        message: error.message || 'Unknown error occurred in getPluggyToken'
+      }
     };
   }
 }
 
-// Helper function to call Pluggy API
-export async function callPluggyAPI(endpoint: string, method: string, apiKey: string, body: any = null) {
-  const url = `${PLUGGY_API_URL}${endpoint}`;
-  
-  console.log(`Calling Pluggy API: ${method} ${endpoint}`);
-  
-  const headers = new Headers({
-    'X-API-KEY': apiKey,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  });
-
-  const options = {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : null,
-  };
-  
+export async function callPluggyAPI(endpoint: string, method: string, apiKey: string | null, body: any = null) {
   try {
-    const response = await fetch(url, options);
+    console.log(`Calling Pluggy API: ${method} ${endpoint}`);
     
-    // Log response details
-    console.log(`Pluggy API Response Status: ${response.status}`);
+    const baseUrl = 'https://api.pluggy.ai';
     
-    // Get the raw response text
-    const responseText = await response.text();
-    console.log(`Response Body (first 500 chars): ${responseText.substring(0, 500)}${responseText.length > 500 ? '...' : ''}`);
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    };
     
-    // Try to parse as JSON
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      console.error("Failed to parse Pluggy response as JSON:", e);
-      responseData = { text: responseText, rawError: e.message };
+    const options: RequestInit = {
+      method,
+      headers,
+    };
+    
+    if (body) {
+      options.body = JSON.stringify(body);
     }
     
+    const response = await fetch(`${baseUrl}${endpoint}`, options);
+    
     if (!response.ok) {
-      console.error(`Pluggy API Error (${response.status}):`, responseData);
-      return { 
-        success: false, 
-        error: responseData,
-        status: response.status,
-        errorType: response.status === 401 ? "authentication_failure" : "api_error" 
+      const errorText = await response.text();
+      console.error(`Pluggy API error: ${response.status} ${response.statusText}`, errorText);
+      return {
+        success: false,
+        error: {
+          status: response.status,
+          message: errorText || 'Failed to call Pluggy API'
+        }
       };
     }
     
-    return { success: true, data: responseData };
+    const data = await response.json();
+    console.log('Successfully called Pluggy API');
+    
+    return {
+      success: true,
+      data: data
+    };
   } catch (error) {
-    console.error(`Network error calling Pluggy API at ${endpoint}:`, error);
-    return { 
-      success: false, 
-      error: { message: error.message },
-      errorType: "network_error" 
+    console.error('Error in callPluggyAPI:', error);
+    return {
+      success: false,
+      error: {
+        message: error.message || 'Unknown error occurred in callPluggyAPI'
+      }
     };
   }
 }
 
-// Helper to generate insights based on financial metrics
-export async function gerarInsights(empresaId: string, runway: number, burnRate: number, receita: number, caixaAtual: number, supabaseClient: any) {
-  const insights = [];
-  
-  // Regra de negócio: Runway < 3 meses (ALTA PRIORIDADE)
-  if (runway < 3) {
-    insights.push({
-      empresa_id: empresaId,
-      tipo: "alerta",
-      titulo: `Runway crítico de ${runway.toFixed(1)} meses - Ação urgente necessária`,
-      descricao: "Seu caixa atual durará menos de 3 meses no ritmo atual de gastos. Recomendamos revisão de despesas ou planejamento de captação.",
-      prioridade: "alta",
-      status: "pendente"
-    });
-  }
-  // Regra de negócio: Runway < 6 meses (MÉDIA PRIORIDADE)
-  else if (runway < 6) {
-    insights.push({
-      empresa_id: empresaId,
-      tipo: "alerta",
-      titulo: `Runway limitado de ${runway.toFixed(1)} meses - Planeje sua próxima captação`,
-      descricao: "Seu caixa atual durará menos de 6 meses. Recomendamos iniciar planejamento de captação ou redução de despesas não-essenciais.",
-      prioridade: "media",
-      status: "pendente"
-    });
-  }
-  
-  // Regra de negócio: burn rate > valor de referência do setor
-  // Usando um valor fixo temporariamente até termos benchmarks do setor
-  const burnRateReferencia = 30000; // Exemplo: R$ 30.000/mês
-  if (burnRate > burnRateReferencia) {
-    insights.push({
-      empresa_id: empresaId,
-      tipo: "alerta",
-      titulo: `Burn rate elevado de R$${burnRate.toFixed(2)} por mês`,
-      descricao: `Sua taxa de queima mensal está acima da referência para startups em estágio similar. Analise categorias de despesas para identificar oportunidades de otimização.`,
-      prioridade: "media",
-      status: "pendente"
-    });
-  }
-  
-  // Regra de negócio: crescimento de receita
-  // Simular para este exemplo
-  if (receita > burnRate * 1.2) {
-    insights.push({
-      empresa_id: empresaId,
-      tipo: "projeção",
-      titulo: "Crescimento sustentável - Receita supera burn rate em mais de 20%",
-      descricao: "Sua empresa está em trajetória sustentável de crescimento, com receita superior ao burn rate, criando um fluxo de caixa positivo.",
-      prioridade: "baixa",
-      status: "pendente"
-    });
-  }
-  
-  // Regra de negócio: Caixa disponível para investimento
-  if (caixaAtual > burnRate * 12) {
-    insights.push({
-      empresa_id: empresaId,
-      tipo: "sugestão",
-      titulo: "Oportunidade de investimento em crescimento",
-      descricao: "Com mais de 12 meses de runway, você pode considerar investir parte do caixa em iniciativas de crescimento como marketing ou contratações estratégicas.",
-      prioridade: "baixa",
-      status: "pendente"
-    });
-  }
-  
-  // Salvar insights gerados
-  if (insights.length > 0) {
-    const { error } = await supabaseClient
-      .from("insights")
-      .insert(insights);
-      
-    if (error) {
-      console.error("Erro ao salvar insights:", error);
-    } else {
-      console.log(`${insights.length} insights gerados e salvos com sucesso`);
+export async function gerarInsights(empresaId: string, runwayMeses: number, burnRate: number, receitaMensal: number, caixaAtual: number, supabaseClient: any) {
+  try {
+    console.log(`Gerando insights para empresa ${empresaId}`);
+
+    const insights = [];
+
+    // Insight 1: Runway baixo
+    if (runwayMeses < 3) {
+      insights.push({
+        empresa_id: empresaId,
+        tipo: "Alerta",
+        titulo: "Runway Crítico",
+        descricao: `Seu runway é de apenas ${runwayMeses.toFixed(1)} meses. Reduza despesas ou aumente a receita urgentemente.`,
+        prioridade: "alta",
+        status: "pendente",
+        data_criacao: new Date().toISOString()
+      });
     }
+
+    // Insight 2: Burn rate alto
+    if (burnRate > receitaMensal) {
+      insights.push({
+        empresa_id: empresaId,
+        tipo: "Alerta",
+        titulo: "Burn Rate Elevado",
+        descricao: `Seu burn rate (${burnRate.toFixed(0)}) excede sua receita mensal (${receitaMensal.toFixed(0)}). Avalie cortes de custos.`,
+        prioridade: "media",
+        status: "pendente",
+        data_criacao: new Date().toISOString()
+      });
+    }
+
+    // Insight 3: Caixa atual
+    if (caixaAtual < 1000) {
+      insights.push({
+        empresa_id: empresaId,
+        tipo: "Alerta",
+        titulo: "Caixa Baixo",
+        descricao: `Seu caixa atual é de R$${caixaAtual.toFixed(0)}. Monitore de perto suas finanças.`,
+        prioridade: "media",
+        status: "pendente",
+        data_criacao: new Date().toISOString()
+      });
+    }
+
+    // Insight 4: Receita mensal
+    if (receitaMensal > 10000) {
+      insights.push({
+        empresa_id: empresaId,
+        tipo: "Recomendação",
+        titulo: "Receita em Crescimento",
+        descricao: `Sua receita mensal é de R$${receitaMensal.toFixed(0)}. Explore investimentos para escalar o negócio.`,
+        prioridade: "baixa",
+        status: "pendente",
+        data_criacao: new Date().toISOString()
+      });
+    }
+
+    if (insights.length > 0) {
+      const { error: insightsError } = await supabaseClient
+        .from("insights")
+        .insert(insights);
+
+      if (insightsError) {
+        console.error("Erro ao salvar insights:", insightsError);
+      }
+    } else {
+      console.log("Nenhum insight gerado");
+    }
+
+    console.log("Insights gerados com sucesso");
+  } catch (error) {
+    console.error("Erro ao gerar insights:", error);
+    throw error;
   }
 }

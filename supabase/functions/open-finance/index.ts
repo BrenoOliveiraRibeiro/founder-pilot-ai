@@ -14,12 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    // Use your specific Supabase and Pluggy credentials
+    const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
-    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
+    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
+    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
 
-    console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 5) + "***" : "not set");
+    console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
     console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
 
     // Inicializa cliente do Supabase
