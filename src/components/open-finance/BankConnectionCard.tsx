@@ -22,10 +22,10 @@ interface BankConnectionCardProps {
   connecting: boolean;
   connectionProgress: number;
   connectionStatus: string;
-  belvoWidgetLoaded: boolean;
+  pluggyWidgetLoaded: boolean;
   useSandbox: boolean;
   handleConnect: () => Promise<void>;
-  belvoContainerRef: React.RefObject<HTMLDivElement>;
+  connectContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 export const BankConnectionCard = ({
@@ -35,10 +35,10 @@ export const BankConnectionCard = ({
   connecting,
   connectionProgress,
   connectionStatus,
-  belvoWidgetLoaded,
+  pluggyWidgetLoaded,
   useSandbox,
   handleConnect,
-  belvoContainerRef
+  connectContainerRef
 }: BankConnectionCardProps) => {
   return (
     <Card className="border-none shadow-md">
@@ -68,9 +68,9 @@ export const BankConnectionCard = ({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Modo Sandbox Ativado</AlertTitle>
             <AlertDescription className="text-primary/80">
-              No modo sandbox, utilize as credenciais de teste: "fake-user" e "fake-password"
+              No modo sandbox, utilize as credenciais de teste disponibilizadas pelo Pluggy
               <a 
-                href="https://developers.belvo.com/docs/test-in-sandbox" 
+                href="https://docs.pluggy.ai/docs/sandbox-test-flow" 
                 target="_blank" 
                 rel="noreferrer"
                 className="flex items-center text-primary mt-1 text-sm"
@@ -104,12 +104,12 @@ export const BankConnectionCard = ({
           
           <SecurityInfoItems />
           
-          {/* Container para o widget do Belvo */}
-          <div ref={belvoContainerRef} className="belvo-widget-container"></div>
+          {/* Container para o widget do Pluggy */}
+          <div ref={connectContainerRef} className="pluggy-connect-container"></div>
           
           <Button 
             className="w-full group transition-all duration-200 relative overflow-hidden"
-            disabled={!selectedProvider || connecting || !belvoWidgetLoaded}
+            disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
             onClick={handleConnect}
           >
             <span className="relative z-10 flex items-center">
@@ -123,4 +123,3 @@ export const BankConnectionCard = ({
     </Card>
   );
 };
-

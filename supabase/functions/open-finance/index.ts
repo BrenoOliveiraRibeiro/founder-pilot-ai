@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 import { corsHeaders } from "./utils.ts";
-import { testBelvoConnection } from "./test-connection.ts";
+import { testPluggyConnection } from "./test-connection.ts";
 import { authorizeConnection } from "./authorize.ts";
 import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
@@ -16,17 +16,17 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const belvoSecretId = Deno.env.get("BELVO_SECRET_ID") || "";
-    const belvoSecretPassword = Deno.env.get("BELVO_SECRET_PASSWORD") || "";
+    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
+    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
 
-    console.log("Using Belvo credentials - ID:", belvoSecretId ? belvoSecretId.substring(0, 5) + "***" : "not set");
-    console.log("Password length:", belvoSecretPassword ? belvoSecretPassword.length : "not set");
+    console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 5) + "***" : "not set");
+    console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
 
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
-    const { action, empresa_id, institution, link_id, sandbox = true } = requestData;
+    const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
@@ -38,25 +38,25 @@ serve(async (req) => {
     // Route to appropriate handler based on action
     switch (action) {
       case "test_connection":
-        return await testBelvoConnection(belvoSecretId, belvoSecretPassword, sandbox, corsHeaders);
+        return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
         return await authorizeConnection(
           empresa_id, 
           institution, 
           sandbox, 
-          belvoSecretId, 
-          belvoSecretPassword, 
+          pluggyClientId, 
+          pluggyClientSecret, 
           corsHeaders
         );
       
       case "callback":
         return await processCallback(
           empresa_id, 
-          link_id, 
+          item_id, 
           sandbox, 
-          belvoSecretId, 
-          belvoSecretPassword, 
+          pluggyClientId, 
+          pluggyClientSecret, 
           supabase, 
           corsHeaders
         );
@@ -66,8 +66,8 @@ serve(async (req) => {
           empresa_id, 
           requestData.integration_id, 
           sandbox, 
-          belvoSecretId, 
-          belvoSecretPassword, 
+          pluggyClientId, 
+          pluggyClientSecret, 
           supabase, 
           corsHeaders
         );

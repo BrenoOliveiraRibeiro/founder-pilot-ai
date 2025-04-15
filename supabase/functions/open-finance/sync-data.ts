@@ -1,18 +1,28 @@
 
+import { getPluggyToken } from "./utils.ts";
 import { processFinancialData } from "./financial-data.ts";
 
 export async function syncData(
   empresaId: string, 
   integrationId: string | undefined, 
   sandbox: boolean, 
-  belvoSecretId: string, 
-  belvoSecretPassword: string, 
+  pluggyClientId: string, 
+  pluggyClientSecret: string, 
   supabase: any, 
   corsHeaders: Record<string, string>
 ) {
   console.log(`Sincronizando dados da empresa ${empresaId}`);
   
   try {
+    // Get API key
+    const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
+    
+    if (!tokenResult.success) {
+      throw new Error(`Falha na autenticação com a API Pluggy: ${tokenResult.error.message}`);
+    }
+    
+    const apiKey = tokenResult.data.apiKey;
+    
     // If integration_id is provided, sync only that integration
     if (integrationId) {
       const { data: integracao, error: integracaoError } = await supabase
@@ -30,9 +40,10 @@ export async function syncData(
       console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}`);
       await processFinancialData(
         empresaId, 
-        integracao.detalhes.link_id, 
-        belvoSecretId, 
-        belvoSecretPassword, 
+        integracao.detalhes.item_id, 
+        apiKey,
+        pluggyClientId, 
+        pluggyClientSecret, 
         integracao.detalhes.sandbox || false, 
         supabase
       );
@@ -69,9 +80,10 @@ export async function syncData(
         try {
           await processFinancialData(
             empresaId, 
-            integracao.detalhes.link_id, 
-            belvoSecretId, 
-            belvoSecretPassword, 
+            integracao.detalhes.item_id, 
+            apiKey,
+            pluggyClientId, 
+            pluggyClientSecret, 
             integracao.detalhes.sandbox || false, 
             supabase
           );

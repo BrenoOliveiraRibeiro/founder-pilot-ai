@@ -1,108 +1,107 @@
-import { callBelvoAPI } from "./utils.ts";
 
-export async function testBelvoConnection(belvoSecretId: string, belvoSecretPassword: string, sandbox: boolean, corsHeaders: Record<string, string>) {
+import { getPluggyToken, callPluggyAPI, corsHeaders } from "./utils.ts";
+
+export async function testPluggyConnection(pluggyClientId: string, pluggyClientSecret: string, sandbox: boolean, corsHeaders: Record<string, string>) {
   try {
-    console.log("Testing Belvo connection using current credentials...");
+    console.log("Testing Pluggy connection using current credentials...");
     
-    // First, try to get institutions to verify auth
-    console.log("Verifying credentials with GET /api/institutions/ call");
-    const institutionsResult = await callBelvoAPI('/api/institutions/', 'GET', belvoSecretId, belvoSecretPassword, sandbox);
+    // First, get authentication token
+    console.log("Getting Pluggy API token");
+    const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
-    if (!institutionsResult.success) {
-      console.error("Failed basic API authentication test:", institutionsResult.error);
+    if (!tokenResult.success) {
+      console.error("Failed basic API authentication test:", tokenResult.error);
       return new Response(
         JSON.stringify({
           success: false,
-          message: "Falha na autenticação básica com a API Belvo",
-          error: institutionsResult.error,
+          message: "Falha na autenticação básica com a API Pluggy",
+          error: tokenResult.error,
           errorType: "authentication_failure",
-          status: institutionsResult.status
+          status: tokenResult.status
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
     
-    console.log(`Successfully retrieved ${institutionsResult.data.count} institutions`);
+    const apiKey = tokenResult.data.apiKey;
+    console.log(`Successfully retrieved API token: ${apiKey.substring(0, 5)}...`);
     
-    // If authentication works, proceed to test link creation
-    console.log("Creating test link using sandbox credentials...");
+    // Now, test by fetching available connectors
+    console.log("Fetching available connectors...");
+    const connectorsResult = await callPluggyAPI('/connectors?countries=BR', 'GET', apiKey);
     
-    // Get the first institution available in sandbox for testing
-    let testInstitution = 'erebor_br_retail'; // Default fallback
-    
-    if (institutionsResult.data.results && institutionsResult.data.results.length > 0) {
-      // Try to find a Brazilian institution first
-      const brInstitution = institutionsResult.data.results.find((inst: any) => 
-        inst.country_code === 'BR' || (inst.country_codes && inst.country_codes.includes('BR'))
+    if (!connectorsResult.success) {
+      console.error("Failed to fetch connectors:", connectorsResult.error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Falha ao buscar conectores disponíveis",
+          error: connectorsResult.error,
+          errorType: "connectors_retrieval_failure"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
-      
-      if (brInstitution) {
-        testInstitution = brInstitution.name;
-      } else {
-        // Otherwise use the first available
-        testInstitution = institutionsResult.data.results[0].name;
-      }
     }
     
-    console.log(`Using test institution: ${testInstitution}`);
+    console.log(`Retrieved ${connectorsResult.data.total} connectors`);
     
-    const createLinkResult = await callBelvoAPI('/api/links/', 'POST', belvoSecretId, belvoSecretPassword, sandbox, {
-      institution: testInstitution,
-      username: 'fake-user',
-      password: 'fake-password', 
-      access_mode: 'single'
+    // Create a test connection
+    const testConnector = connectorsResult.data.results.find(
+      (c: any) => c.type === "PERSONAL_BANK" && c.country === "BR"
+    ) || connectorsResult.data.results[0];
+    
+    if (!testConnector) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Nenhum conector disponível para teste",
+          errorType: "no_connectors_available"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    
+    console.log(`Using test connector: ${testConnector.name} (${testConnector.id})`);
+    
+    // Create a test item (connection)
+    const createItemResult = await callPluggyAPI('/items', 'POST', apiKey, {
+      connectorId: testConnector.id,
+      parameters: { user: 'user-test', password: 'password-test' }
     });
     
-    if (!createLinkResult.success) {
-      console.error("Failed to create test link:", createLinkResult.error);
+    if (!createItemResult.success) {
+      console.error("Failed to create test item:", createItemResult.error);
       return new Response(
         JSON.stringify({
-          success: false,
-          message: "Falha ao criar link de teste",
-          error: createLinkResult.error,
-          errorType: "test_link_failure"
+          success: true,
+          message: "Conexão com a API Pluggy confirmada, mas falha ao criar item de teste",
+          error: createItemResult.error,
+          connectors: connectorsResult.data.results.slice(0, 5)
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
     
-    console.log("Test link created:", createLinkResult.data.id);
+    console.log(`Test item created: ${createItemResult.data.id}`);
     
-    // Retrieve accounts for this link
-    const accountsResult = await callBelvoAPI(`/api/accounts/?link=${createLinkResult.data.id}`, 'GET', belvoSecretId, belvoSecretPassword, sandbox);
-    
-    if (!accountsResult.success) {
-      console.error("Failed to retrieve accounts:", accountsResult.error);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Falha ao recuperar contas de teste",
-          error: accountsResult.error,
-          errorType: "accounts_retrieval_failure"
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-    
-    console.log(`Retrieved ${accountsResult.data.count} test accounts`);
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Conexão com a API Belvo realizada com sucesso",
-        testLink: createLinkResult.data.id,
-        accountsCount: accountsResult.data.count,
-        accounts: accountsResult.data.results.slice(0, 2) // Return first 2 accounts as sample
+        message: "Conexão com a API Pluggy realizada com sucesso",
+        testItem: createItemResult.data.id,
+        connectorsCount: connectorsResult.data.total,
+        connectors: connectorsResult.data.results.slice(0, 5)
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("Belvo test connection failed:", error);
+    console.error("Pluggy test connection failed:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        message: "Teste de conexão Belvo falhou",
+        message: "Teste de conexão Pluggy falhou",
         error: error.message,
-        errorType: "test_link_failure"
+        errorType: "test_connection_failure"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

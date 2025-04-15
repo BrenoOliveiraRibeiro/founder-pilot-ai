@@ -22,8 +22,8 @@ const OpenFinance = () => {
     connecting,
     connectionProgress,
     connectionStatus,
-    belvoContainerRef,
-    belvoWidgetLoaded,
+    connectContainerRef,
+    pluggyWidgetLoaded,
     useSandbox,
     setUseSandbox,
     providers,
@@ -64,10 +64,10 @@ const OpenFinance = () => {
           connecting={connecting}
           connectionProgress={connectionProgress}
           connectionStatus={connectionStatus}
-          belvoWidgetLoaded={belvoWidgetLoaded}
+          pluggyWidgetLoaded={pluggyWidgetLoaded}
           useSandbox={useSandbox}
           handleConnect={handleConnect}
-          belvoContainerRef={belvoContainerRef}
+          connectContainerRef={connectContainerRef}
         />
       </div>
     </AppLayout>

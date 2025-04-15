@@ -4,15 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/BankProviders';
-import { useBelvoWidget } from './useBelvoWidget';
+import { usePluggyConnect } from './usePluggyConnect';
 import { useOpenFinanceConnections } from './useOpenFinanceConnections';
 import { useNavigate } from 'react-router-dom';
-
-declare global {
-  interface Window {
-    belvoSDK?: any;
-  }
-}
 
 export const useOpenFinanceConnection = () => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -22,8 +16,8 @@ export const useOpenFinanceConnection = () => {
   const [connectionStatus, setConnectionStatus] = useState("");
   const { currentEmpresa, refreshEmpresas } = useAuth();
   const { toast } = useToast();
-  const belvoContainerRef = useRef<HTMLDivElement>(null);
-  const { belvoWidgetLoaded } = useBelvoWidget();
+  const connectContainerRef = useRef<HTMLDivElement>(null);
+  const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
   const navigate = useNavigate();
 
@@ -37,7 +31,7 @@ export const useOpenFinanceConnection = () => {
   }, [providers, selectedProvider]);
 
   const handleConnect = async () => {
-    if (!selectedProvider || !currentEmpresa?.id || !belvoWidgetLoaded) {
+    if (!selectedProvider || !currentEmpresa?.id || !pluggyWidgetLoaded) {
       toast({
         title: "Erro",
         description: "Selecione um banco e tente novamente.",
@@ -51,7 +45,7 @@ export const useOpenFinanceConnection = () => {
     setConnectionStatus("Inicializando conexão...");
     
     try {
-      // Obter token para o widget do Belvo
+      // Obter token para o widget do Pluggy
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "authorize",
@@ -62,51 +56,52 @@ export const useOpenFinanceConnection = () => {
       });
 
       if (error) throw error;
-      if (!data.widget_token) throw new Error("Token não retornado");
+      if (!data.connect_token) throw new Error("Token não retornado");
 
       setConnectionProgress(40);
       setConnectionStatus("Autorizando com o banco...");
 
-      // Inicializar e abrir o widget do Belvo
-      if (window.belvoSDK) {
-        const successCallback = (link: string, institution: string) => {
-          console.log("Link criado com sucesso:", link);
-          setConnectionProgress(80);
-          setConnectionStatus("Conexão estabelecida, registrando...");
-          handleBelvoSuccess(link, institution);
-        };
+      // Inicializar e abrir o widget do Pluggy
+      const onSuccess = async (itemData: { id: string }) => {
+        console.log("Item criado com sucesso:", itemData.id);
+        setConnectionProgress(80);
+        setConnectionStatus("Conexão estabelecida, registrando...");
+        await handlePluggySuccess(itemData.id);
+      };
 
-        const errorCallback = (error: any) => {
-          console.error("Erro no widget do Belvo:", error);
-          setConnectionProgress(0);
-          toast({
-            title: "Erro de conexão",
-            description: "Não foi possível conectar ao banco. Detalhes: " + (error.message || "Erro desconhecido"),
-            variant: "destructive"
-          });
-          setConnecting(false);
-        };
+      const onError = (error: any) => {
+        console.error("Erro no widget do Pluggy:", error);
+        setConnectionProgress(0);
+        toast({
+          title: "Erro de conexão",
+          description: "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"),
+          variant: "destructive"
+        });
+        setConnecting(false);
+      };
 
-        const exitCallback = () => {
-          console.log("Widget fechado pelo usuário");
-          setConnectionProgress(0);
-          setConnecting(false);
-        };
+      const onClose = () => {
+        console.log("Widget fechado pelo usuário");
+        setConnectionProgress(0);
+        setConnecting(false);
+      };
 
-        const widget = window.belvoSDK.createWidget(data.widget_token, {
-          callback: (link_id: string, institution: string) => 
-            successCallback(link_id, institution),
-          onError: errorCallback,
-          onExit: exitCallback,
-          locale: "pt",
-          institution: data.institution
-        }).build();
+      // Initialize Pluggy Connect
+      const pluggyConnect = await initializePluggyConnect(
+        data.connect_token,
+        {
+          onSuccess,
+          onError,
+          onClose,
+          connectorId: selectedProvider
+        },
+        connectContainerRef.current
+      );
 
-        widget.mount(belvoContainerRef.current);
-        
-      } else {
-        throw new Error("Widget do Belvo não carregado");
+      if (!pluggyConnect) {
+        throw new Error("Erro ao inicializar Pluggy Connect");
       }
+      
     } catch (error: any) {
       console.error("Erro ao conectar conta:", error);
       setConnectionProgress(0);
@@ -119,20 +114,19 @@ export const useOpenFinanceConnection = () => {
     }
   };
 
-  const handleBelvoSuccess = async (linkId: string, institution: string) => {
+  const handlePluggySuccess = async (itemId: string) => {
     if (!currentEmpresa?.id) return;
     
     try {
       setConnectionProgress(90);
       setConnectionStatus("Sincronizando dados...");
       
-      // Registrar o link no backend
+      // Registrar o item no backend
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "callback",
           empresa_id: currentEmpresa.id,
-          link_id: linkId,
-          institution: institution,
+          item_id: itemId,
           sandbox: useSandbox
         }
       });
@@ -177,8 +171,8 @@ export const useOpenFinanceConnection = () => {
     connecting,
     connectionProgress,
     connectionStatus,
-    belvoContainerRef,
-    belvoWidgetLoaded,
+    connectContainerRef,
+    pluggyWidgetLoaded,
     useSandbox,
     setUseSandbox,
     providers,

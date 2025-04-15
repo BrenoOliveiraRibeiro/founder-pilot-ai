@@ -1,19 +1,29 @@
 
-import { callBelvoAPI, gerarInsights } from "./utils.ts";
+import { getPluggyToken, callPluggyAPI, gerarInsights } from "./utils.ts";
 
 export async function processFinancialData(
   empresaId: string, 
-  linkId: string, 
-  belvoSecretId: string, 
-  belvoSecretPassword: string, 
+  itemId: string, 
+  apiKey: string | null,
+  pluggyClientId: string, 
+  pluggyClientSecret: string, 
   sandbox: boolean, 
   supabaseClient: any
 ) {
   try {
-    console.log(`Iniciando processamento de dados financeiros para empresa ${empresaId}, link ${linkId}, sandbox: ${sandbox}`);
+    console.log(`Iniciando processamento de dados financeiros para empresa ${empresaId}, item ${itemId}, sandbox: ${sandbox}`);
     
-    // 1. Fetch account balances
-    const accountsResult = await callBelvoAPI(`/api/accounts/?link=${linkId}`, 'GET', belvoSecretId, belvoSecretPassword, sandbox);
+    // Get API key if not provided
+    if (!apiKey) {
+      const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
+      if (!tokenResult.success) {
+        throw new Error("Falha ao obter token da API Pluggy");
+      }
+      apiKey = tokenResult.data.apiKey;
+    }
+    
+    // 1. Fetch accounts
+    const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
     
     if (!accountsResult.success || !accountsResult.data || !accountsResult.data.results || accountsResult.data.results.length === 0) {
       throw new Error("Nenhuma conta encontrada");
@@ -26,34 +36,41 @@ export async function processFinancialData(
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     
-    const transactionsResult = await callBelvoAPI(
-      `/api/transactions/?link=${linkId}&date_from=${threeMonthsAgo.toISOString().split('T')[0]}&date_to=${new Date().toISOString().split('T')[0]}`, 
-      'GET',
-      belvoSecretId,
-      belvoSecretPassword,
-      sandbox
-    );
+    const fromDate = threeMonthsAgo.toISOString().split('T')[0];
+    const toDate = new Date().toISOString().split('T')[0];
     
-    if (!transactionsResult.success) {
-      throw new Error("Falha ao buscar transações");
+    let allTransactions = [];
+    
+    // For each account, fetch transactions
+    for (const account of accounts) {
+      const transactionsResult = await callPluggyAPI(
+        `/transactions?accountId=${account.id}&from=${fromDate}&to=${toDate}`, 
+        'GET',
+        apiKey
+      );
+      
+      if (transactionsResult.success && transactionsResult.data.results) {
+        allTransactions = [...allTransactions, ...transactionsResult.data.results];
+      } else {
+        console.warn(`Erro ao buscar transações para a conta ${account.id}:`, transactionsResult.error);
+      }
     }
     
-    const transactions = transactionsResult.data.results || [];
-    console.log(`Encontradas ${transactions.length} transações`);
+    console.log(`Encontradas ${allTransactions.length} transações ao total`);
     
     // 3. Calculate relevant metrics
     // Current balance (sum of account balances)
-    const caixaAtual = accounts.reduce((total, account) => total + parseFloat(account.balance.current), 0);
+    const caixaAtual = accounts.reduce((total, account) => total + (account.balance || 0), 0);
     
     // Separate transactions into revenue and expenses
-    const receitas = transactions.filter(tx => parseFloat(tx.amount) > 0);
-    const despesas = transactions.filter(tx => parseFloat(tx.amount) < 0);
+    const receitas = allTransactions.filter(tx => tx.amount > 0);
+    const despesas = allTransactions.filter(tx => tx.amount < 0);
     
     // Calculate monthly revenue (average of last 3 months)
-    const receitaMensal = receitas.reduce((total, tx) => total + Math.abs(parseFloat(tx.amount)), 0) / 3;
+    const receitaMensal = receitas.reduce((total, tx) => total + Math.abs(tx.amount), 0) / 3;
     
     // Calculate burn rate (average of expenses over last 3 months)
-    const burnRate = Math.abs(despesas.reduce((total, tx) => total + parseFloat(tx.amount), 0)) / 3;
+    const burnRate = Math.abs(despesas.reduce((total, tx) => total + tx.amount, 0)) / 3;
     
     // Calculate runway in months
     const runwayMeses = burnRate > 0 ? caixaAtual / burnRate : 0;
@@ -85,13 +102,13 @@ export async function processFinancialData(
     }
     
     // 5. Save relevant transactions
-    const transacoesFormatadas = transactions.slice(0, 50).map(tx => ({
+    const transacoesFormatadas = allTransactions.slice(0, 50).map(tx => ({
       empresa_id: empresaId,
       descricao: tx.description,
-      valor: parseFloat(tx.amount),
-      data_transacao: tx.value_date,
+      valor: tx.amount,
+      data_transacao: tx.date,
       categoria: tx.category || 'Outros',
-      tipo: parseFloat(tx.amount) > 0 ? 'receita' : 'despesa',
+      tipo: tx.amount > 0 ? 'receita' : 'despesa',
       metodo_pagamento: tx.type || 'Transferência',
       recorrente: false // Will be determined through later analysis
     }));

@@ -1,26 +1,69 @@
 
-// Constants for Belvo API
-export const BELVO_API_URL = "https://api.belvo.com";
-export const BELVO_SANDBOX_URL = "https://sandbox.belvo.com";
+// Constants for Pluggy API
+export const PLUGGY_API_URL = "https://api.pluggy.ai";
+export const PLUGGY_SANDBOX_URL = "https://sandbox.pluggy.ai";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function to call Belvo API
-export async function callBelvoAPI(endpoint: string, method: string, belvoSecretId: string, belvoSecretPassword: string, sandbox: boolean, body: any = null) {
-  const apiBaseUrl = sandbox ? BELVO_SANDBOX_URL : BELVO_API_URL;
-  const url = `${apiBaseUrl}${endpoint}`;
-  const authString = `${belvoSecretId}:${belvoSecretPassword}`;
-  const encodedAuth = btoa(authString);
+// Helper function to get Pluggy API token
+export async function getPluggyToken(clientId: string, clientSecret: string, sandbox: boolean) {
+  const apiBaseUrl = sandbox ? PLUGGY_SANDBOX_URL : PLUGGY_API_URL;
+  const url = `${apiBaseUrl}/auth`;
   
-  console.log(`Auth string first chars: ${authString.substring(0, 5)}...`);
-  console.log(`Encoded Auth first chars: ${encodedAuth.substring(0, 10)}...`);
-  console.log(`Full URL: ${url}`);
+  console.log(`Getting Pluggy token from ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        clientId,
+        clientSecret,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Pluggy API Error (${response.status}):`, errorText);
+      return { 
+        success: false, 
+        error: { message: `Failed to authenticate with Pluggy: ${response.status} ${response.statusText}` },
+        status: response.status,
+        errorType: response.status === 401 ? "authentication_failure" : "api_error" 
+      };
+    }
+    
+    const data = await response.json();
+    console.log("Successfully retrieved Pluggy API token");
+    
+    return { 
+      success: true, 
+      data: { apiKey: data.apiKey }
+    };
+  } catch (error) {
+    console.error("Network error calling Pluggy API:", error);
+    return { 
+      success: false, 
+      error: { message: error.message },
+      errorType: "network_error" 
+    };
+  }
+}
+
+// Helper function to call Pluggy API
+export async function callPluggyAPI(endpoint: string, method: string, apiKey: string, body: any = null) {
+  const url = `${PLUGGY_API_URL}${endpoint}`;
+  
+  console.log(`Calling Pluggy API: ${method} ${endpoint}`);
   
   const headers = new Headers({
-    'Authorization': `Basic ${encodedAuth}`,
+    'X-API-KEY': apiKey,
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   });
@@ -30,15 +73,12 @@ export async function callBelvoAPI(endpoint: string, method: string, belvoSecret
     headers,
     body: body ? JSON.stringify(body) : null,
   };
-
-  console.log(`Calling Belvo API: ${method} ${endpoint}`);
   
   try {
     const response = await fetch(url, options);
     
     // Log response details
-    console.log(`Belvo API Response Status: ${response.status}`);
-    console.log(`Response Headers:`, Object.fromEntries([...response.headers]));
+    console.log(`Pluggy API Response Status: ${response.status}`);
     
     // Get the raw response text
     const responseText = await response.text();
@@ -49,12 +89,12 @@ export async function callBelvoAPI(endpoint: string, method: string, belvoSecret
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
-      console.error("Failed to parse Belvo response as JSON:", e);
+      console.error("Failed to parse Pluggy response as JSON:", e);
       responseData = { text: responseText, rawError: e.message };
     }
     
     if (!response.ok) {
-      console.error(`Belvo API Error (${response.status}):`, responseData);
+      console.error(`Pluggy API Error (${response.status}):`, responseData);
       return { 
         success: false, 
         error: responseData,
@@ -65,7 +105,7 @@ export async function callBelvoAPI(endpoint: string, method: string, belvoSecret
     
     return { success: true, data: responseData };
   } catch (error) {
-    console.error(`Network error calling Belvo API at ${endpoint}:`, error);
+    console.error(`Network error calling Pluggy API at ${endpoint}:`, error);
     return { 
       success: false, 
       error: { message: error.message },
