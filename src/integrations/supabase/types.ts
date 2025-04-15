@@ -9,47 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      documentos: {
-        Row: {
-          arquivo_url: string
-          created_at: string | null
-          empresa_id: string | null
-          id: string
-          nome: string
-          tamanho: number
-          tipo: string
-          updated_at: string | null
-        }
-        Insert: {
-          arquivo_url: string
-          created_at?: string | null
-          empresa_id?: string | null
-          id?: string
-          nome: string
-          tamanho: number
-          tipo: string
-          updated_at?: string | null
-        }
-        Update: {
-          arquivo_url?: string
-          created_at?: string | null
-          empresa_id?: string | null
-          id?: string
-          nome?: string
-          tamanho?: number
-          tipo?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "documentos_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       empresas: {
         Row: {
           created_at: string | null

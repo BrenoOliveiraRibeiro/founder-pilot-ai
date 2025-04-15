@@ -105,7 +105,7 @@ export const BankConnectionCard = ({
           <SecurityInfoItems />
           
           {/* Container para o widget do Pluggy */}
-          <div ref={connectContainerRef} className="pluggy-connect-container"></div>
+          <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
           
           <Button 
             className="w-full group transition-all duration-200 relative overflow-hidden"
