@@ -68,12 +68,12 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
 
       // Preparar métricas financeiras, se disponíveis, para priorização de regras de negócio
       const financialMetrics = metrics ? {
-        runwayMeses: metrics.runwayMeses,
-        burnRate: metrics.burnRate,
-        receitaMensal: metrics.receitaMensal,
-        caixaAtual: metrics.caixaAtual,
-        cashFlow: metrics.cashFlow,
-        mrrGrowth: metrics.mrrGrowth
+        runwayMeses: metrics.runway_meses,
+        burnRate: metrics.burn_rate,
+        receitaMensal: metrics.receita_mensal,
+        caixaAtual: metrics.caixa_atual,
+        cashFlow: metrics.cash_flow,
+        mrrGrowth: metrics.mrr_growth
       } : null;
 
       // Call the enhanced edge function with user message and context
