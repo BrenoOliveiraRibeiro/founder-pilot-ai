@@ -7,7 +7,7 @@ export const usePluggyTesting = () => {
 
   const testPluggyConnection = async (useSandbox: boolean) => {
     try {
-      console.log("Testando conexão com Pluggy");
+      console.log("Testando conexão com Pluggy", { sandbox: useSandbox });
       
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
@@ -24,7 +24,7 @@ export const usePluggyTesting = () => {
           description: error.message || "Não foi possível conectar ao serviço Pluggy. Verifique suas credenciais.",
           variant: "destructive"
         });
-        return false;
+        return { success: false, message: error.message };
       }
       
       if (!data.success) {
@@ -33,7 +33,7 @@ export const usePluggyTesting = () => {
           description: data.message || "A conexão com Pluggy falhou. Verifique suas credenciais.",
           variant: "destructive"
         });
-        return false;
+        return { success: false, message: data.message };
       }
       
       toast({
@@ -41,7 +41,7 @@ export const usePluggyTesting = () => {
         description: `${data.connectorsCount || 0} conectores disponíveis.`,
       });
       
-      return true;
+      return { success: true, connectorsCount: data.connectorsCount || 0 };
     } catch (error: any) {
       console.error("Erro ao testar conexão:", error);
       toast({
@@ -49,7 +49,7 @@ export const usePluggyTesting = () => {
         description: error.message || "Ocorreu um erro ao testar a conexão com Pluggy.",
         variant: "destructive"
       });
-      return false;
+      return { success: false, message: error.message || "Erro desconhecido" };
     }
   };
 

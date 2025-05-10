@@ -17,7 +17,15 @@ export const usePluggyCallbacks = () => {
     fetchIntegrations: () => Promise<void>,
     setDebugInfo: (info: any) => void
   ) => {
-    if (!currentEmpresa?.id) return;
+    if (!currentEmpresa?.id) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma empresa selecionada para registrar a conexão",
+        variant: "destructive"
+      });
+      resetConnection();
+      return { success: false, message: "Nenhuma empresa selecionada" };
+    }
     
     try {
       updateConnectionState(90, "Sincronizando dados...");
@@ -37,7 +45,13 @@ export const usePluggyCallbacks = () => {
       if (error) {
         console.error("Erro no callback:", error);
         setDebugInfo({ error, step: "callback" });
-        throw error;
+        toast({
+          title: "Erro no processamento",
+          description: error.message || "Ocorreu um erro ao registrar a conexão",
+          variant: "destructive"
+        });
+        resetConnection();
+        return { success: false, message: error.message };
       }
 
       console.log("Callback bem-sucedido:", data);
@@ -57,6 +71,7 @@ export const usePluggyCallbacks = () => {
         navigate("/dashboard");
       }, 1500);
       
+      return { success: true };
     } catch (error: any) {
       console.error("Erro ao registrar conexão:", error);
       setDebugInfo({ error, step: "register_connection" });
@@ -65,8 +80,9 @@ export const usePluggyCallbacks = () => {
         description: error.message || "A conexão foi estabelecida, mas houve um erro ao registrar. Tente novamente.",
         variant: "destructive"
       });
-    } finally {
       resetConnection();
+      return { success: false, message: error.message };
+    } finally {
       setTimeout(() => {
         updateConnectionState(0, "");
       }, 1500);
