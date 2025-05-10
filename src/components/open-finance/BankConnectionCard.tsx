@@ -51,7 +51,7 @@ export const BankConnectionCard = ({
               Conecte suas contas bancárias via Open Finance para análise automática
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm">
             <span className={`text-xs ${useSandbox ? "text-primary" : "text-muted-foreground"}`}>Sandbox</span>
             <button 
               onClick={() => {/* This is handled in the parent component */}}

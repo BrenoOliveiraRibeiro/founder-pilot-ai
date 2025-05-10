@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 export const useOpenFinanceConnection = () => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const [useSandbox, setUseSandbox] = useState(true);
+  const [useSandbox, setUseSandbox] = useState(false); // Changed default to false for production mode
   const [connectionProgress, setConnectionProgress] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState("");
   const [debugInfo, setDebugInfo] = useState<any>(null);

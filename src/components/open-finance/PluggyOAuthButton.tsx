@@ -11,7 +11,7 @@ interface PluggyOAuthButtonProps {
 }
 
 export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
-  useSandbox = true,
+  useSandbox = false, // Atualizado para false por padrão
   className = "",
   variant = "default"
 }) => {

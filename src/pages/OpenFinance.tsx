@@ -48,6 +48,11 @@ const OpenFinance = () => {
     await testPluggyConnection();
   };
 
+  // Handle toggle sandbox/production mode
+  const handleToggleSandbox = () => {
+    setUseSandbox(!useSandbox);
+  };
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
@@ -111,6 +116,12 @@ const OpenFinance = () => {
             <span className="font-medium">
               Modo: {useSandbox ? 'Sandbox (teste)' : 'Produção'}
             </span>
+            <button 
+              onClick={handleToggleSandbox}
+              className="text-xs border border-primary/30 rounded px-1 text-primary"
+            >
+              Alternar
+            </button>
           </div>
         </div>
         
