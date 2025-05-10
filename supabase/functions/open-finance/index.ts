@@ -17,8 +17,8 @@ serve(async (req) => {
     // Use your specific Supabase and Pluggy credentials
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
-    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
+    const pluggyClientId = "0836caea-07da-42dc-a475-b212688df53b";
+    const pluggyClientSecret = "7e59fb22-a9b5-4ea5-8ce9-bbf34b9f11a9";
 
     console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
     console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
