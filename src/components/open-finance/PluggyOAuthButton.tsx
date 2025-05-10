@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { usePluggyOAuth } from "@/hooks/usePluggyOAuth";
-import { Loader2, Link2 } from "lucide-react";
+import { Loader2, Link2, AlertCircle } from "lucide-react";
 
 interface PluggyOAuthButtonProps {
   useSandbox?: boolean;
@@ -11,11 +11,11 @@ interface PluggyOAuthButtonProps {
 }
 
 export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
-  useSandbox = false, // Atualizado para false por padrão
+  useSandbox = false,
   className = "",
   variant = "default"
 }) => {
-  const { startPluggyAuth, isLoading, authResult } = usePluggyOAuth();
+  const { startPluggyAuth, isLoading, authResult, debugInfo } = usePluggyOAuth();
 
   const handleConnect = () => {
     startPluggyAuth(useSandbox);
@@ -52,9 +52,19 @@ export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
       </Button>
 
       {authResult && !authResult.success && (
-        <div className="text-sm text-destructive">
+        <div className="text-sm text-destructive flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
           Erro na conexão: {authResult.message}
         </div>
+      )}
+
+      {debugInfo && (
+        <details className="text-xs border border-destructive/30 rounded p-2 mt-2">
+          <summary className="cursor-pointer font-medium text-destructive">Informações de debug</summary>
+          <pre className="mt-2 p-2 bg-destructive/5 rounded overflow-x-auto">
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </details>
       )}
     </div>
   );
