@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle } from "lucide-react";
