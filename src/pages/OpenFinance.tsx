@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle } from "lucide-react";
@@ -12,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const OpenFinance = () => {
   const {
     activeIntegrations,
-    loading,
+    loading: integrationsLoading,
     syncing,
     handleSyncData,
     formatDate
@@ -138,12 +139,13 @@ const OpenFinance = () => {
           </Alert>
         )}
         
-        {activeIntegrations.length > 0 && (
+        {currentEmpresa && (
           <ActiveIntegrationsCard 
             integrations={activeIntegrations}
             handleSync={handleSyncData}
             syncing={syncing}
             formatDate={formatDate}
+            loading={integrationsLoading}
           />
         )}
         
