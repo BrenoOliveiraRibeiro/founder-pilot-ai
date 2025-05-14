@@ -20,6 +20,7 @@ import InvestorsSettings from "./pages/InvestorsSettings";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import N8NIntegration from "./pages/N8NIntegration"; // Add import
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/layouts/ProtectedRoute";
 
@@ -68,6 +69,12 @@ const App = () => (
             <Route path="/open-finance" element={
               <ProtectedRoute>
                 <OpenFinance />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/n8n" element={
+              <ProtectedRoute>
+                <N8NIntegration />
               </ProtectedRoute>
             } />
             

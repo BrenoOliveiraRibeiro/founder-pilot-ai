@@ -1,11 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '@/components/open-finance/BankProviders';
 
 export const useProviderSelection = (initialSandboxMode = false) => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [useSandbox, setUseSandbox] = useState(initialSandboxMode);
   const { toast } = useToast();
+
+  // Get the appropriate providers based on sandbox mode
+  const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
 
   // Auto-select first provider if none selected
   useEffect(() => {
@@ -31,6 +35,7 @@ export const useProviderSelection = (initialSandboxMode = false) => {
     setSelectedProvider,
     useSandbox,
     setUseSandbox,
-    validateProviderSelection
+    validateProviderSelection,
+    providers // Export providers so it can be used by consumer components
   };
 };

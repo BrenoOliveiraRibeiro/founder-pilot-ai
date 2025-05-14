@@ -3,3 +3,7 @@ project_id = "fhimpyxzedzildagctpq"
 
 [functions.openai-api]
 verify_jwt = true
+
+[functions.n8n-webhook]
+verify_jwt = false
+
