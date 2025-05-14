@@ -310,6 +310,82 @@ export type Database = {
           },
         ]
       }
+      webhook_configs: {
+        Row: {
+          config: Json | null
+          created_at: string
+          empresa_id: string
+          id: string
+          provider: string
+          updated_at: string
+          webhook_url: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          provider: string
+          updated_at?: string
+          webhook_url: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          provider?: string
+          updated_at?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_executions: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          payload: Json | null
+          result: Json | null
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          source: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_executions_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

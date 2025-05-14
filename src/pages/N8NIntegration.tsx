@@ -1,13 +1,14 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { useWebhookIntegration } from "@/hooks/useWebhookIntegration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, AlertCircle, ArrowRight, Globe, Server } from "lucide-react";
+import { Info, AlertCircle, ArrowRight, Globe, ServerCog } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { fromWebhookConfigs } from "@/integrations/supabase/typedClient";
 
 const N8NIntegration = () => {
   const {
@@ -28,6 +29,29 @@ const N8NIntegration = () => {
   const handleTest = async () => {
     await testWebhook();
   };
+  
+  // Carregar webhook URL existente se disponível
+  useEffect(() => {
+    const loadWebhookConfig = async () => {
+      if (currentEmpresa?.id) {
+        try {
+          const { data, error } = await fromWebhookConfigs()
+            .select('webhook_url')
+            .eq('empresa_id', currentEmpresa.id)
+            .eq('provider', 'n8n')
+            .single();
+          
+          if (data && !error) {
+            setWebhookUrl(data.webhook_url);
+          }
+        } catch (error) {
+          console.log("Nenhum webhook configurado ainda.");
+        }
+      }
+    };
+    
+    loadWebhookConfig();
+  }, [currentEmpresa?.id, setWebhookUrl]);
   
   return (
     <AppLayout>
@@ -164,7 +188,7 @@ const N8NIntegration = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Server className="h-5 w-5" />
+                <ServerCog className="h-5 w-5" />
                 Endpoint para Uso no N8N
               </CardTitle>
               <CardDescription>

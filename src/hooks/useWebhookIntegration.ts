@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { fromWebhookConfigs } from '@/integrations/supabase/typedClient';
 
 export const useWebhookIntegration = () => {
   const [webhookUrl, setWebhookUrl] = useState<string>('');
@@ -23,7 +24,7 @@ export const useWebhookIntegration = () => {
     
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('webhook_configs')
+      const { error } = await fromWebhookConfigs()
         .upsert({
           empresa_id: currentEmpresa.id,
           webhook_url: url,
@@ -93,7 +94,7 @@ export const useWebhookIntegration = () => {
       toast({
         title: "Aviso",
         description: "O teste foi enviado, mas não foi possível verificar a resposta devido a restrições CORS.",
-        variant: "warning"
+        variant: "default"
       });
     } finally {
       setIsSubmitting(false);

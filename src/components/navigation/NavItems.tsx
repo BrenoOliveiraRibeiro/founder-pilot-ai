@@ -12,6 +12,10 @@ import {
   Settings,
   ServerCog
 } from "lucide-react";
+import React from 'react';
+import { Link } from "react-router-dom";
+import { NavItem } from './types';
+import { cn } from "@/lib/utils";
 
 export const MAIN_NAV_ITEMS = [
   {
@@ -76,3 +80,25 @@ export const SETTINGS_NAV_ITEMS = [
     icon: Settings,
   },
 ];
+
+export const NavItemComponent: React.FC<{ 
+  item: NavItem; 
+  isActive: boolean;
+}> = ({ item, isActive }) => {
+  return (
+    <li>
+      <Link
+        to={item.href}
+        className={cn(
+          "flex items-center px-3 py-2 hover:bg-muted hover:text-foreground rounded-md text-sm transition-colors",
+          isActive
+            ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+            : "text-muted-foreground"
+        )}
+      >
+        {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+        {item.title}
+      </Link>
+    </li>
+  );
+};
