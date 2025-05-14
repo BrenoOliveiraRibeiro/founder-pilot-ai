@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
-export const useProviderSelection = (providers: any[]) => {
+export const useProviderSelection = (initialSandboxMode = false) => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [useSandbox, setUseSandbox] = useState(false);
+  const [useSandbox, setUseSandbox] = useState(initialSandboxMode);
   const { toast } = useToast();
 
   // Auto-select first provider if none selected

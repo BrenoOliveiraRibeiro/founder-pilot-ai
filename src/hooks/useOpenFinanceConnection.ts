@@ -12,6 +12,17 @@ export const useOpenFinanceConnection = () => {
   const { currentEmpresa } = useAuth();
   const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
+  
+  // Initialize provider selection first before referencing it
+  const {
+    selectedProvider,
+    setSelectedProvider,
+    useSandbox,
+    setUseSandbox,
+    validateProviderSelection
+  } = useProviderSelection(true); // Initialize with default value
+  
+  // Then use useSandbox in the connection manager
   const { 
     connecting,
     setConnecting,
@@ -25,14 +36,6 @@ export const useOpenFinanceConnection = () => {
     validateRequirements,
     handlePluggySuccess
   } = useConnectionManager(pluggyWidgetLoaded, initializePluggyConnect, fetchIntegrations);
-
-  const {
-    selectedProvider,
-    setSelectedProvider,
-    useSandbox,
-    setUseSandbox,
-    validateProviderSelection
-  } = useProviderSelection(useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS);
 
   // Debug current state
   useEffect(() => {
@@ -163,6 +166,7 @@ export const useOpenFinanceConnection = () => {
     }
   };
 
+  // Update providers based on the sandbox mode
   const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
 
   return {

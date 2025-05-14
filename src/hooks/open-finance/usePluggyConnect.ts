@@ -1,80 +1,197 @@
 
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 
-declare global {
-  interface Window {
-    PluggyConnect: any;
-  }
-}
-
+/**
+ * Hook responsável por gerenciar o carregamento do script do Pluggy Connect
+ * e fornecer métodos para inicializar o widget
+ */
 export const usePluggyConnect = () => {
   const [pluggyWidgetLoaded, setPluggyWidgetLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingScript, setLoadingScript] = useState(false);
+  const { toast } = useToast();
 
-  // Carrega o script do Pluggy quando o componente é montado
+  // Responsabilidade: Carregar o script Pluggy Connect
   useEffect(() => {
     const loadPluggyScript = async () => {
+      // Script já carregado
       if (window.PluggyConnect) {
+        console.log("Pluggy Connect já está disponível no window");
         setPluggyWidgetLoaded(true);
         return;
       }
-
-      const script = document.createElement('script');
-      script.src = 'https://cdn.pluggy.ai/pluggy-connect/pluggy-connect.js';
-      script.async = true;
       
-      script.onload = () => {
-        console.log("Script do Pluggy carregado com sucesso");
-        setPluggyWidgetLoaded(true);
-      };
+      // Script em carregamento
+      if (loadingScript) {
+        return;
+      }
       
-      script.onerror = () => {
-        console.error("Erro ao carregar script do Pluggy");
-        setPluggyWidgetLoaded(false);
-      };
+      console.log("Carregando script do Pluggy Connect");
+      setLoadingScript(true);
       
-      document.body.appendChild(script);
-    };
-
-    loadPluggyScript();
-
-    return () => {
-      // Cleanup on unmount if needed
-      const scriptElement = document.querySelector('script[src="https://cdn.pluggy.ai/pluggy-connect/pluggy-connect.js"]');
-      if (scriptElement) {
-        // Optionally remove the script when component unmounts
-        // document.body.removeChild(scriptElement);
+      try {
+        // Carrega o script do Pluggy Connect
+        if (!document.getElementById("pluggy-script")) {
+          const script = document.createElement("script");
+          script.id = "pluggy-script";
+          script.src = "https://cdn.pluggy.ai/pluggy-connect/v2.js";
+          script.async = true;
+          
+          // Define handlers para sucesso e erro
+          script.onload = () => {
+            console.log("Script do Pluggy Connect carregado com sucesso");
+            if (window.PluggyConnect) {
+              console.log("Objeto PluggyConnect disponível na window");
+              setPluggyWidgetLoaded(true);
+              setLoadError(null);
+              toast({
+                description: "Pluggy Connect carregado com sucesso",
+              });
+            } else {
+              const error = "Script carregado, mas objeto PluggyConnect não disponível";
+              console.error(error);
+              setLoadError(error);
+              toast({
+                title: "Erro ao carregar Pluggy Connect",
+                description: error,
+                variant: "destructive"
+              });
+            }
+            setLoadingScript(false);
+          };
+          
+          script.onerror = (error) => {
+            const errorMessage = "Falha ao carregar o script do Pluggy Connect";
+            console.error(errorMessage, error);
+            setLoadError(errorMessage);
+            setLoadingScript(false);
+            toast({
+              title: "Erro",
+              description: errorMessage,
+              variant: "destructive"
+            });
+          };
+          
+          document.head.appendChild(script);
+          console.log("Script do Pluggy Connect adicionado ao documento");
+        }
+      } catch (error) {
+        const errorMessage = "Erro inesperado ao carregar script do Pluggy Connect";
+        console.error(errorMessage, error);
+        setLoadError(errorMessage);
+        setLoadingScript(false);
+        toast({
+          title: "Erro crítico",
+          description: errorMessage,
+          variant: "destructive"
+        });
       }
     };
-  }, []);
+    
+    loadPluggyScript();
+  }, [toast]);
 
+  // Responsabilidade: Inicializar o widget do Pluggy Connect
   const initializePluggyConnect = async (
-    token: string, 
-    options: any, 
-    containerElement: HTMLDivElement
+    connectToken: string,
+    options: any,
+    containerElement: HTMLElement | null
   ) => {
+    console.log("Inicializando Pluggy Connect", { 
+      tokenLength: connectToken?.length || 0,
+      tokenPreview: connectToken ? `${connectToken.substring(0, 10)}...` : 'Token não fornecido',
+      options,
+      containerExists: !!containerElement
+    });
+    
+    // Validações
+    if (!connectToken) {
+      const error = "Token de conexão não fornecido";
+      console.error(error);
+      toast({
+        title: "Erro de inicialização",
+        description: error,
+        variant: "destructive"
+      });
+      return null;
+    }
+    
     if (!window.PluggyConnect) {
-      console.error("Pluggy Connect não está disponível");
+      const error = "Pluggy Connect não está disponível na window";
+      console.error(error);
+      toast({
+        title: "Erro de inicialização",
+        description: error,
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    if (!containerElement) {
+      const error = "Container para o widget não encontrado";
+      console.error(error);
+      toast({
+        title: "Erro de inicialização",
+        description: error,
+        variant: "destructive"
+      });
       return null;
     }
 
     try {
-      console.log("Inicializando Pluggy Connect", { 
-        tokenLength: token.length,
-        containerExists: !!containerElement 
-      });
-      
-      const pluggyConnect = new window.PluggyConnect({
-        connectToken: token,
-        ...options,
-        containerEl: containerElement,
+      console.log("Criando instância do Pluggy Connect");
+      const pluggyConnect = await window.PluggyConnect.create({
+        connectToken,
+        includeSandbox: options.includeSandbox ?? true,
+        ...options
       });
 
+      console.log("Instância do Pluggy Connect criada com sucesso");
+
+      // Renderiza o widget
+      console.log("Montando widget no container");
+      pluggyConnect.mount(containerElement);
+      console.log("Widget montado com sucesso");
+      
       return pluggyConnect;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao inicializar Pluggy Connect:", error);
+      toast({
+        title: "Falha na inicialização",
+        description: error.message || "Erro ao inicializar o widget do Pluggy Connect",
+        variant: "destructive"
+      });
       return null;
     }
   };
 
-  return { pluggyWidgetLoaded, initializePluggyConnect };
+  // Responsabilidade: Verificar se o Pluggy Connect está pronto para uso
+  const isPluggyReady = () => {
+    if (!pluggyWidgetLoaded) {
+      if (loadError) {
+        toast({
+          title: "Pluggy Connect não está disponível",
+          description: loadError,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Pluggy Connect não está pronto",
+          description: "O widget ainda está sendo carregado, aguarde alguns instantes.",
+          variant: "destructive"
+        });
+      }
+      return false;
+    }
+    return true;
+  };
+
+  return {
+    pluggyWidgetLoaded,
+    loadError,
+    loadingScript,
+    initializePluggyConnect,
+    isPluggyReady
+  };
 };
