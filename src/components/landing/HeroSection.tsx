@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChartBar, ChartPie, ChartLine, AlertTriangle } from "lucide-react";
+import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 
 export const HeroSection = () => {
   const navigate = useNavigate();

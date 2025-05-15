@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,13 +74,11 @@ const Index = () => {
           transition={{ duration: 0.5 }}
         >
           <motion.div 
-            className="flex items-center gap-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <FounderPilotLogo className="h-12 w-auto text-foreground" />
-            <h1 className="text-3xl font-bold">FounderPilot</h1>
+            <FounderPilotLogo className="h-16 w-auto text-foreground" />
           </motion.div>
           
           <FriendlyLoadingMessage isLoading={true} className="mt-2" />
@@ -95,8 +92,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="container mx-auto px-4 py-6 flex justify-between items-center">
         <div className="flex items-center">
-          <FounderPilotLogo className="h-10 w-auto text-foreground mr-2" />
-          <span className="text-xl font-bold">FounderPilot</span>
+          <FounderPilotLogo className="h-12 w-auto text-foreground" />
         </div>
         <Button 
           onClick={goToAuth} 
