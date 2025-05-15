@@ -22,7 +22,7 @@ export const HeroSection = () => {
               Seu copiloto financeiro com inteligência artificial
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              Conecte seus dados financeiros via Open Finance e obtenha insights estratégicos para tomar melhores decisões para sua startup.
+              Obtenha insights estratégicos para tomar melhores decisões para sua startup com dados financeiros inteligentes.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
@@ -51,7 +51,7 @@ export const HeroSection = () => {
                 ))}
               </div>
               <p className="text-sm text-muted-foreground">
-                Acompanhe o desempenho da sua empresa com <span className="text-primary font-medium">dados conectados</span>
+                Acompanhe o desempenho da sua empresa com <span className="text-primary font-medium">análises inteligentes</span>
               </p>
             </div>
           </motion.div>
@@ -67,15 +67,32 @@ export const HeroSection = () => {
                 <div className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Inicie conectando seus dados</h3>
+                      <h3 className="text-lg font-medium mb-2">Dashboard Inteligente</h3>
                       <div className="bg-muted p-4 rounded-md flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium">Integre com Open Finance</p>
-                          <p className="text-xs text-muted-foreground">Acesso seguro a seus dados bancários</p>
+                          <p className="text-sm font-medium">Análises Financeiras</p>
+                          <p className="text-xs text-muted-foreground">Visualize indicadores em tempo real</p>
                         </div>
                         <Button variant="outline" size="sm" className="text-xs">
-                          Conectar
+                          Explorar
                         </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <div className="h-14 w-24 bg-muted rounded-md flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 mr-2"></div>
+                        <div className="space-y-1">
+                          <div className="h-2 bg-primary/20 rounded w-12"></div>
+                          <div className="h-2 bg-muted-foreground/30 rounded w-10"></div>
+                        </div>
+                      </div>
+                      <div className="h-14 w-24 bg-muted rounded-md flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-green-500/10 mr-2"></div>
+                        <div className="space-y-1">
+                          <div className="h-2 bg-green-500/20 rounded w-12"></div>
+                          <div className="h-2 bg-muted-foreground/30 rounded w-10"></div>
+                        </div>
                       </div>
                     </div>
                     

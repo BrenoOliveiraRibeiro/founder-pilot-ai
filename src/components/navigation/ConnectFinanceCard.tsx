@@ -10,13 +10,13 @@ export const ConnectFinanceCard: React.FC = () => {
         Conecte seus dados
       </h3>
       <p className="text-xs text-foreground/70 mb-3 leading-relaxed">
-        Vincule suas contas financeiras para desbloquear insights mais precisos
+        Vincule suas contas para desbloquear insights mais precisos
       </p>
       <Link 
-        to="/open-finance"
+        to="/connect"
         className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs px-3 py-1.5 rounded-md inline-flex items-center justify-center w-full font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm"
       >
-        Conectar Open Finance
+        Conectar dados financeiros
       </Link>
     </div>
   );
