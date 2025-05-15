@@ -81,6 +81,28 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Melhorias para Safari no iOS */
+  input, 
+  select, 
+  textarea {
+    @apply appearance-none;
+    font-size: 16px; /* Evita zoom automático no iOS */
+  }
+  
+  /* Melhoria para scroll nativo no iOS */
+  .overflow-y-auto, 
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Desativar destaque de toque */
+  button, 
+  a {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -91,5 +113,20 @@
   
   .glass-effect {
     @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border border-white/20 dark:border-white/10;
+  }
+  
+  .tap-highlight-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Melhorar interatividade para Safari no iOS */
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Desativar seleção de texto em alguns elementos */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }

@@ -2,19 +2,23 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { File, X } from "lucide-react";
+import { File, X, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface DocumentUploadProps {
   onDocumentChange: (file: File) => void;
   documents: Array<{ file: File, preview?: string }>;
   onRemoveDocument: (index: number) => void;
+  isMobile?: boolean;
+  isSafariIOS?: boolean;
 }
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({ 
   onDocumentChange, 
   documents,
-  onRemoveDocument 
+  onRemoveDocument,
+  isMobile,
+  isSafariIOS
 }) => {
   const { toast } = useToast();
   
@@ -61,13 +65,24 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     e.target.value = '';
   };
 
+  // Estilo específico para iOS Safari
+  const iosSafariStyles = isSafariIOS 
+    ? "tap-highlight-transparent active:opacity-70" 
+    : "";
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col p-4 border-2 border-dashed rounded-md">
+      <div className={`flex flex-col p-4 border-2 border-dashed rounded-md ${iosSafariStyles}`}>
         <div className="flex flex-col items-center justify-center py-6">
-          <File className="h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-sm text-center text-muted-foreground">
-            Arraste e solte ou clique para adicionar pitch deck, planilhas ou documentos
+          {isMobile ? (
+            <Upload className="h-12 w-12 text-muted-foreground mb-3" />
+          ) : (
+            <File className="h-10 w-10 text-muted-foreground mb-2" />
+          )}
+          <p className="text-sm text-center text-muted-foreground px-2">
+            {isMobile
+              ? "Toque para adicionar documentos"
+              : "Arraste e solte ou clique para adicionar pitch deck, planilhas ou documentos"}
           </p>
         </div>
         <Input
@@ -82,16 +97,16 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
           type="button" 
           variant="outline" 
           onClick={() => document.getElementById('document-upload')?.click()}
-          className="w-full"
+          className={`w-full ${isMobile ? 'text-base py-6' : ''} ${iosSafariStyles}`}
         >
-          Selecionar arquivos
+          {isMobile ? "Selecionar documentos" : "Selecionar arquivos"}
         </Button>
       </div>
       
       {documents.length > 0 && (
         <div className="space-y-2 mt-4">
           <h4 className="text-sm font-medium">Arquivos selecionados</h4>
-          <div className="max-h-60 overflow-y-auto">
+          <div className={`max-h-${isMobile ? '40' : '60'} overflow-y-auto`}>
             {documents.map((doc, index) => (
               <div key={index} className="flex items-center justify-between py-2 px-3 border rounded-md mb-2">
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -105,7 +120,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   type="button" 
                   variant="ghost" 
                   size="sm"
-                  className="text-red-500 h-8 w-8 p-0"
+                  className={`text-red-500 ${isMobile ? 'h-10 w-10 p-0' : 'h-8 w-8 p-0'} ${iosSafariStyles}`}
                   onClick={() => onRemoveDocument(index)}
                   aria-label="Remover documento"
                 >

@@ -16,6 +16,8 @@ interface OnboardingStepContentProps {
   onLogoChange: (file: File | null, previewUrl: string) => void;
   onDocumentChange: (file: File) => void;
   onRemoveDocument: (index: number) => void;
+  isMobile?: boolean;
+  isSafariIOS?: boolean;
 }
 
 export const OnboardingStepContent: React.FC<OnboardingStepContentProps> = ({
@@ -25,20 +27,29 @@ export const OnboardingStepContent: React.FC<OnboardingStepContentProps> = ({
   documents,
   onLogoChange,
   onDocumentChange,
-  onRemoveDocument
+  onRemoveDocument,
+  isMobile,
+  isSafariIOS
 }) => {
   // Renderiza apenas o componente correspondente ao passo atual
   switch (step) {
     case 1:
-      return <EmpresaInfoForm form={form} />;
+      return <EmpresaInfoForm form={form} isMobile={isMobile} />;
     case 2:
-      return <LogoStep onLogoChange={onLogoChange} existingLogo={logoPreview} />;
+      return <LogoStep 
+        onLogoChange={onLogoChange} 
+        existingLogo={logoPreview} 
+        isMobile={isMobile} 
+        isSafariIOS={isSafariIOS} 
+      />;
     case 3:
       return (
         <DocumentsStep
           onDocumentChange={onDocumentChange}
           documents={documents}
           onRemoveDocument={onRemoveDocument}
+          isMobile={isMobile}
+          isSafariIOS={isSafariIOS}
         />
       );
     default:
