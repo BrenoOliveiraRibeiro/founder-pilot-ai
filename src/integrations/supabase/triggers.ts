@@ -16,7 +16,9 @@ export const setupDatabaseTriggers = async () => {
 export const insertDemoData = async (empresaId: string) => {
   try {
     // Call the insert_demo_data function we created
-    const { data, error } = await supabase.rpc('insert_demo_data', { p_empresa_id: empresaId });
+    const { data, error } = await supabase.rpc('insert_demo_data', { 
+      p_empresa_id: empresaId 
+    } as { p_empresa_id: string });
     
     if (error) throw error;
     return { success: true, data };

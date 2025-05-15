@@ -391,7 +391,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_demo_data: {
+        Args: { p_empresa_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
