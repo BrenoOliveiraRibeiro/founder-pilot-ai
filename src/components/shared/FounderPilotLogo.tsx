@@ -15,8 +15,8 @@ export const FounderPilotLogo = ({
   return (
     <div className="flex items-center gap-2">
       <img 
-        src="/lovable-uploads/75dab371-2220-44b3-84fa-09860154e30a.png" 
-        alt="FounderPilot AI" 
+        src="/lovable-uploads/1ed26c5b-6150-4a9e-a059-199df5821ef8.png" 
+        alt="Synapsia" 
         className={className}
       />
       {showText && (
