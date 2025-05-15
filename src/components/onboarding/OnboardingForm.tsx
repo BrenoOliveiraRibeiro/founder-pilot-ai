@@ -1,9 +1,6 @@
 
 import React from "react";
 import { Form } from "@/components/ui/form";
-import { EmpresaInfoForm } from "@/components/onboarding/EmpresaInfoForm";
-import { LogoStep } from "@/components/onboarding/LogoStep";
-import { DocumentsStep } from "@/components/onboarding/DocumentsStep";
 import { OnboardingFooter } from "@/components/onboarding/OnboardingFooter";
 import { useOnboardingForm } from "./useOnboardingForm";
 import { OnboardingStepContent } from "./OnboardingStepContent";

@@ -27,6 +27,7 @@ export const OnboardingStepContent: React.FC<OnboardingStepContentProps> = ({
   onDocumentChange,
   onRemoveDocument
 }) => {
+  // Renderiza apenas o componente correspondente ao passo atual
   switch (step) {
     case 1:
       return <EmpresaInfoForm form={form} />;
