@@ -29,7 +29,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         <div className="flex flex-col h-full">
           <div className="p-6">
             <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
-              <FounderPilotLogo className="h-12 w-auto text-foreground" />
+              <FounderPilotLogo className="h-8 w-auto" showText={true} textClassName="text-lg font-semibold" />
             </Link>
           </div>
 
