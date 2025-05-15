@@ -4,7 +4,7 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState<boolean>(false)
   const [isSafariIOS, setIsSafariIOS] = React.useState<boolean>(false)
 
   React.useEffect(() => {
@@ -35,7 +35,7 @@ export function useIsMobile() {
   }, [])
 
   return {
-    isMobile: !!isMobile,
+    isMobile,
     isSafariIOS
   }
 }
