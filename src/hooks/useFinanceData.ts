@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fromMetricas, fromTransacoes, fromInsights } from '@/integrations/supabase/typedClient';
