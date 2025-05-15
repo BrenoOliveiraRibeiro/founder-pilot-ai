@@ -1,4 +1,3 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -20,13 +19,13 @@ export const HeroSection = () => {
             className="max-w-xl"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 leading-tight">
-              Seu copiloto financeiro e estratégico com inteligência artificial
+              Seu copiloto de IA para decisões estratégicas.
             </h1>
             <p className="text-xl md:text-2xl text-primary/80 font-medium mb-2">
               Decidir no escuro custa caro.
             </p>
             <p className="text-lg text-muted-foreground mb-8">
-              Transforme dados financeiros, operacionais e de mercado em insights acionáveis. Tome decisões com clareza, velocidade e segurança.
+              Ganhe clareza com insights financeiros, operacionais e de mercado — tudo em um só lugar.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
