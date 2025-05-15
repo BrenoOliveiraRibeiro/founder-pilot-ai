@@ -3,11 +3,12 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExternalLink, ChevronRight, LockIcon, AlertCircle } from "lucide-react";
+import { ExternalLink, ChevronRight, LockIcon, AlertCircle, HelpCircle, Info } from "lucide-react";
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
 import { PluggyOAuthButton } from "./PluggyOAuthButton";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Provider {
   id: string;
@@ -41,6 +42,17 @@ export const BankConnectionCard = ({
   handleConnect,
   connectContainerRef
 }: BankConnectionCardProps) => {
+  const { toast } = useToast();
+  
+  const showHelpToast = () => {
+    toast({
+      title: "Ajuda sobre os métodos de conexão",
+      description: "No modo Sandbox, use usuário 'user-ok' e senha '123' para testar. Em produção, use suas credenciais bancárias reais.",
+      variant: "info",
+      duration: 10000,
+    });
+  };
+
   return (
     <Card className="border-none shadow-md">
       <CardHeader className="border-b border-border pb-3">
@@ -69,7 +81,11 @@ export const BankConnectionCard = ({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Modo Sandbox Ativado</AlertTitle>
             <AlertDescription className="text-primary/80">
-              No modo sandbox, utilize as credenciais de teste disponibilizadas pelo Pluggy
+              No modo sandbox, utilize as credenciais de teste disponibilizadas pelo Pluggy:
+              <div className="mt-2 p-2 bg-primary/10 rounded text-sm font-mono">
+                <div>Usuário: <strong>user-ok</strong></div>
+                <div>Senha: <strong>123</strong></div>
+              </div>
               <a 
                 href="https://docs.pluggy.ai/docs/sandbox-test-flow" 
                 target="_blank" 
@@ -95,7 +111,16 @@ export const BankConnectionCard = ({
         
         <div className="space-y-6">
           <div>
-            <h3 className="text-sm font-medium mb-3">Selecione seu banco:</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">Selecione seu banco:</h3>
+              <button
+                onClick={showHelpToast}
+                className="text-xs flex items-center text-muted-foreground hover:text-primary"
+              >
+                <HelpCircle className="h-3 w-3 mr-1" />
+                Ajuda
+              </button>
+            </div>
             <ProvidersList 
               providers={providers}
               selectedProvider={selectedProvider}
@@ -108,25 +133,36 @@ export const BankConnectionCard = ({
           {/* Container para o widget do Pluggy */}
           <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
           
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Widget-based connection */}
-            <Button 
-              className="w-full group transition-all duration-200 relative overflow-hidden"
-              disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
-              onClick={handleConnect}
-            >
-              <span className="relative z-10 flex items-center">
-                {connecting ? "Conectando..." : "Conectar com Widget"}
-                <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-              </span>
-              <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
-            </Button>
+          <div className="space-y-4">
+            <Alert variant="outline" className="bg-muted/40 border-dashed">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-sm font-medium">Como conectar sua conta</AlertTitle>
+              <AlertDescription className="text-xs">
+                Selecione um banco acima e escolha um dos métodos de conexão abaixo. Em modo Sandbox, 
+                use as credenciais <strong>user-ok</strong> e <strong>123</strong> para teste.
+              </AlertDescription>
+            </Alert>
             
-            {/* OAuth-based connection */}
-            <PluggyOAuthButton 
-              useSandbox={useSandbox}
-              className="w-full"
-            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Widget-based connection */}
+              <Button 
+                className="w-full group transition-all duration-200 relative overflow-hidden"
+                disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
+                onClick={handleConnect}
+              >
+                <span className="relative z-10 flex items-center">
+                  {connecting ? "Conectando..." : "Conectar com Widget"}
+                  <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </span>
+                <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              </Button>
+              
+              {/* OAuth-based connection */}
+              <PluggyOAuthButton 
+                useSandbox={useSandbox}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
       </CardContent>

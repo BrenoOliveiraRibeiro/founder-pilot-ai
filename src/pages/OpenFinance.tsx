@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle } from "lucide-react";
@@ -8,6 +9,7 @@ import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ConnectionInstructionsAlert } from "@/components/open-finance/ConnectionInstructionsAlert";
 
 const OpenFinance = () => {
   const {
@@ -69,6 +71,9 @@ const OpenFinance = () => {
             </p>
           </div>
         </div>
+        
+        {/* Instruções de conexão */}
+        <ConnectionInstructionsAlert />
         
         {!currentEmpresa && !authLoading && (
           <Alert variant="destructive" className="mb-6">
