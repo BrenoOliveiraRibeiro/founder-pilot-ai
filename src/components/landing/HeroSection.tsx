@@ -3,7 +3,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChartBar, ChartPie, ChartLine } from "lucide-react";
+import { ArrowRight, ChartBar, ChartPie, ChartLine, AlertTriangle } from "lucide-react";
 
 export const HeroSection = () => {
   const navigate = useNavigate();
@@ -18,11 +18,14 @@ export const HeroSection = () => {
             transition={{ duration: 0.7 }}
             className="max-w-xl"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 leading-tight">
               Seu copiloto financeiro e estratégico com inteligência artificial
             </h1>
+            <p className="text-xl md:text-2xl text-primary/80 font-medium mb-2">
+              Decidir no escuro custa caro.
+            </p>
             <p className="text-lg text-muted-foreground mb-8">
-              Obtenha insights estratégicos para tomar melhores decisões para sua startup com dados financeiros inteligentes.
+              Transforme dados financeiros, operacionais e de mercado em insights acionáveis. Tome decisões com clareza, velocidade e segurança.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
@@ -82,6 +85,17 @@ export const HeroSection = () => {
                       <div className="bg-primary/10 px-2 py-1 rounded text-xs font-medium text-primary">
                         Saudável
                       </div>
+                    </div>
+                    
+                    {/* Insight AI Alert */}
+                    <div className="bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-3 rounded-lg mb-4 animate-pulse-subtle">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                        <span className="text-xs font-semibold text-red-600 dark:text-red-400">Alerta Crítico de Runway</span>
+                      </div>
+                      <p className="text-sm text-red-700 dark:text-red-300">
+                        Seu caixa acaba em 68 dias. Sugestão: Reduzir R$ 2.100/mês em ferramentas pouco utilizadas.
+                      </p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 mb-4">
