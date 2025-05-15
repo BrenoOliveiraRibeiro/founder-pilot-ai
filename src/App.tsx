@@ -116,7 +116,7 @@ function App() {
           {/* Página 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Toaster position="top-center" />
+        <Toaster />
       </AuthProvider>
     </BrowserRouter>
   );

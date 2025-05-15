@@ -134,7 +134,7 @@ export const BankConnectionCard = ({
           <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
           
           <div className="space-y-4">
-            <Alert variant="outline" className="bg-muted/40 border-dashed">
+            <Alert variant="default" className="bg-muted/40 border-dashed">
               <Info className="h-4 w-4 text-primary" />
               <AlertTitle className="text-sm font-medium">Como conectar sua conta</AlertTitle>
               <AlertDescription className="text-xs">

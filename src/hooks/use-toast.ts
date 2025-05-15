@@ -1,10 +1,12 @@
 
-import { toast as sonnerToast, type ToastOptions } from "sonner";
+import { toast as sonnerToast } from "sonner";
 
-type ToastProps = ToastOptions & {
+type ToastProps = {
   title?: string;
   description?: string;
   variant?: "default" | "destructive" | "success" | "info" | "warning";
+  duration?: number;
+  [key: string]: any;
 };
 
 const useToast = () => {
