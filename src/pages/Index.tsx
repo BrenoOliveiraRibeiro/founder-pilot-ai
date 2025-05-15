@@ -80,7 +80,7 @@ const Index = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <FounderPilotLogo className="h-8 w-8 text-foreground" />
+            <FounderPilotLogo className="h-12 w-auto text-foreground" />
             <h1 className="text-3xl font-bold">FounderPilot</h1>
           </motion.div>
           
@@ -95,7 +95,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="container mx-auto px-4 py-6 flex justify-between items-center">
         <div className="flex items-center">
-          <FounderPilotLogo className="h-8 w-8 text-foreground mr-2" />
+          <FounderPilotLogo className="h-10 w-auto text-foreground mr-2" />
           <span className="text-xl font-bold">FounderPilot</span>
         </div>
         <Button 
