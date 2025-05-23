@@ -32,7 +32,7 @@ export const usePluggyOAuth = () => {
    * Inicia o processo de autenticação OAuth - sempre em produção
    */
   const handleStartAuth = () => {
-    return startPluggyAuth(currentEmpresa, false); // Sempre produção
+    return startPluggyAuth(currentEmpresa);
   };
 
   return {

@@ -18,7 +18,7 @@ export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
   const { startPluggyAuth, isLoading, authResult, debugInfo } = usePluggyOAuth();
 
   const handleConnect = () => {
-    startPluggyAuth(false); // Sempre produção
+    startPluggyAuth();
   };
 
   return (
