@@ -11,14 +11,14 @@ interface PluggyOAuthButtonProps {
 }
 
 export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
-  useSandbox = false,
   className = "",
-  variant = "default"
+  variant = "outline"
 }) => {
+  // Sempre produção, ignorar prop useSandbox
   const { startPluggyAuth, isLoading, authResult, debugInfo } = usePluggyOAuth();
 
   const handleConnect = () => {
-    startPluggyAuth(useSandbox);
+    startPluggyAuth(false); // Sempre produção
   };
 
   return (
@@ -43,7 +43,7 @@ export const PluggyOAuthButton: React.FC<PluggyOAuthButtonProps> = ({
         ) : (
           <>
             <span className="flex items-center">
-              Conectar com Open Finance
+              Conectar via OAuth
               <Link2 className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </span>
             <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>

@@ -38,7 +38,6 @@ export const BankConnectionCard = ({
   connectionProgress,
   connectionStatus,
   pluggyWidgetLoaded,
-  useSandbox,
   handleConnect,
   connectContainerRef
 }: BankConnectionCardProps) => {
@@ -46,8 +45,8 @@ export const BankConnectionCard = ({
   
   const showHelpToast = () => {
     toast({
-      title: "Ajuda sobre os métodos de conexão",
-      description: "No modo Sandbox, use usuário 'user-ok' e senha '123' para testar. Em produção, use suas credenciais bancárias reais.",
+      title: "Ajuda sobre conexão bancária",
+      description: "Use suas credenciais bancárias reais para conectar sua conta empresarial. Todos os dados são criptografados e protegidos.",
       variant: "info",
       duration: 10000,
     });
@@ -58,49 +57,43 @@ export const BankConnectionCard = ({
       <CardHeader className="border-b border-border pb-3">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-xl">Conectar Nova Conta</CardTitle>
+            <CardTitle className="text-xl">Conectar Conta Empresarial</CardTitle>
             <CardDescription>
-              Conecte suas contas bancárias via Open Finance para análise automática
+              Conecte suas contas bancárias PJ via Open Finance para análise automática
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className={`text-xs ${useSandbox ? "text-primary" : "text-muted-foreground"}`}>Sandbox</span>
-            <button 
-              onClick={() => {/* This is handled in the parent component */}}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${useSandbox ? 'bg-primary' : 'bg-input'}`}
-            >
-              <span className={`inline-block h-5 w-5 rounded-full bg-background transition-transform ${useSandbox ? 'translate-x-6' : 'translate-x-1'}`}></span>
-            </button>
-            <span className={`text-xs ${!useSandbox ? "text-primary" : "text-muted-foreground"}`}>Produção</span>
+            <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+              Produção
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-4">
-        {useSandbox && (
-          <Alert variant="info" className="mb-4 border-none bg-primary/5 text-primary">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Modo Sandbox Ativado</AlertTitle>
-            <AlertDescription className="text-primary/80">
-              No modo sandbox, utilize as credenciais de teste disponibilizadas pelo Pluggy:
-              <div className="mt-2 p-2 bg-primary/10 rounded text-sm font-mono">
-                <div>Usuário: <strong>user-ok</strong></div>
-                <div>Senha: <strong>123</strong></div>
-              </div>
-              <a 
-                href="https://docs.pluggy.ai/docs/sandbox-test-flow" 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center text-primary mt-1 text-sm"
-              >
-                Ver documentação <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
-            </AlertDescription>
-          </Alert>
-        )}
+        <Alert variant="default" className="mb-4 border-none bg-blue-50 text-blue-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Modo Produção Ativado</AlertTitle>
+          <AlertDescription className="text-blue-800">
+            Conecte suas contas bancárias empresariais reais usando suas credenciais do banco.
+            <div className="mt-2 p-2 bg-blue-100 rounded text-sm">
+              <div>✓ Dados reais e atualizados</div>
+              <div>✓ Conexão segura e criptografada</div>
+              <div>✓ Integração com Open Finance Brasil</div>
+            </div>
+            <a 
+              href="https://docs.pluggy.ai/docs/production-flow" 
+              target="_blank" 
+              rel="noreferrer"
+              className="flex items-center text-blue-600 mt-1 text-sm hover:underline"
+            >
+              Ver documentação de produção <ExternalLink className="h-3 w-3 ml-1" />
+            </a>
+          </AlertDescription>
+        </Alert>
         
         <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
           <LockIcon className="h-4 w-4" />
-          <p>Utilizamos criptografia e tecnologia de ponta para manter seus dados seguros</p>
+          <p>Utilizamos criptografia bancária e tecnologia Open Finance para manter seus dados seguros</p>
         </div>
         
         <ConnectionProgress 
@@ -112,7 +105,7 @@ export const BankConnectionCard = ({
         <div className="space-y-6">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Selecione seu banco:</h3>
+              <h3 className="text-sm font-medium">Selecione seu banco empresarial:</h3>
               <button
                 onClick={showHelpToast}
                 className="text-xs flex items-center text-muted-foreground hover:text-primary"
@@ -136,10 +129,10 @@ export const BankConnectionCard = ({
           <div className="space-y-4">
             <Alert variant="default" className="bg-muted/40 border-dashed">
               <Info className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-sm font-medium">Como conectar sua conta</AlertTitle>
+              <AlertTitle className="text-sm font-medium">Como conectar sua conta empresarial</AlertTitle>
               <AlertDescription className="text-xs">
-                Selecione um banco acima e escolha um dos métodos de conexão abaixo. Em modo Sandbox, 
-                use as credenciais <strong>user-ok</strong> e <strong>123</strong> para teste.
+                Selecione seu banco empresarial acima e escolha um dos métodos de conexão abaixo. 
+                Use suas credenciais bancárias reais da conta PJ.
               </AlertDescription>
             </Alert>
             
@@ -159,7 +152,7 @@ export const BankConnectionCard = ({
               
               {/* OAuth-based connection */}
               <PluggyOAuthButton 
-                useSandbox={useSandbox}
+                useSandbox={false}
                 className="w-full"
               />
             </div>

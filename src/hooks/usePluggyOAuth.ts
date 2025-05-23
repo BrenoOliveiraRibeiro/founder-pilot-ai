@@ -5,7 +5,7 @@ import { useOAuthAuthorize } from './open-finance/useOAuthAuthorize';
 import { useOAuthCallback } from './open-finance/useOAuthCallback';
 
 /**
- * Hook principal para gerenciar o fluxo OAuth do Pluggy
+ * Hook principal para gerenciar o fluxo OAuth do Pluggy - apenas produção
  */
 export const usePluggyOAuth = () => {
   const { currentEmpresa } = useAuth();
@@ -29,10 +29,10 @@ export const usePluggyOAuth = () => {
   }, [currentEmpresa]);
 
   /**
-   * Inicia o processo de autenticação OAuth
+   * Inicia o processo de autenticação OAuth - sempre em produção
    */
-  const handleStartAuth = (sandbox = false) => {
-    return startPluggyAuth(currentEmpresa, sandbox);
+  const handleStartAuth = () => {
+    return startPluggyAuth(currentEmpresa, false); // Sempre produção
   };
 
   return {

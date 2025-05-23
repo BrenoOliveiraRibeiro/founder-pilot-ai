@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOAuthValidator } from './useOAuthValidator';
 
 /**
- * Hook para lidar com o processo de autorização OAuth
+ * Hook para lidar com o processo de autorização OAuth - apenas produção
  */
 export const useOAuthAuthorize = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,18 +13,17 @@ export const useOAuthAuthorize = () => {
   const { validateCompanySelection, handleError } = useOAuthValidator();
 
   /**
-   * Inicia o processo de autenticação OAuth com o Pluggy
+   * Inicia o processo de autenticação OAuth com o Pluggy - sempre produção
    */
-  const startPluggyAuth = async (currentEmpresa: any, sandbox = false) => {
+  const startPluggyAuth = async (currentEmpresa: any) => {
     if (!validateCompanySelection(currentEmpresa)) {
       return { success: false };
     }
 
     setIsLoading(true);
     try {
-      console.log("Iniciando autenticação OAuth com Pluggy", { 
-        empresa_id: currentEmpresa.id, 
-        sandbox 
+      console.log("Iniciando autenticação OAuth com Pluggy (Produção)", { 
+        empresa_id: currentEmpresa.id
       });
       
       // Obter URL de autorização da função Supabase
@@ -32,7 +31,7 @@ export const useOAuthAuthorize = () => {
         body: {
           action: "authorize",
           empresa_id: currentEmpresa.id,
-          sandbox: sandbox,
+          sandbox: false, // Sempre produção
           redirectUri: window.location.origin // Garante redirecionamento para a origem atual
         }
       });

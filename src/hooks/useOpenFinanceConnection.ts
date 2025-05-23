@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/BankProviders';
+import { PRODUCTION_PJ_PROVIDERS } from '../components/open-finance/BankProviders';
 import { usePluggyConnect } from './open-finance/usePluggyConnect';
 import { useOpenFinanceConnections } from './useOpenFinanceConnections';
 import { useProviderSelection } from './open-finance/useProviderSelection';
@@ -13,16 +13,17 @@ export const useOpenFinanceConnection = () => {
   const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
   
-  // Initialize provider selection first before referencing it
+  // Initialize provider selection - sempre produção
   const {
     selectedProvider,
     setSelectedProvider,
-    useSandbox,
-    setUseSandbox,
     validateProviderSelection
-  } = useProviderSelection(true); // Initialize with default value
+  } = useProviderSelection();
   
-  // Then use useSandbox in the connection manager
+  // Always production mode
+  const useSandbox = false;
+  const setUseSandbox = () => {}; // Função vazia para compatibilidade
+  
   const { 
     connecting,
     setConnecting,
@@ -39,24 +40,24 @@ export const useOpenFinanceConnection = () => {
 
   // Debug current state
   useEffect(() => {
-    console.log("Open Finance Connection State:", {
+    console.log("Open Finance Connection State (Production Only):", {
       currentEmpresa: currentEmpresa ? { id: currentEmpresa.id, nome: currentEmpresa.nome } : null,
       selectedProvider,
       pluggyWidgetLoaded,
       connecting,
-      useSandbox,
+      mode: "production",
       containerExists: connectContainerRef.current !== null,
     });
-  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, useSandbox, connectContainerRef]);
+  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, connectContainerRef]);
 
   const testPluggyConnection = async () => {
     try {
-      console.log("Testando conexão com Pluggy", { sandbox: useSandbox });
+      console.log("Testando conexão com Pluggy em modo produção");
       
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "test_connection",
-          sandbox: useSandbox
+          sandbox: false // Sempre produção
         }
       });
       
@@ -92,10 +93,10 @@ export const useOpenFinanceConnection = () => {
     updateConnectionState(20, "Inicializando conexão...");
     
     try {
-      console.log("Solicitando token para Pluggy Connect:", {
+      console.log("Solicitando token para Pluggy Connect (Produção):", {
         empresa_id: currentEmpresa?.id,
         institution: selectedProvider,
-        sandbox: useSandbox
+        sandbox: false
       });
       
       // Obter token para o widget do Pluggy
@@ -104,7 +105,7 @@ export const useOpenFinanceConnection = () => {
           action: "authorize",
           empresa_id: currentEmpresa?.id,
           institution: selectedProvider,
-          sandbox: useSandbox
+          sandbox: false // Sempre produção
         }
       });
 
@@ -126,7 +127,7 @@ export const useOpenFinanceConnection = () => {
       const onSuccess = async (itemData: { id: string }) => {
         console.log("Item criado com sucesso:", itemData.id);
         updateConnectionState(80, "Conexão estabelecida, registrando...");
-        await handlePluggySuccess(itemData.id, useSandbox);
+        await handlePluggySuccess(itemData.id, false); // Sempre produção
       };
 
       const onError = (error: any) => {
@@ -149,7 +150,7 @@ export const useOpenFinanceConnection = () => {
           onError,
           onClose,
           connectorId: selectedProvider,
-          includeSandbox: useSandbox
+          includeSandbox: false // Sempre produção
         },
         connectContainerRef.current
       );
@@ -166,8 +167,8 @@ export const useOpenFinanceConnection = () => {
     }
   };
 
-  // Update providers based on the sandbox mode
-  const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
+  // Use production providers
+  const providers = PRODUCTION_PJ_PROVIDERS;
 
   return {
     selectedProvider,
@@ -177,7 +178,7 @@ export const useOpenFinanceConnection = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
-    useSandbox,
+    useSandbox: false,
     setUseSandbox,
     providers,
     handleConnect,

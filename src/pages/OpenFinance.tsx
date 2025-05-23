@@ -28,8 +28,6 @@ const OpenFinance = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
-    useSandbox,
-    setUseSandbox,
     providers,
     handleConnect,
     testPluggyConnection,
@@ -39,7 +37,7 @@ const OpenFinance = () => {
   const { currentEmpresa, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    console.log("OpenFinance component mounted/updated");
+    console.log("OpenFinance component mounted/updated (Production Mode)");
     console.log("Current empresa:", currentEmpresa);
     console.log("Auth loading:", authLoading);
     console.log("Pluggy widget loaded:", pluggyWidgetLoaded);
@@ -49,11 +47,6 @@ const OpenFinance = () => {
     await testPluggyConnection();
   };
 
-  // Handle toggle sandbox/production mode
-  const handleToggleSandbox = () => {
-    setUseSandbox(!useSandbox);
-  };
-
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
@@ -61,13 +54,13 @@ const OpenFinance = () => {
           <div>
             <h1 className="text-2xl font-bold">Open Finance</h1>
             <p className="text-muted-foreground mt-1">
-              Conecte seus dados financeiros para análises do FounderPilot AI
+              Conecte seus dados financeiros empresariais para análises do FounderPilot AI
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Info className="h-4 w-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              Os dados são utilizados exclusivamente para análise
+              Dados PJ utilizados exclusivamente para análise
             </p>
           </div>
         </div>
@@ -87,8 +80,8 @@ const OpenFinance = () => {
         
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-primary/80"></div>
-            <span className="text-sm font-medium">Status da integração</span>
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
+            <span className="text-sm font-medium">Status da integração (Produção)</span>
           </div>
           <Button 
             variant="outline" 
@@ -117,15 +110,9 @@ const OpenFinance = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium">
-              Modo: {useSandbox ? 'Sandbox (teste)' : 'Produção'}
+            <span className="font-medium text-green-600">
+              Modo: Produção (Dados Reais)
             </span>
-            <button 
-              onClick={handleToggleSandbox}
-              className="text-xs border border-primary/30 rounded px-1 text-primary"
-            >
-              Alternar
-            </button>
           </div>
         </div>
         
@@ -161,7 +148,7 @@ const OpenFinance = () => {
           connectionProgress={connectionProgress}
           connectionStatus={connectionStatus}
           pluggyWidgetLoaded={pluggyWidgetLoaded}
-          useSandbox={useSandbox}
+          useSandbox={false}
           handleConnect={handleConnect}
           connectContainerRef={connectContainerRef}
         />

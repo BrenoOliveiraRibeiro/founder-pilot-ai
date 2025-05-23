@@ -1,20 +1,21 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '@/components/open-finance/BankProviders';
+import { PRODUCTION_PJ_PROVIDERS } from '@/components/open-finance/BankProviders';
 
-export const useProviderSelection = (initialSandboxMode = false) => {
+export const useProviderSelection = () => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [useSandbox, setUseSandbox] = useState(initialSandboxMode);
+  // Removido useSandbox - sempre produção
   const { toast } = useToast();
 
-  // Get the appropriate providers based on sandbox mode
-  const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
+  // Sempre usar conectores de produção PJ
+  const providers = PRODUCTION_PJ_PROVIDERS;
 
-  // Auto-select first provider if none selected
+  // Auto-select first popular provider if none selected
   useEffect(() => {
     if (providers.length > 0 && !selectedProvider) {
-      setSelectedProvider(providers[0].id);
+      const firstPopular = providers.find(p => p.popular) || providers[0];
+      setSelectedProvider(firstPopular.id);
     }
   }, [providers, selectedProvider]);
 
@@ -33,9 +34,9 @@ export const useProviderSelection = (initialSandboxMode = false) => {
   return {
     selectedProvider, 
     setSelectedProvider,
-    useSandbox,
-    setUseSandbox,
+    useSandbox: false, // Sempre produção
+    setUseSandbox: () => {}, // Função vazia para compatibilidade
     validateProviderSelection,
-    providers // Export providers so it can be used by consumer components
+    providers
   };
 };
