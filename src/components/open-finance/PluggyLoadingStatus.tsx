@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, RefreshCw, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
 
 interface PluggyLoadingStatusProps {
   pluggyWidgetLoaded: boolean;
@@ -25,7 +25,7 @@ export const PluggyLoadingStatus: React.FC<PluggyLoadingStatusProps> = ({
     return (
       <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
         <CheckCircle className="h-4 w-4" />
-        <span>Widget Pluggy carregado e pronto para uso!</span>
+        <span>Widget Pluggy carregado e pronto para uso! (Versão oficial v3)</span>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export const PluggyLoadingStatus: React.FC<PluggyLoadingStatusProps> = ({
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Carregando Widget Pluggy
+            Carregando Widget Pluggy Oficial
           </CardTitle>
           <CardDescription className="text-blue-600">
             {loadingStatus}
@@ -45,9 +45,9 @@ export const PluggyLoadingStatus: React.FC<PluggyLoadingStatusProps> = ({
         <CardContent className="pt-0">
           <div className="text-xs text-blue-600">
             {retryCount > 0 && (
-              <div>Tentativa: {retryCount + 1}/4</div>
+              <div>Tentativa: {retryCount + 1}/3</div>
             )}
-            <div className="mt-1">Aguarde alguns segundos...</div>
+            <div className="mt-1">Carregando da CDN oficial do Pluggy...</div>
           </div>
         </CardContent>
       </Card>
@@ -75,9 +75,20 @@ export const PluggyLoadingStatus: React.FC<PluggyLoadingStatusProps> = ({
                 <ul className="list-disc list-inside mt-1">
                   <li>Verificar conexão com internet</li>
                   <li>Desabilitar bloqueador de anúncios</li>
+                  <li>Verificar se o domínio cdn.pluggy.ai está acessível</li>
                   <li>Tentar em uma aba anônima</li>
                   <li>Recarregar a página</li>
                 </ul>
+              </div>
+              <div className="mt-2">
+                <a 
+                  href="https://pluggy.journey.io/p/4ae200b795bc473091a3168e296ebc4d" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-600 text-xs hover:underline"
+                >
+                  Ver documentação oficial <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
               </div>
             </div>
             <Button

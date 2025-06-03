@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 /**
  * Hook responsável por gerenciar o carregamento do script do Pluggy Connect
- * com retry logic e melhor debugging
+ * seguindo a documentação oficial
  */
 export const usePluggyConnect = () => {
   const [pluggyWidgetLoaded, setPluggyWidgetLoaded] = useState(false);
@@ -14,71 +14,55 @@ export const usePluggyConnect = () => {
   const [loadingStatus, setLoadingStatus] = useState<string>('');
   const { toast } = useToast();
 
-  const MAX_RETRIES = 3;
-  const LOAD_TIMEOUT = 15000; // 15 segundos
+  const MAX_RETRIES = 2;
+  const LOAD_TIMEOUT = 10000; // 10 segundos
 
-  // URLs do script Pluggy (fallbacks)
-  const SCRIPT_URLS = [
-    "https://cdn.pluggy.ai/pluggy-connect/v2.js",
-    "https://cdn.pluggy.ai/pluggy-connect/latest.js",
-    "https://cdn.pluggy.ai/pluggy-connect/v1.js"
-  ];
+  // URL oficial do script Pluggy conforme documentação
+  const SCRIPT_URL = "https://cdn.pluggy.ai/pluggy-connect/v3.js";
 
   const checkPluggyAvailability = useCallback(() => {
-    console.log("Verificando disponibilidade do PluggyConnect...");
-    if (window.PluggyConnect) {
-      console.log("✅ PluggyConnect encontrado:", typeof window.PluggyConnect);
+    console.log("🔍 Verificando disponibilidade do PluggyConnect...");
+    if (window.PluggyConnect && typeof window.PluggyConnect.init === 'function') {
+      console.log("✅ PluggyConnect encontrado e pronto:", typeof window.PluggyConnect);
       setPluggyWidgetLoaded(true);
       setLoadError(null);
       setLoadingStatus('Widget carregado com sucesso');
       return true;
     }
-    console.log("❌ PluggyConnect não disponível na window");
+    console.log("❌ PluggyConnect não disponível ou incompleto na window");
     return false;
   }, []);
 
   const removeExistingScript = useCallback(() => {
     const existingScript = document.getElementById("pluggy-script");
     if (existingScript) {
-      console.log("Removendo script existente...");
+      console.log("🧹 Removendo script existente...");
       existingScript.remove();
     }
   }, []);
 
-  const loadPluggyScript = useCallback(async (urlIndex = 0) => {
-    if (urlIndex >= SCRIPT_URLS.length) {
-      const error = `Todas as URLs do script falharam após ${MAX_RETRIES} tentativas`;
-      console.error(error);
-      setLoadError(error);
-      setLoadingScript(false);
-      setLoadingStatus('Falha ao carregar - todas as URLs testadas');
-      return false;
-    }
-
-    const scriptUrl = SCRIPT_URLS[urlIndex];
-    console.log(`Tentando carregar script do Pluggy (tentativa ${retryCount + 1}/${MAX_RETRIES + 1}):`, scriptUrl);
-    setLoadingStatus(`Carregando script... (${urlIndex + 1}/${SCRIPT_URLS.length})`);
+  const loadPluggyScript = useCallback(async () => {
+    console.log(`📥 Carregando script oficial do Pluggy (tentativa ${retryCount + 1}/${MAX_RETRIES + 1}):`, SCRIPT_URL);
+    setLoadingStatus(`Carregando widget oficial...`);
 
     return new Promise<boolean>((resolve) => {
-      // Remove script anterior se existir
       removeExistingScript();
 
       const script = document.createElement("script");
       script.id = "pluggy-script";
-      script.src = scriptUrl;
+      script.src = SCRIPT_URL;
       script.async = true;
       script.crossOrigin = "anonymous";
 
-      // Timeout para o carregamento
       const timeout = setTimeout(() => {
-        console.error(`Timeout ao carregar script: ${scriptUrl}`);
+        console.error(`⏰ Timeout ao carregar script: ${SCRIPT_URL}`);
         script.remove();
         resolve(false);
       }, LOAD_TIMEOUT);
 
       script.onload = () => {
         clearTimeout(timeout);
-        console.log(`Script carregado: ${scriptUrl}`);
+        console.log(`✅ Script carregado: ${SCRIPT_URL}`);
         
         // Aguardar um pouco para o objeto ficar disponível
         setTimeout(() => {
@@ -88,16 +72,16 @@ export const usePluggyConnect = () => {
             });
             resolve(true);
           } else {
-            console.warn(`Script carregado mas PluggyConnect não disponível: ${scriptUrl}`);
+            console.warn(`⚠️ Script carregado mas PluggyConnect não disponível: ${SCRIPT_URL}`);
             script.remove();
             resolve(false);
           }
-        }, 500);
+        }, 1000);
       };
 
       script.onerror = (error) => {
         clearTimeout(timeout);
-        console.error(`Erro ao carregar script: ${scriptUrl}`, error);
+        console.error(`❌ Erro ao carregar script: ${SCRIPT_URL}`, error);
         script.remove();
         resolve(false);
       };
@@ -112,34 +96,32 @@ export const usePluggyConnect = () => {
     setLoadingScript(true);
     setLoadError(null);
 
-    // Primeiro, verificar se já está disponível
+    // Verificar se já está disponível
     if (checkPluggyAvailability()) {
       setLoadingScript(false);
       return;
     }
 
-    // Tentar carregar com cada URL
-    for (let urlIndex = 0; urlIndex < SCRIPT_URLS.length; urlIndex++) {
-      const success = await loadPluggyScript(urlIndex);
-      if (success) {
-        setLoadingScript(false);
-        setRetryCount(0);
-        return;
-      }
+    const success = await loadPluggyScript();
+    
+    if (success) {
+      setLoadingScript(false);
+      setRetryCount(0);
+      return;
     }
 
-    // Se chegou aqui, todas as URLs falharam
+    // Se falhou e ainda temos tentativas
     if (retryCount < MAX_RETRIES) {
-      console.log(`Tentando novamente em 2 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
+      console.log(`🔄 Tentando novamente em 3 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
       setRetryCount(prev => prev + 1);
-      setLoadingStatus(`Tentativa ${retryCount + 2}/${MAX_RETRIES + 1} em 2s...`);
+      setLoadingStatus(`Tentativa ${retryCount + 2}/${MAX_RETRIES + 1} em 3s...`);
       
       setTimeout(() => {
         attemptLoad();
-      }, 2000);
+      }, 3000);
     } else {
       const error = `Falha ao carregar Pluggy Connect após ${MAX_RETRIES + 1} tentativas`;
-      console.error(error);
+      console.error("❌", error);
       setLoadError(error);
       setLoadingScript(false);
       setLoadingStatus('Erro: Widget não pôde ser carregado');
@@ -167,13 +149,13 @@ export const usePluggyConnect = () => {
     attemptLoad();
   }, [attemptLoad]);
 
-  // Responsabilidade: Inicializar o widget do Pluggy Connect
+  // Implementação correta seguindo a documentação oficial
   const initializePluggyConnect = async (
     connectToken: string,
     options: any,
     containerElement: HTMLElement | null
   ) => {
-    console.log("🚀 Inicializando Pluggy Connect", { 
+    console.log("🚀 Inicializando Pluggy Connect (API oficial)", { 
       tokenLength: connectToken?.length || 0,
       tokenPreview: connectToken ? `${connectToken.substring(0, 10)}...` : 'Token não fornecido',
       options,
@@ -181,10 +163,9 @@ export const usePluggyConnect = () => {
       pluggyAvailable: !!window.PluggyConnect
     });
     
-    // Validações
     if (!connectToken) {
       const error = "Token de conexão não fornecido";
-      console.error(error);
+      console.error("❌", error);
       toast({
         title: "Erro de inicialização",
         description: error,
@@ -195,11 +176,8 @@ export const usePluggyConnect = () => {
     
     if (!window.PluggyConnect) {
       const error = "Pluggy Connect não está disponível. Tentando recarregar...";
-      console.error(error);
-      
-      // Tentar recarregar automaticamente
+      console.error("❌", error);
       forceReload();
-      
       toast({
         title: "Widget não carregado",
         description: "Tentando recarregar o widget automaticamente...",
@@ -210,7 +188,7 @@ export const usePluggyConnect = () => {
     
     if (!containerElement) {
       const error = "Container para o widget não encontrado";
-      console.error(error);
+      console.error("❌", error);
       toast({
         title: "Erro de inicialização",
         description: error,
@@ -220,19 +198,24 @@ export const usePluggyConnect = () => {
     }
 
     try {
-      console.log("Criando instância do Pluggy Connect...");
-      const pluggyConnect = await window.PluggyConnect.create({
+      console.log("🔧 Inicializando Pluggy Connect seguindo documentação oficial...");
+      
+      // Implementação correta seguindo a documentação
+      const pluggyConnect = window.PluggyConnect.init({
         connectToken,
-        includeSandbox: options.includeSandbox ?? false, // Sempre produção por padrão
-        ...options
+        includeSandbox: options.includeSandbox ?? false,
+        onSuccess: options.onSuccess,
+        onError: options.onError,
+        onClose: options.onClose,
+        connectorId: options.connectorId
       });
 
-      console.log("✅ Instância do Pluggy Connect criada com sucesso");
+      console.log("✅ Instância do Pluggy Connect inicializada com sucesso");
 
-      // Renderiza o widget
-      console.log("Montando widget no container...");
-      pluggyConnect.mount(containerElement);
-      console.log("✅ Widget montado com sucesso");
+      // Renderizar no container
+      console.log("🎨 Montando widget no container...");
+      pluggyConnect.render(containerElement);
+      console.log("✅ Widget renderizado com sucesso");
       
       return pluggyConnect;
     } catch (error: any) {
@@ -246,7 +229,6 @@ export const usePluggyConnect = () => {
     }
   };
 
-  // Responsabilidade: Verificar se o Pluggy Connect está pronto para uso
   const isPluggyReady = () => {
     if (!pluggyWidgetLoaded) {
       if (loadError) {

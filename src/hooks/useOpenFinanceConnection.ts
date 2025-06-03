@@ -96,7 +96,7 @@ export const useOpenFinanceConnection = () => {
   };
 
   const handleConnect = async () => {
-    console.log("🚀 Iniciando conexão...");
+    console.log("🚀 Iniciando conexão com API oficial...");
     console.log("Banco selecionado:", selectedProvider);
     console.log("Widget carregado:", pluggyWidgetLoaded);
     console.log("Empresa:", currentEmpresa?.id);
@@ -112,23 +112,23 @@ export const useOpenFinanceConnection = () => {
     updateConnectionState(20, "Inicializando conexão...");
     
     try {
-      console.log("Solicitando token para Pluggy Connect (Produção):", {
+      console.log("📡 Solicitando token para Pluggy Connect (API Oficial):", {
         empresa_id: currentEmpresa?.id,
         institution: selectedProvider,
         sandbox: false
       });
       
-      // Obter token para o widget do Pluggy
+      // Obter token para o widget do Pluggy usando API oficial
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "authorize",
           empresa_id: currentEmpresa?.id,
           institution: selectedProvider,
-          sandbox: false // Sempre produção
+          sandbox: false
         }
       });
 
-      console.log("Resposta da API:", { data, error });
+      console.log("📋 Resposta da API:", { data, error });
 
       if (error) {
         handleError(error, "authorize", "Erro na autorização com a API Pluggy", setDebugInfo, resetConnection);
@@ -142,15 +142,15 @@ export const useOpenFinanceConnection = () => {
 
       updateConnectionState(40, "Autorizando com o banco...");
 
-      console.log("🎯 Inicializando widget para", selectedProvider);
+      console.log("🎯 Inicializando widget oficial para", selectedProvider);
 
-      // Inicializar e abrir o widget do Pluggy
-      const onSuccess = async (itemData: { id: string }) => {
-        console.log("✅ Item criado com sucesso:", itemData.id);
+      // Callbacks para o widget
+      const onSuccess = async (itemData: { itemId: string }) => {
+        console.log("✅ Item criado com sucesso:", itemData.itemId);
         updateConnectionState(80, "Conexão estabelecida, registrando...");
         await handlePluggySuccess(
-          itemData.id, 
-          false, // Sempre produção
+          itemData.itemId, 
+          false,
           updateConnectionState,
           resetConnection,
           fetchIntegrations,
@@ -168,10 +168,10 @@ export const useOpenFinanceConnection = () => {
         resetConnection();
       };
 
-      console.log("Inicializando Pluggy Connect com token:", data.connect_token.substring(0, 10) + "...");
-      console.log("Container ref:", connectContainerRef.current);
+      console.log("🔧 Inicializando Pluggy Connect com token oficial:", data.connect_token.substring(0, 10) + "...");
+      console.log("📦 Container ref:", connectContainerRef.current);
 
-      // Initialize Pluggy Connect
+      // Usar a implementação correta da API oficial
       const pluggyConnect = await initializePluggyConnect(
         data.connect_token,
         {
@@ -179,7 +179,7 @@ export const useOpenFinanceConnection = () => {
           onError,
           onClose,
           connectorId: selectedProvider,
-          includeSandbox: false // Sempre produção
+          includeSandbox: false
         },
         connectContainerRef.current
       );
@@ -189,7 +189,7 @@ export const useOpenFinanceConnection = () => {
         return;
       }
       
-      console.log("✅ Pluggy Connect inicializado com sucesso");
+      console.log("✅ Pluggy Connect inicializado com sucesso usando API oficial");
       
     } catch (error: any) {
       console.log("❌ Erro geral:", error);

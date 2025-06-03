@@ -1,20 +1,25 @@
 
-/**
- * Pluggy Connect related type definitions
- */
-
-interface PluggyConnectOptions {
-  connectToken: string;
-  includeSandbox?: boolean;
-  [key: string]: any;
-}
-
+// Definições de tipos para Pluggy Connect seguindo documentação oficial
 declare global {
   interface Window {
-    PluggyConnect?: {
-      create: (options: PluggyConnectOptions) => any;
+    PluggyConnect: {
+      init: (options: PluggyInitOptions) => PluggyInstance;
     };
   }
+}
+
+interface PluggyInitOptions {
+  connectToken: string;
+  includeSandbox?: boolean;
+  connectorId?: string;
+  onSuccess?: (data: { itemId: string; [key: string]: any }) => void;
+  onError?: (error: any) => void;
+  onClose?: () => void;
+}
+
+interface PluggyInstance {
+  render: (container: HTMLElement) => void;
+  destroy?: () => void;
 }
 
 export {};

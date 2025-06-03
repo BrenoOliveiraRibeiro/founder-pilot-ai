@@ -1,6 +1,5 @@
 
 import { corsHeaders, getPluggyToken } from "./utils.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
 export async function authorizeConnection(
   empresa_id: string,
@@ -34,12 +33,11 @@ export async function authorizeConnection(
       console.log(`Creating OAuth URL with redirectUri: ${redirectUri}`);
       
       // For OAuth flow, create authorization URL following official documentation
-      // URL: https://api.pluggy.ai/auth with correct parameters
       const authUrl = `https://api.pluggy.ai/auth` + 
-        `?response_type=code` + // Obrigatório conforme documentação
-        `&client_id=${encodeURIComponent(pluggyClientId)}` + // client_id em vez de clientId
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` + // redirect_uri em vez de redirectUri
-        `&scope=read_accounts read_transactions` + // Escopo para contas PJ
+        `?response_type=code` +
+        `&client_id=${encodeURIComponent(pluggyClientId)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&scope=read_accounts read_transactions` +
         (institution ? `&connector_id=${encodeURIComponent(institution)}` : '');
       
       console.log("Authorization URL created:", authUrl);
@@ -52,10 +50,11 @@ export async function authorizeConnection(
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     } else {
-      // For widget flow, create connect token
-      console.log("Creating connect token for widget flow");
+      // For widget flow, create connect token using correct endpoint
+      console.log("Creating connect token for widget flow using official API");
       
-      const connectTokenResponse = await fetch(`https://api.pluggy.ai/connect_token`, {
+      // Endpoint correto conforme documentação oficial
+      const connectTokenResponse = await fetch(`https://api.pluggy.ai/connect-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +62,8 @@ export async function authorizeConnection(
         },
         body: JSON.stringify({
           itemId: null,
-          includeSandbox: sandbox
+          includeSandbox: sandbox,
+          connectorId: institution || undefined
         })
       });
       
@@ -77,7 +77,7 @@ export async function authorizeConnection(
       }
       
       const connectTokenData = await connectTokenResponse.json();
-      console.log("Connect token created successfully");
+      console.log("Connect token created successfully with official API");
       
       return new Response(
         JSON.stringify({
