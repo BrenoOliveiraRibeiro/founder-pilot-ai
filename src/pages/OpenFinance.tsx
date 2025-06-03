@@ -6,6 +6,7 @@ import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard";
+import { ProductionTestButton } from "@/components/open-finance/ProductionTestButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -58,15 +59,23 @@ const OpenFinance = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <Info className="h-4 w-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Dados PJ utilizados exclusivamente para análise
-            </p>
+            <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+              🔥 PRODUÇÃO
+            </div>
           </div>
         </div>
         
         {/* Instruções de conexão */}
         <ConnectionInstructionsAlert />
+        
+        {/* Teste de Conexão de Produção */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-medium text-blue-900 mb-2">Teste de Conexão - Ambiente de Produção</h3>
+          <p className="text-sm text-blue-700 mb-3">
+            Teste se as credenciais de produção estão funcionando corretamente antes de conectar suas contas bancárias.
+          </p>
+          <ProductionTestButton />
+        </div>
         
         {!currentEmpresa && !authLoading && (
           <Alert variant="destructive" className="mb-6">
@@ -89,7 +98,7 @@ const OpenFinance = () => {
             onClick={handleTestConnection}
             className="text-xs"
           >
-            Testar Conexão
+            Testar Conexão (Legacy)
           </Button>
         </div>
         
@@ -111,7 +120,7 @@ const OpenFinance = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-green-600">
-              Modo: Produção (Dados Reais)
+              🔥 Modo: Produção (Credenciais Configuradas)
             </span>
           </div>
         </div>
