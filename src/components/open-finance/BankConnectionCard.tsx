@@ -7,7 +7,6 @@ import { ExternalLink, ChevronRight, LockIcon, AlertCircle, HelpCircle, Info } f
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
-import { PluggyOAuthButton } from "./PluggyOAuthButton";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Provider {
@@ -47,10 +46,12 @@ export const BankConnectionCard = ({
     toast({
       title: "Ajuda sobre conexão bancária",
       description: "Use suas credenciais bancárias reais para conectar sua conta empresarial. Todos os dados são criptografados e protegidos.",
-      variant: "info",
+      variant: "default",
       duration: 10000,
     });
   };
+
+  const selectedProviderName = providers.find(p => p.id === selectedProvider)?.name || 'Nenhum banco selecionado';
 
   return (
     <Card className="border-none shadow-md">
@@ -121,41 +122,64 @@ export const BankConnectionCard = ({
             />
           </div>
           
+          {/* Status de debug */}
+          <div className="text-xs space-y-1 p-3 bg-gray-50 rounded border">
+            <div className="font-medium text-gray-700">Status da Conexão:</div>
+            <div>Banco selecionado: <span className="font-mono">{selectedProviderName}</span></div>
+            <div>Widget carregado: <span className={pluggyWidgetLoaded ? 'text-green-600' : 'text-red-500'}>{pluggyWidgetLoaded ? 'Sim' : 'Não'}</span></div>
+            <div>Container disponível: <span className={connectContainerRef.current ? 'text-green-600' : 'text-red-500'}>{connectContainerRef.current ? 'Sim' : 'Não'}</span></div>
+            <div>Conectando: <span className={connecting ? 'text-blue-600' : 'text-gray-500'}>{connecting ? 'Sim' : 'Não'}</span></div>
+          </div>
+          
           <SecurityInfoItems />
           
           {/* Container para o widget do Pluggy */}
-          <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
+          <div 
+            id="pluggy-container" 
+            ref={connectContainerRef} 
+            className="pluggy-connect-container min-h-20 border-2 border-dashed border-gray-200 rounded-lg p-4"
+          >
+            <div className="text-center text-sm text-gray-500">
+              {pluggyWidgetLoaded ? "Widget pronto - clique em 'Conectar com Widget' para abrir" : "Carregando widget..."}
+            </div>
+          </div>
           
           <div className="space-y-4">
             <Alert variant="default" className="bg-muted/40 border-dashed">
               <Info className="h-4 w-4 text-primary" />
               <AlertTitle className="text-sm font-medium">Como conectar sua conta empresarial</AlertTitle>
               <AlertDescription className="text-xs">
-                Selecione seu banco empresarial acima e escolha um dos métodos de conexão abaixo. 
-                Use suas credenciais bancárias reais da conta PJ.
+                1. Selecione seu banco acima (ex: C6 Bank)
+                2. Clique em "Conectar com Widget" 
+                3. Use suas credenciais bancárias reais da conta PJ
               </AlertDescription>
             </Alert>
             
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {/* Widget-based connection */}
-              <Button 
-                className="w-full group transition-all duration-200 relative overflow-hidden"
-                disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
-                onClick={handleConnect}
-              >
-                <span className="relative z-10 flex items-center">
-                  {connecting ? "Conectando..." : "Conectar com Widget"}
-                  <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </span>
-                <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
-              </Button>
-              
-              {/* OAuth-based connection */}
-              <PluggyOAuthButton 
-                useSandbox={false}
-                className="w-full"
-              />
-            </div>
+            {/* Apenas o botão do widget */}
+            <Button 
+              className="w-full group transition-all duration-200 relative overflow-hidden"
+              disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
+              onClick={handleConnect}
+              size="lg"
+            >
+              <span className="relative z-10 flex items-center">
+                {connecting ? "Conectando..." : "Conectar com Widget"}
+                <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </span>
+              <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+            </Button>
+            
+            {!pluggyWidgetLoaded && (
+              <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded">
+                ⚠️ Widget ainda está carregando. Aguarde alguns segundos e tente novamente.
+              </div>
+            )}
+            
+            {!selectedProvider && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                ❌ Selecione um banco primeiro (ex: C6 Bank) para continuar.
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

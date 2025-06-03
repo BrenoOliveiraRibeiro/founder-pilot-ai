@@ -7,11 +7,13 @@ import { useOpenFinanceConnections } from './useOpenFinanceConnections';
 import { useProviderSelection } from './open-finance/useProviderSelection';
 import { useConnectionManager } from './open-finance/useConnectionManager';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useOpenFinanceConnection = () => {
   const { currentEmpresa } = useAuth();
   const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
+  const { toast } = useToast();
   
   // Initialize provider selection - sempre produção
   const {
@@ -38,17 +40,39 @@ export const useOpenFinanceConnection = () => {
     handlePluggySuccess
   } = useConnectionManager(pluggyWidgetLoaded, initializePluggyConnect, fetchIntegrations);
 
-  // Debug current state
+  // Enhanced debug logging
   useEffect(() => {
-    console.log("Open Finance Connection State (Production Only):", {
-      currentEmpresa: currentEmpresa ? { id: currentEmpresa.id, nome: currentEmpresa.nome } : null,
-      selectedProvider,
-      pluggyWidgetLoaded,
-      connecting,
-      mode: "production",
-      containerExists: connectContainerRef.current !== null,
-    });
-  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, connectContainerRef]);
+    const selectedProviderName = PRODUCTION_PJ_PROVIDERS.find(p => p.id === selectedProvider)?.name || 'Nenhum';
+    
+    console.log("=== DEBUG Open Finance Connection ===");
+    console.log("Empresa:", currentEmpresa ? { id: currentEmpresa.id, nome: currentEmpresa.nome } : 'Não selecionada');
+    console.log("Banco selecionado:", selectedProviderName, `(ID: ${selectedProvider})`);
+    console.log("Widget Pluggy carregado:", pluggyWidgetLoaded);
+    console.log("Container existe:", connectContainerRef.current !== null);
+    console.log("Conectando:", connecting);
+    console.log("Modo:", "PRODUÇÃO");
+    console.log("======================================");
+    
+    // Log quando usuário seleciona C6
+    if (selectedProvider === 'c6-bank') {
+      console.log("🏦 C6 Bank selecionado!");
+      console.log("Widget status:", pluggyWidgetLoaded ? "✅ Carregado" : "❌ Não carregado");
+      
+      if (!pluggyWidgetLoaded) {
+        toast({
+          title: "Widget carregando...",
+          description: "O C6 Bank foi selecionado. Aguarde o widget carregar completamente antes de conectar.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "C6 Bank selecionado",
+          description: "Pronto para conectar! Clique em 'Conectar com Widget' para prosseguir.",
+          duration: 3000,
+        });
+      }
+    }
+  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, connectContainerRef, toast]);
 
   const testPluggyConnection = async () => {
     try {
@@ -84,8 +108,23 @@ export const useOpenFinanceConnection = () => {
   };
 
   const handleConnect = async () => {
+    console.log("🚀 Iniciando conexão...");
+    console.log("Banco selecionado:", selectedProvider);
+    console.log("Widget carregado:", pluggyWidgetLoaded);
+    console.log("Empresa:", currentEmpresa?.id);
+    
     // Validação dos requisitos básicos
     if (!validateProviderSelection() || !validateRequirements()) {
+      console.log("❌ Validação falhou");
+      return;
+    }
+    
+    if (!pluggyWidgetLoaded) {
+      toast({
+        title: "Widget não carregado",
+        description: "O widget do Pluggy ainda está carregando. Aguarde alguns segundos e tente novamente.",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -123,14 +162,17 @@ export const useOpenFinanceConnection = () => {
 
       updateConnectionState(40, "Autorizando com o banco...");
 
+      console.log("🎯 Inicializando widget para", selectedProvider);
+
       // Inicializar e abrir o widget do Pluggy
       const onSuccess = async (itemData: { id: string }) => {
-        console.log("Item criado com sucesso:", itemData.id);
+        console.log("✅ Item criado com sucesso:", itemData.id);
         updateConnectionState(80, "Conexão estabelecida, registrando...");
         await handlePluggySuccess(itemData.id, false); // Sempre produção
       };
 
       const onError = (error: any) => {
+        console.log("❌ Erro no widget:", error);
         handleError(error, "pluggy_widget_error", "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"));
       };
 
@@ -160,9 +202,10 @@ export const useOpenFinanceConnection = () => {
         return;
       }
       
-      console.log("Pluggy Connect inicializado com sucesso");
+      console.log("✅ Pluggy Connect inicializado com sucesso");
       
     } catch (error: any) {
+      console.log("❌ Erro geral:", error);
       handleError(error, "connect_account", "Não foi possível estabelecer conexão com o banco. Tente novamente.");
     }
   };
