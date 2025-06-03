@@ -10,7 +10,8 @@ export async function getPluggyToken(pluggyClientId: string, pluggyClientSecret:
     // For debugging
     console.log(`Getting Pluggy token with client ID: ${pluggyClientId.substring(0, 7)}... (sandbox: ${sandbox})`);
     
-    const baseUrl = sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai';
+    // Sempre usar produção - URL corrigida conforme documentação
+    const baseUrl = 'https://api.pluggy.ai';
     
     const response = await fetch(`${baseUrl}/auth`, {
       method: 'POST',
@@ -61,7 +62,7 @@ export async function callPluggyAPI(endpoint: string, method: string, apiKey: st
     
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'X-API-KEY': apiKey || '',
     };
     
     const options: RequestInit = {

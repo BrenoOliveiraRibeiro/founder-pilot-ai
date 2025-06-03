@@ -33,12 +33,16 @@ export async function authorizeConnection(
     if (redirectUri) {
       console.log(`Creating OAuth URL with redirectUri: ${redirectUri}`);
       
-      // For OAuth flow, create authorization URL
-      const authUrl = `https://auth.pluggy.ai/connect` + 
-        `?clientId=${encodeURIComponent(pluggyClientId)}` + 
-        `&redirectUri=${encodeURIComponent(redirectUri)}` +
-        `&includeSandbox=${sandbox ? 'true' : 'false'}` +
-        (institution ? `&connectorId=${encodeURIComponent(institution)}` : '');
+      // For OAuth flow, create authorization URL following official documentation
+      // URL: https://api.pluggy.ai/auth with correct parameters
+      const authUrl = `https://api.pluggy.ai/auth` + 
+        `?response_type=code` + // Obrigatório conforme documentação
+        `&client_id=${encodeURIComponent(pluggyClientId)}` + // client_id em vez de clientId
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` + // redirect_uri em vez de redirectUri
+        `&scope=read_accounts read_transactions` + // Escopo para contas PJ
+        (institution ? `&connector_id=${encodeURIComponent(institution)}` : '');
+      
+      console.log("Authorization URL created:", authUrl);
       
       return new Response(
         JSON.stringify({ 
@@ -51,7 +55,7 @@ export async function authorizeConnection(
       // For widget flow, create connect token
       console.log("Creating connect token for widget flow");
       
-      const connectTokenResponse = await fetch(`${sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai'}/connect_token`, {
+      const connectTokenResponse = await fetch(`https://api.pluggy.ai/connect_token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

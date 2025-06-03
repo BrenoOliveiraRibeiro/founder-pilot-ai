@@ -36,16 +36,19 @@ export async function processCallback(
     if (code && redirectUri) {
       console.log(`Processing OAuth callback with code: ${code.substring(0, 5)}...`);
       
-      // Exchange authorization code for access token
-      const tokenResponse = await fetch(`${sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai'}/connect/token`, {
+      // Exchange authorization code for access token using correct endpoint
+      // Endpoint corrigido conforme documentação: /auth/token
+      const tokenResponse = await fetch(`https://api.pluggy.ai/auth/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-API-KEY": apiKey
         },
         body: JSON.stringify({
+          grant_type: "authorization_code", // Adicionado conforme documentação OAuth2
           code,
-          redirectUri
+          redirect_uri: redirectUri, // redirect_uri em vez de redirectUri
+          client_id: pluggyClientId // client_id em vez de clientId
         })
       });
       
@@ -53,7 +56,11 @@ export async function processCallback(
         const errorText = await tokenResponse.text();
         console.error("Error exchanging code for token:", errorText);
         return new Response(
-          JSON.stringify({ error: "Failed to exchange authorization code", details: errorText }),
+          JSON.stringify({ 
+            error: "Failed to exchange authorization code", 
+            details: errorText,
+            statusCode: tokenResponse.status 
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: tokenResponse.status }
         );
       }
@@ -62,12 +69,12 @@ export async function processCallback(
       console.log("Successfully exchanged code for item data");
       
       // Use the itemId from the response
-      item_id = tokenData.item.id;
+      item_id = tokenData.item?.id || tokenData.itemId;
     }
     
     if (!item_id) {
       return new Response(
-        JSON.stringify({ error: "No item_id provided" }),
+        JSON.stringify({ error: "No item_id provided or received from token exchange" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -75,7 +82,7 @@ export async function processCallback(
     console.log(`Processing item: ${item_id}`);
     
     // Retrieve item details
-    const itemResponse = await fetch(`${sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai'}/items/${item_id}`, {
+    const itemResponse = await fetch(`https://api.pluggy.ai/items/${item_id}`, {
       method: "GET",
       headers: {
         "X-API-KEY": apiKey
@@ -95,7 +102,7 @@ export async function processCallback(
     console.log(`Item details retrieved for ${itemData.connector.name}`);
 
     // Retrieve accounts
-    const accountsResponse = await fetch(`${sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai'}/accounts?itemId=${item_id}`, {
+    const accountsResponse = await fetch(`https://api.pluggy.ai/accounts?itemId=${item_id}`, {
       method: "GET",
       headers: {
         "X-API-KEY": apiKey

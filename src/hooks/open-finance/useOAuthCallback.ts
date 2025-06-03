@@ -37,7 +37,7 @@ export const useOAuthCallback = () => {
           action: "callback",
           code: authCode,
           empresa_id: currentEmpresa.id,
-          redirectUri: window.location.origin
+          redirectUri: `${window.location.origin}/open-finance` // Usar URL correta
         }
       });
 

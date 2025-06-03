@@ -32,7 +32,7 @@ export const useOAuthAuthorize = () => {
           action: "authorize",
           empresa_id: currentEmpresa.id,
           sandbox: false, // Sempre produção
-          redirectUri: window.location.origin // Garante redirecionamento para a origem atual
+          redirectUri: `${window.location.origin}/open-finance` // Redirecionar para página Open Finance
         }
       });
 
