@@ -11,7 +11,15 @@ import { useToast } from '@/components/ui/use-toast';
 
 export const useOpenFinanceConnection = () => {
   const { currentEmpresa } = useAuth();
-  const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
+  const { 
+    pluggyWidgetLoaded, 
+    loadingScript,
+    loadError,
+    retryCount,
+    loadingStatus,
+    initializePluggyConnect,
+    forceReload
+  } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
   const { toast } = useToast();
   
@@ -48,6 +56,10 @@ export const useOpenFinanceConnection = () => {
     console.log("Empresa:", currentEmpresa ? { id: currentEmpresa.id, nome: currentEmpresa.nome } : 'Não selecionada');
     console.log("Banco selecionado:", selectedProviderName, `(ID: ${selectedProvider})`);
     console.log("Widget Pluggy carregado:", pluggyWidgetLoaded);
+    console.log("Script carregando:", loadingScript);
+    console.log("Erro de carregamento:", loadError);
+    console.log("Status de carregamento:", loadingStatus);
+    console.log("Tentativas:", retryCount);
     console.log("Container existe:", connectContainerRef.current !== null);
     console.log("Conectando:", connecting);
     console.log("Modo:", "PRODUÇÃO");
@@ -58,21 +70,35 @@ export const useOpenFinanceConnection = () => {
       console.log("🏦 C6 Bank selecionado!");
       console.log("Widget status:", pluggyWidgetLoaded ? "✅ Carregado" : "❌ Não carregado");
       
-      if (!pluggyWidgetLoaded) {
+      if (loadError) {
         toast({
-          title: "Widget carregando...",
-          description: "O C6 Bank foi selecionado. Aguarde o widget carregar completamente antes de conectar.",
+          title: "Erro no C6 Bank",
+          description: "O C6 Bank foi selecionado mas o widget falhou ao carregar. Tente recarregar.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } else if (loadingScript) {
+        toast({
+          title: "C6 Bank selecionado",
+          description: "Widget carregando... Aguarde a conclusão para conectar.",
           duration: 3000,
+        });
+      } else if (!pluggyWidgetLoaded) {
+        toast({
+          title: "Widget não carregado",
+          description: "C6 Bank selecionado mas widget não está pronto. Tente recarregar.",
+          variant: "destructive",
+          duration: 5000,
         });
       } else {
         toast({
-          title: "C6 Bank selecionado",
-          description: "Pronto para conectar! Clique em 'Conectar com Widget' para prosseguir.",
+          title: "C6 Bank pronto!",
+          description: "Clique em 'Conectar com Widget' para prosseguir com a conexão.",
           duration: 3000,
         });
       }
     }
-  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, connectContainerRef, toast]);
+  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, loadingScript, loadError, loadingStatus, retryCount, connecting, connectContainerRef, toast]);
 
   const testPluggyConnection = async () => {
     try {
@@ -120,11 +146,25 @@ export const useOpenFinanceConnection = () => {
     }
     
     if (!pluggyWidgetLoaded) {
-      toast({
-        title: "Widget não carregado",
-        description: "O widget do Pluggy ainda está carregando. Aguarde alguns segundos e tente novamente.",
-        variant: "destructive"
-      });
+      if (loadError) {
+        toast({
+          title: "Widget com erro",
+          description: "O widget do Pluggy falhou ao carregar. Use o botão 'Tentar Recarregar Widget' para tentar novamente.",
+          variant: "destructive"
+        });
+      } else if (loadingScript) {
+        toast({
+          title: "Widget carregando",
+          description: "O widget do Pluggy ainda está carregando. Aguarde alguns segundos e tente novamente.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Widget não carregado",
+          description: "O widget do Pluggy não está disponível. Tente recarregar a página.",
+          variant: "destructive"
+        });
+      }
       return;
     }
     
@@ -221,11 +261,16 @@ export const useOpenFinanceConnection = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
+    loadingScript,
+    loadError,
+    retryCount,
+    loadingStatus,
     useSandbox: false,
     setUseSandbox,
     providers,
     handleConnect,
     testPluggyConnection,
-    debugInfo
+    debugInfo,
+    forceReload
   };
 };

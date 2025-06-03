@@ -29,10 +29,15 @@ const OpenFinance = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
+    loadingScript,
+    loadError,
+    retryCount,
+    loadingStatus,
     providers,
     handleConnect,
     testPluggyConnection,
-    debugInfo
+    debugInfo,
+    forceReload
   } = useOpenFinanceConnection();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
@@ -42,7 +47,9 @@ const OpenFinance = () => {
     console.log("Current empresa:", currentEmpresa);
     console.log("Auth loading:", authLoading);
     console.log("Pluggy widget loaded:", pluggyWidgetLoaded);
-  }, [currentEmpresa, authLoading, pluggyWidgetLoaded]);
+    console.log("Loading script:", loadingScript);
+    console.log("Load error:", loadError);
+  }, [currentEmpresa, authLoading, pluggyWidgetLoaded, loadingScript, loadError]);
 
   const handleTestConnection = async () => {
     await testPluggyConnection();
@@ -104,8 +111,12 @@ const OpenFinance = () => {
         
         <div className="mb-6 space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className={`font-medium ${pluggyWidgetLoaded ? 'text-green-600' : 'text-red-500'}`}>
-              Pluggy Connect: {pluggyWidgetLoaded ? 'Carregado' : 'Não carregado'}
+            <span className={`font-medium ${pluggyWidgetLoaded ? 'text-green-600' : loadingScript ? 'text-blue-600' : 'text-red-500'}`}>
+              Pluggy Connect: {
+                pluggyWidgetLoaded ? 'Carregado' : 
+                loadingScript ? `Carregando... (${loadingStatus})` : 
+                loadError ? 'Erro no carregamento' : 'Não carregado'
+              }
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -123,6 +134,13 @@ const OpenFinance = () => {
               🔥 Modo: Produção (Credenciais Configuradas)
             </span>
           </div>
+          {retryCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-orange-600">
+                Tentativas de carregamento: {retryCount}/3
+              </span>
+            </div>
+          )}
         </div>
         
         {debugInfo && (
@@ -157,6 +175,11 @@ const OpenFinance = () => {
           connectionProgress={connectionProgress}
           connectionStatus={connectionStatus}
           pluggyWidgetLoaded={pluggyWidgetLoaded}
+          loadingScript={loadingScript}
+          loadError={loadError}
+          retryCount={retryCount}
+          loadingStatus={loadingStatus}
+          onForceReload={forceReload}
           useSandbox={false}
           handleConnect={handleConnect}
           connectContainerRef={connectContainerRef}

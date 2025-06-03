@@ -7,6 +7,7 @@ import { ExternalLink, ChevronRight, LockIcon, AlertCircle, HelpCircle, Info } f
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
+import { PluggyLoadingStatus } from "./PluggyLoadingStatus";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Provider {
@@ -24,6 +25,11 @@ interface BankConnectionCardProps {
   connectionProgress: number;
   connectionStatus: string;
   pluggyWidgetLoaded: boolean;
+  loadingScript: boolean;
+  loadError: string | null;
+  retryCount: number;
+  loadingStatus: string;
+  onForceReload: () => void;
   useSandbox: boolean;
   handleConnect: () => Promise<void>;
   connectContainerRef: React.RefObject<HTMLDivElement>;
@@ -37,6 +43,11 @@ export const BankConnectionCard = ({
   connectionProgress,
   connectionStatus,
   pluggyWidgetLoaded,
+  loadingScript,
+  loadError,
+  retryCount,
+  loadingStatus,
+  onForceReload,
   handleConnect,
   connectContainerRef
 }: BankConnectionCardProps) => {
@@ -97,6 +108,18 @@ export const BankConnectionCard = ({
           <p>Utilizamos criptografia bancária e tecnologia Open Finance para manter seus dados seguros</p>
         </div>
         
+        {/* Status do carregamento do Widget */}
+        <div className="mb-6">
+          <PluggyLoadingStatus 
+            pluggyWidgetLoaded={pluggyWidgetLoaded}
+            loadingScript={loadingScript}
+            loadError={loadError}
+            retryCount={retryCount}
+            loadingStatus={loadingStatus}
+            onForceReload={onForceReload}
+          />
+        </div>
+        
         <ConnectionProgress 
           connectionProgress={connectionProgress}
           connectionStatus={connectionStatus}
@@ -129,6 +152,8 @@ export const BankConnectionCard = ({
             <div>Widget carregado: <span className={pluggyWidgetLoaded ? 'text-green-600' : 'text-red-500'}>{pluggyWidgetLoaded ? 'Sim' : 'Não'}</span></div>
             <div>Container disponível: <span className={connectContainerRef.current ? 'text-green-600' : 'text-red-500'}>{connectContainerRef.current ? 'Sim' : 'Não'}</span></div>
             <div>Conectando: <span className={connecting ? 'text-blue-600' : 'text-gray-500'}>{connecting ? 'Sim' : 'Não'}</span></div>
+            {loadingScript && <div>Carregando script: <span className="text-blue-600">Sim ({loadingStatus})</span></div>}
+            {retryCount > 0 && <div>Tentativas: <span className="text-orange-600">{retryCount}/3</span></div>}
           </div>
           
           <SecurityInfoItems />
@@ -149,13 +174,14 @@ export const BankConnectionCard = ({
               <Info className="h-4 w-4 text-primary" />
               <AlertTitle className="text-sm font-medium">Como conectar sua conta empresarial</AlertTitle>
               <AlertDescription className="text-xs">
-                1. Selecione seu banco acima (ex: C6 Bank)
-                2. Clique em "Conectar com Widget" 
-                3. Use suas credenciais bancárias reais da conta PJ
+                1. Aguarde o widget carregar completamente
+                2. Selecione seu banco acima (ex: C6 Bank)
+                3. Clique em "Conectar com Widget" 
+                4. Use suas credenciais bancárias reais da conta PJ
               </AlertDescription>
             </Alert>
             
-            {/* Apenas o botão do widget */}
+            {/* Botão principal */}
             <Button 
               className="w-full group transition-all duration-200 relative overflow-hidden"
               disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
@@ -169,9 +195,9 @@ export const BankConnectionCard = ({
               <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
             </Button>
             
-            {!pluggyWidgetLoaded && (
+            {!pluggyWidgetLoaded && !loadingScript && (
               <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded">
-                ⚠️ Widget ainda está carregando. Aguarde alguns segundos e tente novamente.
+                ⚠️ Widget falhou ao carregar. Use o botão "Tentar Recarregar Widget" acima.
               </div>
             )}
             
