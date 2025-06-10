@@ -48,56 +48,83 @@ class PluggyAuth {
   }
 
   private async performTokenRefresh(): Promise<string> {
-    const options = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        clientId: '9874a45e-3a75-425e-a451-26b3d99c7dc2',
-        clientSecret: '9c93ac24-0829-4822-8320-c946070f8c49'
-      })
-    };
+    try {
+      const options = {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          clientId: '9874a45e-3a75-425e-a451-26b3d99c7dc2',
+          clientSecret: '9c93ac24-0829-4822-8320-c946070f8c49'
+        })
+      };
 
-    const response = await fetch('https://api.pluggy.ai/auth', options);
-    const data: AuthResponse = await response.json();
-    
-    console.log('New auth token received:', data);
-    return data.apiKey;
+      console.log('Requesting auth token from Pluggy...');
+      const response = await fetch('https://api.pluggy.ai/auth', options);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: AuthResponse = await response.json();
+      
+      if (!data.apiKey) {
+        throw new Error('No API key received from Pluggy');
+      }
+      
+      console.log('New auth token received successfully');
+      return data.apiKey;
+    } catch (error) {
+      console.error('Error in performTokenRefresh:', error);
+      throw error;
+    }
   }
 
   async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const apiKey = await this.getApiKey();
-    
-    const authenticatedOptions = {
-      ...options,
-      headers: {
-        ...options.headers,
-        'X-API-KEY': apiKey
-      }
-    };
-
-    const response = await fetch(url, authenticatedOptions);
-
-    // If we get a 403 error (API_KEY_MISSING_OR_INVALID), refresh token and retry
-    if (response.status === 403) {
-      console.log('API key invalid, refreshing and retrying...');
-      this.apiKey = null; // Force refresh
-      const newApiKey = await this.getApiKey();
+    try {
+      const apiKey = await this.getApiKey();
       
-      const retryOptions = {
+      const authenticatedOptions = {
         ...options,
         headers: {
           ...options.headers,
-          'X-API-KEY': newApiKey
+          'X-API-KEY': apiKey
         }
       };
 
-      return fetch(url, retryOptions);
-    }
+      console.log(`Making authenticated request to: ${url}`);
+      const response = await fetch(url, authenticatedOptions);
 
-    return response;
+      // If we get a 403 error (API_KEY_MISSING_OR_INVALID), refresh token and retry
+      if (response.status === 403) {
+        console.log('API key invalid, refreshing and retrying...');
+        this.apiKey = null; // Force refresh
+        const newApiKey = await this.getApiKey();
+        
+        const retryOptions = {
+          ...options,
+          headers: {
+            ...options.headers,
+            'X-API-KEY': newApiKey
+          }
+        };
+
+        console.log('Retrying request with new API key...');
+        return fetch(url, retryOptions);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error in makeAuthenticatedRequest:', error);
+      throw error;
+    }
+  }
+
+  // Método para limpar o token (útil para forçar refresh)
+  clearToken(): void {
+    this.apiKey = null;
   }
 }
 
