@@ -25,7 +25,7 @@ export const usePluggyConnect = () => {
     if (!document.getElementById("pluggy-script")) {
       const script = document.createElement("script");
       script.id = "pluggy-script";
-      script.src = "https://cdn.pluggy.ai/pluggy-connect/v3.js";
+      script.src = "https://cdn.pluggy.ai/pluggy-connect/v2.js";
       script.async = true;
       
       script.onload = () => {
@@ -78,16 +78,10 @@ export const usePluggyConnect = () => {
 
     try {
       console.log("Criando instância do Pluggy Connect");
-      const pluggyConnect = window.PluggyConnect.init({
+      const pluggyConnect = await window.PluggyConnect.create({
         connectToken,
-        includeSandbox: options.includeSandbox || true,
-        onSuccess: options.onSuccess,
-        onError: options.onError,
-        onClose: options.onClose,
-        onOpen: options.onOpen,
-        onLoad: options.onLoad,
-        updateCredentials: options.updateCredentials,
-        onEvent: options.onEvent
+        includeSandbox: true,
+        ...options
       });
 
       console.log("Instância do Pluggy Connect criada com sucesso");
