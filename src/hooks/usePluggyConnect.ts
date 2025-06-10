@@ -1,12 +1,6 @@
 
 import { useState, useEffect } from "react";
 
-declare global {
-  interface Window {
-    PluggyConnect?: any;
-  }
-}
-
 export const usePluggyConnect = () => {
   const [pluggyWidgetLoaded, setPluggyWidgetLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
