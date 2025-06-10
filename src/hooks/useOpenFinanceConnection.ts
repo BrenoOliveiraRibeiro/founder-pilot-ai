@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,11 +122,11 @@ export const useOpenFinanceConnection = () => {
       setConnectionStatus("Autorizando com o banco...");
 
       // Inicializar e abrir o widget do Pluggy
-      const onSuccess = async (itemData: { id: string }) => {
-        console.log("Item criado com sucesso:", itemData.id);
+      const onSuccess = async (itemData: { itemId: string; item: any }) => {
+        console.log("Item criado com sucesso:", itemData.itemId);
         setConnectionProgress(80);
         setConnectionStatus("Conexão estabelecida, registrando...");
-        await handlePluggySuccess(itemData.id);
+        await handlePluggySuccess(itemData.itemId);
       };
 
       const onError = (error: any) => {
@@ -156,7 +157,6 @@ export const useOpenFinanceConnection = () => {
           onSuccess,
           onError,
           onClose,
-          connectorId: selectedProvider,
           includeSandbox: useSandbox
         },
         connectContainerRef.current

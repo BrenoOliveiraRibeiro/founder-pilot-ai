@@ -23,7 +23,7 @@ export async function authorizeConnection(empresaId: string, institution: string
     console.log("Token da API Pluggy obtido com sucesso");
     
     // Agora, gerar connect token para o widget
-    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, {
+    const connectTokenResult = await callPluggyAPI('/connect-token', 'POST', apiKey, {
       clientUserId: empresaId
     });
     
