@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { fromEmpresas } from "@/integrations/supabase/typedClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnboardingUpload } from "./useOnboardingUpload";
 import { z } from "zod";
@@ -82,18 +81,9 @@ export const useOnboardingForm = () => {
     setIsLoading(true);
     
     try {
-      console.log("Tentando cadastrar empresa com dados:", { 
-        user_id: user.id,
-        nome: values.nome,
-        segmento: values.segmento,
-        estagio: values.estagio,
-        num_funcionarios: values.num_funcionarios,
-        data_fundacao: values.data_fundacao,
-        website: values.website
-      });
-
       // 1. Criar empresa
-      const { data: empresa, error } = await fromEmpresas()
+      const { data: empresa, error } = await supabase
+        .from('empresas')
         .insert([
           {
             user_id: user.id,
@@ -108,12 +98,7 @@ export const useOnboardingForm = () => {
         .select()
         .single();
 
-      if (error) {
-        console.error("Erro ao cadastrar empresa:", error);
-        throw error;
-      }
-      
-      console.log("Empresa cadastrada com sucesso:", empresa);
+      if (error) throw error;
       
       // 2. Fazer upload do logo se existir
       if (logoFile && empresa) {
@@ -121,7 +106,7 @@ export const useOnboardingForm = () => {
       }
       
       // 3. Fazer upload dos documentos
-      if (documents.length > 0 && empresa) {
+      if (documents.length > 0) {
         await uploadDocuments(documents, user.id, empresa.id);
       }
       

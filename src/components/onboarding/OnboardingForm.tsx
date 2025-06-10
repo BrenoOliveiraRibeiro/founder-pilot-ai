@@ -1,10 +1,12 @@
 
 import React from "react";
 import { Form } from "@/components/ui/form";
+import { EmpresaInfoForm } from "@/components/onboarding/EmpresaInfoForm";
+import { LogoStep } from "@/components/onboarding/LogoStep";
+import { DocumentsStep } from "@/components/onboarding/DocumentsStep";
 import { OnboardingFooter } from "@/components/onboarding/OnboardingFooter";
 import { useOnboardingForm } from "./useOnboardingForm";
 import { OnboardingStepContent } from "./OnboardingStepContent";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export const OnboardingForm = () => {
   const {
@@ -22,8 +24,6 @@ export const OnboardingForm = () => {
     handleSubmit
   } = useOnboardingForm();
 
-  const { isMobile, isSafariIOS } = useIsMobile();
-
   return (
     <Form {...form}>
       <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
@@ -35,8 +35,6 @@ export const OnboardingForm = () => {
           onLogoChange={handleLogoChange}
           onDocumentChange={handleDocumentChange}
           onRemoveDocument={handleRemoveDocument}
-          isMobile={isMobile}
-          isSafariIOS={isSafariIOS}
         />
         <OnboardingFooter 
           step={step}
@@ -45,7 +43,6 @@ export const OnboardingForm = () => {
           goToNextStep={goToNextStep}
           onSubmit={() => form.handleSubmit(handleSubmit)()}
           isLoading={isLoading}
-          isMobile={isMobile}
         />
       </form>
     </Form>

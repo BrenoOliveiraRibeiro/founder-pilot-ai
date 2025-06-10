@@ -1,30 +1,35 @@
 
-import { corsHeaders, getPluggyToken } from "./utils.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
-import { gerarInsights } from "./utils.ts";
+import { getPluggyToken, callPluggyAPI } from "./utils.ts";
+import { processFinancialData } from "./financial-data.ts";
 
 export async function processCallback(
-  empresa_id: string,
-  item_id: string | null,
-  code: string | null,
-  redirectUri: string | null,
-  sandbox: boolean,
-  pluggyClientId: string,
-  pluggyClientSecret: string,
-  supabaseClient: any
+  empresaId: string, 
+  itemId: string, 
+  sandbox: boolean, 
+  pluggyClientId: string, 
+  pluggyClientSecret: string, 
+  supabase: any, 
+  corsHeaders: Record<string, string>
 ) {
+  // Validate inputs
+  if (!itemId) {
+    return new Response(
+      JSON.stringify({ error: "Item ID não fornecido" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+    );
+  }
+
+  console.log(`Processing callback for item: ${itemId}, sandbox mode: ${sandbox}`);
+
   try {
-    console.log(`Processing callback for empresa ${empresa_id}`);
-    
-    // Get Pluggy API token
+    // Get authentication token
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
     if (!tokenResult.success) {
-      console.error("Failed to get Pluggy API token:", tokenResult.error);
       return new Response(
         JSON.stringify({ 
-          error: "Failed to authenticate with Pluggy", 
-          details: tokenResult.error 
+          error: "Falha na autenticação com a API Pluggy", 
+          details: tokenResult.error
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
@@ -32,159 +37,72 @@ export async function processCallback(
     
     const apiKey = tokenResult.data.apiKey;
     
-    // Handle OAuth flow if code is provided
-    if (code && redirectUri) {
-      console.log(`Processing OAuth callback with code: ${code.substring(0, 5)}...`);
-      
-      // Exchange authorization code for access token using correct endpoint
-      // Endpoint corrigido conforme documentação: /auth/token
-      const tokenResponse = await fetch(`https://api.pluggy.ai/auth/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-KEY": apiKey
-        },
-        body: JSON.stringify({
-          grant_type: "authorization_code", // Adicionado conforme documentação OAuth2
-          code,
-          redirect_uri: redirectUri, // redirect_uri em vez de redirectUri
-          client_id: pluggyClientId // client_id em vez de clientId
-        })
-      });
-      
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error("Error exchanging code for token:", errorText);
-        return new Response(
-          JSON.stringify({ 
-            error: "Failed to exchange authorization code", 
-            details: errorText,
-            statusCode: tokenResponse.status 
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: tokenResponse.status }
-        );
-      }
-      
-      const tokenData = await tokenResponse.json();
-      console.log("Successfully exchanged code for item data");
-      
-      // Use the itemId from the response
-      item_id = tokenData.item?.id || tokenData.itemId;
-    }
+    // Fetch item details
+    const itemResult = await callPluggyAPI(`/items/${itemId}`, 'GET', apiKey);
     
-    if (!item_id) {
+    if (!itemResult.success) {
       return new Response(
-        JSON.stringify({ error: "No item_id provided or received from token exchange" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        JSON.stringify({ 
+          error: "Falha ao buscar detalhes do item", 
+          details: itemResult.error
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
     
-    console.log(`Processing item: ${item_id}`);
+    const item = itemResult.data;
+    console.log(`Item recuperado com sucesso: ${item.id} para conector: ${item.connector.name}`);
     
-    // Retrieve item details
-    const itemResponse = await fetch(`https://api.pluggy.ai/items/${item_id}`, {
-      method: "GET",
-      headers: {
-        "X-API-KEY": apiKey
-      }
-    });
-
-    if (!itemResponse.ok) {
-      const errorText = await itemResponse.text();
-      console.error("Error fetching item details:", errorText);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch item details", details: errorText }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: itemResponse.status }
-      );
+    // Get connector details
+    const connectorResult = await callPluggyAPI(`/connectors/${item.connector.id}`, 'GET', apiKey);
+    
+    if (!connectorResult.success) {
+      console.error("Erro ao buscar detalhes do conector:", connectorResult.error);
     }
-
-    const itemData = await itemResponse.json();
-    console.log(`Item details retrieved for ${itemData.connector.name}`);
-
-    // Retrieve accounts
-    const accountsResponse = await fetch(`https://api.pluggy.ai/accounts?itemId=${item_id}`, {
-      method: "GET",
-      headers: {
-        "X-API-KEY": apiKey
-      }
-    });
-
-    if (!accountsResponse.ok) {
-      const errorText = await accountsResponse.text();
-      console.error("Error fetching accounts:", errorText);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch accounts", details: errorText }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: accountsResponse.status }
-      );
-    }
-
-    const accountsData = await accountsResponse.json();
-    console.log(`Retrieved ${accountsData.results.length} accounts`);
-
-    // Store integration in database
-    const { data: integrationData, error: integrationError } = await supabaseClient
+    
+    const connector = connectorResult.success ? connectorResult.data : null;
+    const institutionName = connector ? connector.name : item.connector.name;
+    
+    // Update integration status in database
+    const { data, error } = await supabase
       .from("integracoes_bancarias")
-      .insert({
-        empresa_id,
-        nome_banco: itemData.connector.name,
-        tipo_conexao: "Open Finance",
-        status: itemData.status,
-        ultimo_sincronismo: new Date().toISOString(),
-        detalhes: {
-          item_id: item_id,
-          connector_id: itemData.connector.id,
-          accounts: accountsData.results,
-          connector: itemData.connector
+      .insert([
+        {
+          empresa_id: empresaId,
+          nome_banco: institutionName,
+          tipo_conexao: "Open Finance",
+          status: "ativo",
+          ultimo_sincronismo: new Date().toISOString(),
+          detalhes: { 
+            item_id: item.id,
+            connector_id: item.connector.id,
+            institution: institutionName,
+            sandbox: sandbox
+          }
         }
-      })
-      .select()
-      .single();
+      ]);
 
-    if (integrationError) {
-      console.error("Error storing integration:", integrationError);
+    if (error) {
+      console.error("Erro ao salvar integração:", error);
       return new Response(
-        JSON.stringify({ error: "Failed to store integration data", details: integrationError }),
+        JSON.stringify({ error: "Falha ao salvar integração" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
 
-    console.log("Integration stored successfully:", integrationData.id);
-
-    // Start syncing financial data
-    const syncResponse = await fetch(`https://fhimpyxzedzildagctpq.supabase.co/functions/v1/open-finance`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`
-      },
-      body: JSON.stringify({
-        action: "sync",
-        empresa_id,
-        integration_id: integrationData.id,
-        sandbox
-      })
-    });
-
-    if (!syncResponse.ok) {
-      console.warn("Failed to trigger data sync, but connection was successful:", await syncResponse.text());
-    } else {
-      console.log("Data sync initiated successfully");
-    }
+    // Start initial data synchronization
+    await processFinancialData(empresaId, itemId, apiKey, pluggyClientId, pluggyClientSecret, sandbox, supabase);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Integration successful",
-        integration_id: integrationData.id
-      }),
+      JSON.stringify({ success: true, message: "Integração ativada com sucesso" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("Error processing callback:", error);
+    console.error("Erro ao processar callback:", error);
     return new Response(
-      JSON.stringify({
-        error: "Failed to process callback",
-        details: error instanceof Error ? error.message : String(error)
+      JSON.stringify({ 
+        error: "Falha ao processar callback", 
+        message: error.message
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );

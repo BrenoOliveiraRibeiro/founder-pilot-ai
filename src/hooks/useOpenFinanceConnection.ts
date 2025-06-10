@@ -1,177 +1,155 @@
-
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { PRODUCTION_PJ_PROVIDERS } from '../components/open-finance/BankProviders';
-import { usePluggyConnect } from './open-finance/usePluggyConnect';
-import { useOpenFinanceConnections } from './useOpenFinanceConnections';
-import { useProviderSelection } from './open-finance/useProviderSelection';
-import { usePluggyCallbacks } from './open-finance/usePluggyCallbacks';
-import { useOpenFinanceConnectionState } from './open-finance/useOpenFinanceConnectionState';
-import { useOpenFinanceValidation } from './open-finance/useOpenFinanceValidation';
-import { useOpenFinanceDebug } from './open-finance/useOpenFinanceDebug';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/BankProviders';
+import { usePluggyConnect } from './usePluggyConnect';
+import { useOpenFinanceConnections } from './useOpenFinanceConnections';
+import { useNavigate } from 'react-router-dom';
 
 export const useOpenFinanceConnection = () => {
-  const { currentEmpresa } = useAuth();
-  const { 
-    pluggyWidgetLoaded, 
-    loadingScript,
-    loadError,
-    retryCount,
-    loadingStatus,
-    initializePluggyConnect,
-    forceReload
-  } = usePluggyConnect();
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [useSandbox, setUseSandbox] = useState(true);
+  const [connectionProgress, setConnectionProgress] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState("");
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const { currentEmpresa, refreshEmpresas } = useAuth();
+  const { toast } = useToast();
+  const connectContainerRef = useRef<HTMLDivElement>(null);
+  const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
   const { fetchIntegrations } = useOpenFinanceConnections();
-  
-  // Initialize provider selection - sempre produção
-  const {
-    selectedProvider,
-    setSelectedProvider,
-    validateProviderSelection
-  } = useProviderSelection();
-  
-  // Connection state management
-  const {
-    connecting,
-    setConnecting,
-    connectionProgress,
-    connectionStatus,
-    debugInfo,
-    setDebugInfo,
-    connectContainerRef,
-    resetConnection,
-    updateConnectionState
-  } = useOpenFinanceConnectionState();
+  const navigate = useNavigate();
 
-  // Validation logic
-  const { validateRequirements, handleError } = useOpenFinanceValidation();
+  const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
 
-  // Pluggy callbacks
-  const { handlePluggySuccess } = usePluggyCallbacks();
-
-  // Debug logging (side effects only)
-  useOpenFinanceDebug(
-    currentEmpresa,
-    selectedProvider,
-    pluggyWidgetLoaded,
-    loadingScript,
-    loadError,
-    loadingStatus,
-    retryCount,
-    connecting,
-    connectContainerRef
-  );
-
-  const testPluggyConnection = async () => {
-    try {
-      console.log("Testando conexão com Pluggy em modo produção");
-      
-      const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: {
-          action: "test_connection",
-          sandbox: false // Sempre produção
-        }
-      });
-      
-      console.log("Resultado do teste de conexão:", { data, error });
-      
-      if (error) {
-        handleError(error, "test_connection", error.message || "Não foi possível conectar ao serviço Pluggy. Verifique suas credenciais.", setDebugInfo, resetConnection);
-        return { success: false, message: error.message };
-      }
-      
-      if (!data.success) {
-        handleError({ message: data.message }, "test_connection_failed", data.message || "A conexão com Pluggy falhou. Verifique suas credenciais.", setDebugInfo, resetConnection);
-        return { success: false, message: data.message };
-      }
-      
-      // Sucesso
-      updateConnectionState(0, "");
-      resetConnection();
-      return { success: true, connectorsCount: data.connectorsCount || 0 };
-    } catch (error: any) {
-      handleError(error, "test_connection", error.message || "Ocorreu um erro ao testar a conexão com Pluggy.", setDebugInfo, resetConnection);
-      return { success: false, message: error.message || "Erro desconhecido" };
+  // Auto-select first provider if none selected
+  useEffect(() => {
+    if (providers.length > 0 && !selectedProvider) {
+      setSelectedProvider(providers[0].id);
     }
-  };
+  }, [providers, selectedProvider]);
+
+  // Debug current state
+  useEffect(() => {
+    console.log("Open Finance Connection State:", {
+      currentEmpresa: currentEmpresa ? { id: currentEmpresa.id, nome: currentEmpresa.nome } : null,
+      selectedProvider,
+      pluggyWidgetLoaded,
+      connecting,
+      useSandbox,
+      containerExists: connectContainerRef.current !== null,
+    });
+  }, [currentEmpresa, selectedProvider, pluggyWidgetLoaded, connecting, useSandbox]);
 
   const handleConnect = async () => {
-    console.log("🚀 Iniciando conexão com API oficial...");
-    console.log("Banco selecionado:", selectedProvider);
-    console.log("Widget carregado:", pluggyWidgetLoaded);
-    console.log("Empresa:", currentEmpresa?.id);
-    
-    // Validação dos requisitos básicos
-    if (!validateProviderSelection() || 
-        !validateRequirements(currentEmpresa, selectedProvider, pluggyWidgetLoaded, loadError, loadingScript)) {
-      console.log("❌ Validação falhou");
+    if (!selectedProvider) {
+      toast({
+        title: "Erro",
+        description: "Selecione um banco para continuar.",
+        variant: "destructive"
+      });
       return;
     }
     
+    if (!currentEmpresa?.id) {
+      console.error("Nenhuma empresa selecionada");
+      toast({
+        title: "Erro",
+        description: "Você precisa ter uma empresa cadastrada para continuar.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!pluggyWidgetLoaded) {
+      console.error("Pluggy Connect não carregado");
+      toast({
+        title: "Erro",
+        description: "O widget de conexão não foi carregado. Tente recarregar a página.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!connectContainerRef.current) {
+      console.error("Container para o widget não encontrado");
+      toast({
+        title: "Erro",
+        description: "Erro ao encontrar o container para o widget. Tente recarregar a página.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setConnecting(true);
-    updateConnectionState(20, "Inicializando conexão...");
+    setConnectionProgress(20);
+    setConnectionStatus("Inicializando conexão...");
     
     try {
-      console.log("📡 Solicitando token para Pluggy Connect (API Oficial):", {
-        empresa_id: currentEmpresa?.id,
+      console.log("Solicitando token para Pluggy Connect:", {
+        empresa_id: currentEmpresa.id,
         institution: selectedProvider,
-        sandbox: false
+        sandbox: useSandbox
       });
       
-      // Obter token para o widget do Pluggy usando API oficial
+      // Obter token para o widget do Pluggy
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "authorize",
-          empresa_id: currentEmpresa?.id,
+          empresa_id: currentEmpresa.id,
           institution: selectedProvider,
-          sandbox: false
+          sandbox: useSandbox
         }
       });
 
-      console.log("📋 Resposta da API:", { data, error });
+      console.log("Resposta da API:", { data, error });
 
       if (error) {
-        handleError(error, "authorize", "Erro na autorização com a API Pluggy", setDebugInfo, resetConnection);
-        return;
+        console.error("Erro na autorização:", error);
+        setDebugInfo({ error, step: "authorize" });
+        throw error;
       }
       
       if (!data || !data.connect_token) {
-        handleError({ message: "Token não retornado" }, "token_validation", "Token de conexão não retornado pelo servidor", setDebugInfo, resetConnection);
-        return;
+        console.error("Token não retornado:", data);
+        setDebugInfo({ data, step: "token_validation" });
+        throw new Error("Token de conexão não retornado pelo servidor");
       }
 
-      updateConnectionState(40, "Autorizando com o banco...");
+      setConnectionProgress(40);
+      setConnectionStatus("Autorizando com o banco...");
 
-      console.log("🎯 Inicializando widget oficial para", selectedProvider);
-
-      // Callbacks para o widget
-      const onSuccess = async (itemData: { itemId: string }) => {
-        console.log("✅ Item criado com sucesso:", itemData.itemId);
-        updateConnectionState(80, "Conexão estabelecida, registrando...");
-        await handlePluggySuccess(
-          itemData.itemId, 
-          false,
-          updateConnectionState,
-          resetConnection,
-          fetchIntegrations,
-          setDebugInfo
-        );
+      // Inicializar e abrir o widget do Pluggy
+      const onSuccess = async (itemData: { id: string }) => {
+        console.log("Item criado com sucesso:", itemData.id);
+        setConnectionProgress(80);
+        setConnectionStatus("Conexão estabelecida, registrando...");
+        await handlePluggySuccess(itemData.id);
       };
 
       const onError = (error: any) => {
-        console.log("❌ Erro no widget:", error);
-        handleError(error, "pluggy_widget_error", "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"), setDebugInfo, resetConnection);
+        console.error("Erro no widget do Pluggy:", error);
+        setDebugInfo({ error, step: "pluggy_widget_error" });
+        setConnectionProgress(0);
+        toast({
+          title: "Erro de conexão",
+          description: "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"),
+          variant: "destructive"
+        });
+        setConnecting(false);
       };
 
       const onClose = () => {
         console.log("Widget fechado pelo usuário");
-        resetConnection();
+        setConnectionProgress(0);
+        setConnecting(false);
       };
 
-      console.log("🔧 Inicializando Pluggy Connect com token oficial:", data.connect_token.substring(0, 10) + "...");
-      console.log("📦 Container ref:", connectContainerRef.current);
+      console.log("Inicializando Pluggy Connect com token:", data.connect_token.substring(0, 10) + "...");
+      console.log("Container ref:", connectContainerRef.current);
 
-      // Usar a implementação correta da API oficial
+      // Initialize Pluggy Connect
       const pluggyConnect = await initializePluggyConnect(
         data.connect_token,
         {
@@ -179,26 +157,138 @@ export const useOpenFinanceConnection = () => {
           onError,
           onClose,
           connectorId: selectedProvider,
-          includeSandbox: false
+          includeSandbox: useSandbox
         },
         connectContainerRef.current
       );
 
       if (!pluggyConnect) {
-        handleError({ message: "Retorno nulo do inicializador Pluggy Connect" }, "initialize_pluggy_connect_null", "Erro ao inicializar Pluggy Connect", setDebugInfo, resetConnection);
-        return;
+        console.error("Retorno nulo do inicializador Pluggy Connect");
+        setDebugInfo({ step: "initialize_pluggy_connect_null" });
+        throw new Error("Erro ao inicializar Pluggy Connect");
       }
       
-      console.log("✅ Pluggy Connect inicializado com sucesso usando API oficial");
+      console.log("Pluggy Connect inicializado com sucesso");
       
     } catch (error: any) {
-      console.log("❌ Erro geral:", error);
-      handleError(error, "connect_account", "Não foi possível estabelecer conexão com o banco. Tente novamente.", setDebugInfo, resetConnection);
+      console.error("Erro ao conectar conta:", error);
+      setConnectionProgress(0);
+      toast({
+        title: "Erro ao conectar conta",
+        description: error.message || "Não foi possível estabelecer conexão com o banco. Tente novamente.",
+        variant: "destructive"
+      });
+      setConnecting(false);
     }
   };
 
-  // Use production providers
-  const providers = PRODUCTION_PJ_PROVIDERS;
+  const handlePluggySuccess = async (itemId: string) => {
+    if (!currentEmpresa?.id) return;
+    
+    try {
+      setConnectionProgress(90);
+      setConnectionStatus("Sincronizando dados...");
+      
+      console.log("Registrando item no backend:", itemId);
+      
+      // Registrar o item no backend
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "callback",
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          sandbox: useSandbox
+        }
+      });
+
+      if (error) {
+        console.error("Erro no callback:", error);
+        setDebugInfo({ error, step: "callback" });
+        throw error;
+      }
+
+      console.log("Callback bem-sucedido:", data);
+      setConnectionProgress(100);
+      setConnectionStatus("Concluído!");
+      
+      toast({
+        title: "Conta conectada com sucesso!",
+        description: `Sua conta foi conectada via Open Finance e os dados estão sendo sincronizados.`,
+      });
+
+      // Atualizar a lista de integrações
+      await fetchIntegrations();
+      await refreshEmpresas();
+      
+      // Redirect to dashboard after successful connection
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error("Erro ao registrar conexão:", error);
+      setDebugInfo({ error, step: "register_connection" });
+      toast({
+        title: "Erro ao registrar conexão",
+        description: error.message || "A conexão foi estabelecida, mas houve um erro ao registrar. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setConnecting(false);
+      setTimeout(() => {
+        setConnectionProgress(0);
+      }, 1500);
+    }
+  };
+
+  const testPluggyConnection = async () => {
+    try {
+      setConnectionStatus("Testando conexão com Pluggy...");
+      console.log("Testando conexão com Pluggy");
+      
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "test_connection",
+          sandbox: useSandbox
+        }
+      });
+      
+      console.log("Resultado do teste de conexão:", { data, error });
+      
+      if (error) {
+        toast({
+          title: "Erro no teste de conexão",
+          description: error.message || "Não foi possível conectar ao serviço Pluggy. Verifique suas credenciais.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (!data.success) {
+        toast({
+          title: "Falha no teste de conexão",
+          description: data.message || "A conexão com Pluggy falhou. Verifique suas credenciais.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      toast({
+        title: "Conexão com Pluggy estabelecida",
+        description: `${data.connectorsCount || 0} conectores disponíveis.`,
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao testar conexão:", error);
+      toast({
+        title: "Erro no teste",
+        description: error.message || "Ocorreu um erro ao testar a conexão com Pluggy.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
 
   return {
     selectedProvider,
@@ -208,16 +298,11 @@ export const useOpenFinanceConnection = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
-    loadingScript,
-    loadError,
-    retryCount,
-    loadingStatus,
-    useSandbox: false,
-    setUseSandbox: () => {}, // Função vazia para compatibilidade
+    useSandbox,
+    setUseSandbox,
     providers,
     handleConnect,
     testPluggyConnection,
-    debugInfo,
-    forceReload
+    debugInfo
   };
 };

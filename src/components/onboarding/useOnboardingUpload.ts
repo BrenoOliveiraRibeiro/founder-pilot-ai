@@ -1,141 +1,175 @@
 
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { fromEmpresas } from "@/integrations/supabase/typedClient";
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useOnboardingUpload = () => {
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  // Função para verificar e criar um bucket se não existir
-  const ensureBucketExists = async (bucketName: string) => {
-    try {
-      // Verifica se o bucket existe
-      const { data: buckets, error } = await supabase.storage.listBuckets();
-      
-      if (error) {
-        console.error(`Erro ao listar buckets:`, error);
-        return false;
-      }
-      
-      const bucketExists = buckets.some(bucket => bucket.name === bucketName);
-      
-      if (!bucketExists) {
-        console.log(`Bucket ${bucketName} não existe, tentando criar...`);
-        
-        // Tenta criar o bucket
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true
-        });
-        
-        if (createError) {
-          console.error(`Erro ao criar bucket ${bucketName}:`, createError);
-          return false;
-        }
-        
-        console.log(`Bucket ${bucketName} criado com sucesso.`);
-      } else {
-        console.log(`Bucket ${bucketName} já existe.`);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(`Erro ao verificar/criar bucket ${bucketName}:`, error);
-      return false;
-    }
+  // Função para sanitizar nomes de arquivos
+  const sanitizeFileName = (fileName: string): string => {
+    // Remove caracteres especiais e substitui espaços por underscores
+    const sanitized = fileName
+      .replace(/[^\w\s.-]/g, '') // Remove todos os caracteres especiais exceto underscores, pontos e hífens
+      .replace(/\s+/g, '_') // Substitui espaços por underscores
+      .trim(); // Remove espaços no início e no fim
+    
+    // Adiciona timestamp para garantir unicidade
+    const timestamp = Date.now();
+    const fileExt = sanitized.includes('.') ? sanitized.split('.').pop() : '';
+    const baseName = sanitized.includes('.') ? sanitized.split('.').slice(0, -1).join('.') : sanitized;
+    
+    return fileExt ? `${baseName}_${timestamp}.${fileExt}` : `${sanitized}_${timestamp}`;
   };
 
-  const uploadLogo = async (file: File, userId: string, empresaId: string) => {
+  const uploadLogo = async (
+    file: File | null,
+    userId: string,
+    empresaId: string
+  ): Promise<string | null> => {
+    if (!file) return null;
+    
     try {
-      const bucketName = 'empresa_logos';
-      const bucketExists = await ensureBucketExists(bucketName);
+      setIsUploading(true);
       
-      if (!bucketExists) {
-        throw new Error("Não foi possível acessar ou criar o armazenamento para logos.");
+      // Sanitiza o nome do arquivo
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const logoFileName = `${userId}/${sanitizedFileName}`;
+      
+      const { data: logoData, error: logoError } = await supabase.storage
+        .from('logos')
+        .upload(logoFileName, file, {
+          cacheControl: '3600',
+          upsert: true // Changed to true to allow overwriting if needed
+        });
+        
+      if (logoError) {
+        console.error('Erro ao fazer upload do logo:', logoError);
+        toast({
+          title: "Erro no upload",
+          description: `Não foi possível fazer o upload da imagem: ${logoError.message}`,
+          variant: "destructive",
+        });
+        throw logoError;
       }
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${empresaId}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${userId}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+      // Obter URL pública
+      const { data: publicUrlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(logoFileName);
+        
+      const logoUrl = publicUrlData.publicUrl;
       
-      // Atualiza o logo_url na empresa
-      const { error: updateError } = await fromEmpresas()
-        .update({ logo_url: data.publicUrl })
+      // Atualizar empresa com logo URL
+      await supabase
+        .from('empresas')
+        .update({ logo_url: logoUrl })
         .eq('id', empresaId);
-
-      if (updateError) throw updateError;
-
-      console.log("Logo atualizado com sucesso:", data.publicUrl);
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Erro ao fazer upload do logo:", error);
+        
+      return logoUrl;
+    } catch (error: any) {
+      console.error('Erro ao fazer upload do logo:', error);
       toast({
-        title: "Erro no upload do logo",
-        description: "Não foi possível fazer upload do logo, mas os dados da empresa foram salvos.",
+        title: "Erro no upload",
+        description: error.message || "Ocorreu um erro ao processar o arquivo. Tente novamente.",
         variant: "destructive",
       });
-      return null;
+      throw error;
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const uploadDocuments = async (
-    documents: Array<{ file: File; preview?: string }>,
+    documents: Array<{ file: File, preview?: string }>,
     userId: string,
     empresaId: string
   ) => {
     try {
-      const bucketName = 'empresa_documentos';
-      const bucketExists = await ensureBucketExists(bucketName);
+      setIsUploading(true);
       
-      if (!bucketExists) {
-        throw new Error("Não foi possível acessar ou criar o armazenamento para documentos.");
-      }
+      const uploadedDocs = [];
       
-      const uploadPromises = documents.map(async (doc) => {
-        const fileExt = doc.file.name.split('.').pop();
-        const fileName = `${empresaId}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${userId}/${fileName}`;
-
-        const { error } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, doc.file);
-
-        if (error) throw error;
-
-        const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-        return data.publicUrl;
-      });
-
-      const results = await Promise.allSettled(uploadPromises);
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      
-      if (successCount > 0) {
-        toast({
-          title: "Documentos enviados",
-          description: `${successCount} de ${documents.length} documentos foram enviados com sucesso.`,
+      for (const doc of documents) {
+        // Sanitiza o nome do arquivo
+        const sanitizedFileName = sanitizeFileName(doc.file.name);
+        const docFileName = `${userId}/${sanitizedFileName}`;
+        
+        const { data: docData, error: docError } = await supabase.storage
+          .from('documentos')
+          .upload(docFileName, doc.file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (docError) {
+          console.error('Erro ao fazer upload do documento:', docError);
+          toast({
+            title: "Erro no upload",
+            description: `Não foi possível fazer o upload do documento ${doc.file.name}: ${docError.message}`,
+            variant: "destructive",
+          });
+          throw docError;
+        }
+        
+        // Obter URL pública
+        const { data: publicDocUrlData } = supabase.storage
+          .from('documentos')
+          .getPublicUrl(docFileName);
+          
+        // Armazenar informações do documento
+        uploadedDocs.push({
+          nome: doc.file.name,
+          tipo: doc.file.type,
+          tamanho: doc.file.size,
+          arquivo_url: publicDocUrlData.publicUrl
         });
       }
       
-      return results
-        .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
-        .map(r => r.value);
-    } catch (error) {
-      console.error("Erro ao fazer upload dos documentos:", error);
+      // Atualizar as informações no objeto da empresa em vez de uma tabela separada
+      const { data: empresaData, error: empresaError } = await supabase
+        .from('empresas')
+        .update({
+          // Precisamos armazenar a informação dos documentos em algum campo existente
+          // ou apenas manter o upload sem registrar na base de dados
+          updated_at: new Date().toISOString() // Atualiza o timestamp para registrar a atividade
+        })
+        .eq('id', empresaId);
+        
+      if (empresaError) {
+        console.error('Erro ao atualizar empresa após upload de documentos:', empresaError);
+        toast({
+          title: "Aviso",
+          description: "Documentos foram carregados, mas houve um erro ao registrar na base de dados.",
+          variant: "default",
+        });
+      }
+      
       toast({
-        title: "Erro no upload de documentos",
-        description: "Alguns documentos não puderam ser enviados, mas os dados da empresa foram salvos.",
+        title: "Upload concluído",
+        description: `${documents.length} documento(s) carregado(s) com sucesso`,
+        variant: "default",
+      });
+      
+      // Retorna as informações dos documentos carregados
+      return uploadedDocs;
+    } catch (error: any) {
+      console.error('Erro ao fazer upload dos documentos:', error);
+      toast({
+        title: "Erro no upload",
+        description: error.message || "Ocorreu um erro ao processar os arquivos. Tente novamente.",
         variant: "destructive",
       });
-      return [];
+      throw error;
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  return { uploadLogo, uploadDocuments };
+  return {
+    isUploading,
+    uploadLogo,
+    uploadDocuments
+  };
 };

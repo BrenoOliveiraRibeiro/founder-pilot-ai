@@ -10,7 +10,6 @@ interface OnboardingFooterProps {
   goToNextStep: () => void;
   onSubmit: () => void;
   isLoading: boolean;
-  isMobile?: boolean;
 }
 
 export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
@@ -19,19 +18,12 @@ export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
   goToPrevStep,
   goToNextStep,
   onSubmit,
-  isLoading,
-  isMobile
+  isLoading
 }) => {
   return (
     <div className="flex justify-between mt-6">
       {step > 1 ? (
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={goToPrevStep} 
-          disabled={isLoading}
-          className={isMobile ? 'py-6 px-4 text-base' : ''}
-        >
+        <Button type="button" variant="outline" onClick={goToPrevStep} disabled={isLoading}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
@@ -40,22 +32,12 @@ export const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
       )}
       
       {step < totalSteps ? (
-        <Button 
-          type="button" 
-          onClick={goToNextStep} 
-          disabled={isLoading}
-          className={isMobile ? 'py-6 px-4 text-base' : ''}
-        >
+        <Button type="button" onClick={goToNextStep} disabled={isLoading}>
           Continuar
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       ) : (
-        <Button 
-          type="button" 
-          onClick={onSubmit} 
-          disabled={isLoading}
-          className={`group ${isMobile ? 'py-6 px-4 text-base' : ''}`}
-        >
+        <Button type="button" onClick={onSubmit} className="group" disabled={isLoading}>
           <span className="flex items-center">
             {isLoading ? "Salvando..." : "Finalizar"} 
             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

@@ -6,16 +6,14 @@ import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard";
-import { ProductionTestButton } from "@/components/open-finance/ProductionTestButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ConnectionInstructionsAlert } from "@/components/open-finance/ConnectionInstructionsAlert";
 
 const OpenFinance = () => {
   const {
     activeIntegrations,
-    loading: integrationsLoading,
+    loading,
     syncing,
     handleSyncData,
     formatDate
@@ -29,27 +27,22 @@ const OpenFinance = () => {
     connectionStatus,
     connectContainerRef,
     pluggyWidgetLoaded,
-    loadingScript,
-    loadError,
-    retryCount,
-    loadingStatus,
+    useSandbox,
+    setUseSandbox,
     providers,
     handleConnect,
     testPluggyConnection,
-    debugInfo,
-    forceReload
+    debugInfo
   } = useOpenFinanceConnection();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    console.log("OpenFinance component mounted/updated (Production Mode)");
+    console.log("OpenFinance component mounted/updated");
     console.log("Current empresa:", currentEmpresa);
     console.log("Auth loading:", authLoading);
     console.log("Pluggy widget loaded:", pluggyWidgetLoaded);
-    console.log("Loading script:", loadingScript);
-    console.log("Load error:", loadError);
-  }, [currentEmpresa, authLoading, pluggyWidgetLoaded, loadingScript, loadError]);
+  }, [currentEmpresa, authLoading, pluggyWidgetLoaded]);
 
   const handleTestConnection = async () => {
     await testPluggyConnection();
@@ -62,26 +55,15 @@ const OpenFinance = () => {
           <div>
             <h1 className="text-2xl font-bold">Open Finance</h1>
             <p className="text-muted-foreground mt-1">
-              Conecte seus dados financeiros empresariais para análises do FounderPilot AI
+              Conecte seus dados financeiros para análises do FounderPilot AI
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-              🔥 PRODUÇÃO
-            </div>
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Os dados são utilizados exclusivamente para análise
+            </p>
           </div>
-        </div>
-        
-        {/* Instruções de conexão */}
-        <ConnectionInstructionsAlert />
-        
-        {/* Teste de Conexão de Produção */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-medium text-blue-900 mb-2">Teste de Conexão - Ambiente de Produção</h3>
-          <p className="text-sm text-blue-700 mb-3">
-            Teste se as credenciais de produção estão funcionando corretamente antes de conectar suas contas bancárias.
-          </p>
-          <ProductionTestButton />
         </div>
         
         {!currentEmpresa && !authLoading && (
@@ -96,8 +78,8 @@ const OpenFinance = () => {
         
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
-            <span className="text-sm font-medium">Status da integração (Produção)</span>
+            <div className="h-2.5 w-2.5 rounded-full bg-primary/80"></div>
+            <span className="text-sm font-medium">Status da integração</span>
           </div>
           <Button 
             variant="outline" 
@@ -105,18 +87,14 @@ const OpenFinance = () => {
             onClick={handleTestConnection}
             className="text-xs"
           >
-            Testar Conexão (Legacy)
+            Testar Conexão
           </Button>
         </div>
         
         <div className="mb-6 space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className={`font-medium ${pluggyWidgetLoaded ? 'text-green-600' : loadingScript ? 'text-blue-600' : 'text-red-500'}`}>
-              Pluggy Connect: {
-                pluggyWidgetLoaded ? 'Carregado' : 
-                loadingScript ? `Carregando... (${loadingStatus})` : 
-                loadError ? 'Erro no carregamento' : 'Não carregado'
-              }
+            <span className={`font-medium ${pluggyWidgetLoaded ? 'text-green-600' : 'text-red-500'}`}>
+              Pluggy Connect: {pluggyWidgetLoaded ? 'Carregado' : 'Não carregado'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -130,17 +108,10 @@ const OpenFinance = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-green-600">
-              🔥 Modo: Produção (Credenciais Configuradas)
+            <span className="font-medium">
+              Modo: {useSandbox ? 'Sandbox (teste)' : 'Produção'}
             </span>
           </div>
-          {retryCount > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-orange-600">
-                Tentativas de carregamento: {retryCount}/3
-              </span>
-            </div>
-          )}
         </div>
         
         {debugInfo && (
@@ -157,13 +128,12 @@ const OpenFinance = () => {
           </Alert>
         )}
         
-        {currentEmpresa && (
+        {activeIntegrations.length > 0 && (
           <ActiveIntegrationsCard 
             integrations={activeIntegrations}
             handleSync={handleSyncData}
             syncing={syncing}
             formatDate={formatDate}
-            loading={integrationsLoading}
           />
         )}
         
@@ -175,12 +145,7 @@ const OpenFinance = () => {
           connectionProgress={connectionProgress}
           connectionStatus={connectionStatus}
           pluggyWidgetLoaded={pluggyWidgetLoaded}
-          loadingScript={loadingScript}
-          loadError={loadError}
-          retryCount={retryCount}
-          loadingStatus={loadingStatus}
-          onForceReload={forceReload}
-          useSandbox={false}
+          useSandbox={useSandbox}
           handleConnect={handleConnect}
           connectContainerRef={connectContainerRef}
         />

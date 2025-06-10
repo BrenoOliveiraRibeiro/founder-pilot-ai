@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,8 +11,6 @@ import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { FooterSection } from "@/components/landing/FooterSection";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -55,10 +54,6 @@ const Index = () => {
     setShowIntro(false);
   };
 
-  const goToAuth = () => {
-    navigate("/auth");
-  };
-
   if (showIntro) {
     return <IntroAnimation onComplete={handleIntroComplete} />;
   }
@@ -74,11 +69,13 @@ const Index = () => {
           transition={{ duration: 0.5 }}
         >
           <motion.div 
+            className="flex items-center gap-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <FounderPilotLogo className="h-16 w-auto text-foreground" />
+            <FounderPilotLogo className="h-8 w-8 text-foreground" />
+            <h1 className="text-3xl font-bold">FounderPilot</h1>
           </motion.div>
           
           <FriendlyLoadingMessage isLoading={true} className="mt-2" />
@@ -87,22 +84,9 @@ const Index = () => {
     );
   }
 
-  // Se não está autenticado, mostrar landing page com botão mais destacado para login
+  // Se não está autenticado, mostrar landing page
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center">
-          <FounderPilotLogo className="h-12 w-auto text-foreground" />
-        </div>
-        <Button 
-          onClick={goToAuth} 
-          size="lg"
-          className="bg-primary hover:bg-primary/90 text-white px-8 py-6 font-medium flex items-center"
-        >
-          Acessar Plataforma <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
-      </div>
-      
       <HeroSection />
       <HowItWorksSection />
       <BenefitsSection />

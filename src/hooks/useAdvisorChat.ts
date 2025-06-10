@@ -3,7 +3,6 @@ import { useState, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/components/advisor/ChatMessage";
-import { useFinanceData } from "@/hooks/useFinanceData";
 
 // Sugestões mais concisas e estratégicas para startups (otimizadas para mobile)
 const initialSuggestions = [
@@ -23,9 +22,6 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
   const [conversationHistory, setConversationHistory] = useState<boolean>(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Obter dados financeiros para contextualizar as respostas
-  const { metrics } = useFinanceData(userData.empresaId || null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,46 +62,11 @@ export const useAdvisorChat = (userData: { empresaId?: string | null; empresaNom
         // Financial data would be included here
       };
 
-      // Preparar métricas financeiras, se disponíveis, para priorização de regras de negócio
-      const financialMetrics = metrics ? {
-        runwayMeses: metrics.runway_meses,
-        burnRate: metrics.burn_rate,
-        receitaMensal: metrics.receita_mensal,
-        caixaAtual: metrics.caixa_atual,
-        cashFlow: metrics.cash_flow,
-        mrrGrowth: metrics.mrr_growth
-      } : null;
-
-      // Call the enhanced edge function with user message and context
-      const { data, error } = await supabase.functions.invoke('openai-api', {
+      // Call Edge Function with user message and context
+      const { data, error } = await supabase.functions.invoke('ai-advisor', {
         body: {
-          prompt: userMessage.content,
-          model: 'gpt-4o',
-          businessData: contextData,
-          financialMetrics: financialMetrics,
-          systemPrompt: `
-            Você é o FounderPilot AI, um copiloto estratégico avançado para empreendedores.
-            
-            # Sobre você
-            - Você é um copiloto com toque de mentor, com expertise financeira e estratégica
-            - Você possui conhecimento aprofundado em finanças, gestão, captação e crescimento de startups
-            - Você aprende rapidamente com KPIs, dados de mercado e padrões do negócio
-            - Você conhece o usuário ${userData?.empresaNome ? `da empresa ${userData.empresaNome}` : ''} e se adapta às necessidades específicas dele
-            - Seu objetivo é ser o melhor co-founder que esse empreendedor poderia ter
-
-            # Regras de negócio obrigatórias:
-            - SEMPRE alertar quando runway < 3 meses e sugerir ações específicas (redução de despesas, alternativas de funding)
-            - SEMPRE alertar quando burn rate aumentar > 10% e investigar causas específicas
-            - SEMPRE recomendar ações concretas quando a receita crescer > 10%
-            - SEMPRE responder no formato: Contexto + Justificativa + Recomendação clara
-            - SEMPRE que possível, fazer perguntas adicionais para entender melhor a situação do empreendedor
-            
-            ${financialMetrics?.runwayMeses && financialMetrics.runwayMeses < 3 ? 
-              '⚠️ ALERTA CRÍTICO: O runway atual é menor que 3 meses! Priorize absolutamente este problema na resposta.' : ''}
-            
-            ${financialMetrics?.burnRate && financialMetrics.burnRate > 0 ? 
-              `Análise de burn rate: ${financialMetrics.burnRate}` : ''}
-          `
+          message: userMessage.content,
+          userData: contextData.userData
         }
       });
 

@@ -1,10 +1,9 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import { useToast } from '@/components/ui/use-toast';
 import { Empresa, Profile } from '@/integrations/supabase/models';
-import { useAuthentication } from '@/hooks/useAuthentication';
-import { useUserProfile } from '@/hooks/useUserProfile';
-import { useCompanyManagement } from '@/hooks/useCompanyManagement';
 
 interface AuthContextType {
   session: Session | null;
@@ -23,26 +22,157 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use our custom hooks
-  const { user, session, signIn, signUp, signOut, loading: authLoading, setLoading: setAuthLoading } = useAuthentication();
-  const { profile, loading: profileLoading } = useUserProfile(user, !!session);
-  const { 
-    empresas, 
-    currentEmpresa, 
-    setCurrentEmpresa, 
-    refreshEmpresas, 
-    loading: companyLoading 
-  } = useCompanyManagement(user, !!session);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [currentEmpresa, setCurrentEmpresa] = useState<Empresa | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Combine loading states
-  const loading = authLoading || profileLoading || companyLoading;
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log("Buscando perfil do usuário:", userId);
+      // Buscar perfil
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  // Update auth loading based on other loading states
-  if (!authLoading && (profileLoading || companyLoading)) {
-    setAuthLoading(true);
-  } else if (authLoading && !profileLoading && !companyLoading) {
-    setAuthLoading(false);
-  }
+      if (profileError) {
+        if (profileError.code !== 'PGRST116') { // Ignore "não encontrado" para novos usuários
+          console.error("Erro ao buscar perfil:", profileError);
+          throw profileError;
+        }
+      }
+      
+      if (profileData) {
+        console.log("Perfil encontrado:", profileData);
+        setProfile(profileData as Profile);
+      } else {
+        console.log("Perfil não encontrado, usuário pode ser novo");
+      }
+
+      // Buscar empresas
+      await refreshEmpresas();
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar seus dados. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshEmpresas = async () => {
+    if (!user) {
+      console.log("Não é possível buscar empresas sem usuário autenticado");
+      return;
+    }
+    
+    try {
+      console.log("Buscando empresas para o usuário:", user.id);
+      const { data: empresasData, error: empresasError } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (empresasError) throw empresasError;
+      
+      console.log("Empresas carregadas:", empresasData);
+      setEmpresas(empresasData as Empresa[]);
+
+      // Se houver empresas, definir a primeira como atual se nenhuma for selecionada
+      if (empresasData && empresasData.length > 0 && !currentEmpresa) {
+        console.log("Definindo empresa atual:", empresasData[0]);
+        setCurrentEmpresa(empresasData[0] as Empresa);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar empresas:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    console.log("AuthProvider inicializado");
+    // Configurar listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Evento de autenticação:", event);
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Se o usuário fizer logout, limpar os dados
+        if (event === 'SIGNED_OUT') {
+          setProfile(null);
+          setEmpresas([]);
+          setCurrentEmpresa(null);
+        }
+        
+        // Se o usuário fizer login, buscar perfil e empresas
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          fetchUserProfile(session.user.id);
+        }
+      }
+    );
+
+    // Verificar se já existe uma sessão
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Sessão existente:", session ? "sim" : "não");
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Buscar o perfil e empresas do usuário
+        fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      console.log("Limpando AuthProvider");
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    console.log("Tentando login para:", email);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("Resposta de login:", data ? "sucesso" : "falha", error);
+      return { error };
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      return { error };
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    console.log("Tentando cadastro para:", email);
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      console.log("Resposta de cadastro:", data ? "sucesso" : "falha", error);
+      return { error };
+    } catch (error) {
+      console.error("Erro ao fazer cadastro:", error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    console.log("Iniciando logout");
+    await supabase.auth.signOut();
+    console.log("Logout concluído");
+  };
 
   const value = {
     session,

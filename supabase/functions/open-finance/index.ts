@@ -14,29 +14,20 @@ serve(async (req) => {
   }
 
   try {
-    // Use your specific Supabase and Pluggy credentials from environment variables
+    // Use your specific Supabase and Pluggy credentials
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
-    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
+    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
+    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
 
     console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
     console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
 
-    // Initialize Supabase client
+    // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
-    const { 
-      action, 
-      empresa_id, 
-      institution, 
-      item_id,
-      code, // For OAuth flow
-      redirectUri, // For OAuth flow  
-      integration_id, 
-      sandbox = true 
-    } = requestData;
+    const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
@@ -56,26 +47,25 @@ serve(async (req) => {
           institution, 
           sandbox, 
           pluggyClientId, 
-          pluggyClientSecret,
-          redirectUri // Pass through the redirectUri for OAuth flow
+          pluggyClientSecret, 
+          corsHeaders
         );
       
       case "callback":
         return await processCallback(
           empresa_id, 
-          item_id,
-          code, // Pass the authorization code for OAuth flow
-          redirectUri, // Pass the redirectUri for OAuth flow
+          item_id, 
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
-          supabase
+          supabase, 
+          corsHeaders
         );
       
       case "sync":
         return await syncData(
           empresa_id, 
-          integration_id, 
+          requestData.integration_id, 
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
@@ -94,8 +84,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: "Erro interno do servidor", 
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
+        message: error.message,
+        stack: error.stack 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );

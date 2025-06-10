@@ -2,22 +2,15 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, Camera } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface LogoUploadProps {
   onLogoChange: (file: File | null, previewUrl: string) => void;
   existingLogo?: string;
-  isMobile?: boolean;
-  isSafariIOS?: boolean;
 }
 
-export const LogoUpload: React.FC<LogoUploadProps> = ({ 
-  onLogoChange, 
-  existingLogo, 
-  isMobile, 
-  isSafariIOS 
-}) => {
+export const LogoUpload: React.FC<LogoUploadProps> = ({ onLogoChange, existingLogo }) => {
   const [previewUrl, setPreviewUrl] = useState<string>(existingLogo || '');
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
@@ -57,14 +50,9 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
     onLogoChange(null, '');
   };
 
-  // Estilo específico para iOS Safari
-  const iosSafariStyles = isSafariIOS 
-    ? "tap-highlight-transparent active:opacity-70" 
-    : "";
-
   return (
     <div className="space-y-4">
-      <div className={`flex flex-col items-center p-4 border-2 border-dashed rounded-md ${iosSafariStyles}`}>
+      <div className="flex flex-col items-center p-4 border-2 border-dashed rounded-md">
         {previewUrl ? (
           <div className="relative">
             <img 
@@ -75,31 +63,24 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
             <button 
               type="button" 
               onClick={handleRemoveLogo}
-              className={`absolute top-0 right-0 p-2 bg-red-500 rounded-full text-white ${isMobile ? 'w-8 h-8' : 'w-6 h-6'}`}
+              className="absolute top-0 right-0 p-1 bg-red-500 rounded-full text-white"
               aria-label="Remover logo"
             >
-              <X className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
+              <X className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <>
             <div className="flex flex-col items-center justify-center py-6">
-              {isMobile ? (
-                <Camera className="h-12 w-12 text-muted-foreground mb-3" />
-              ) : (
-                <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-              )}
-              <p className="text-sm text-center text-muted-foreground px-2">
-                {isUploading ? "Enviando..." : (isMobile 
-                  ? "Toque para selecionar ou tirar uma foto" 
-                  : "Arraste e solte ou clique para fazer upload da sua logo")}
+              <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-sm text-center text-muted-foreground">
+                {isUploading ? "Enviando..." : "Arraste e solte ou clique para fazer upload da sua logo"}
               </p>
             </div>
             <Input
               id="logo-upload"
               type="file"
-              accept="image/*"
-              capture={isMobile ? "environment" : undefined}
+              accept="image/jpeg,image/png,image/svg+xml,image/gif"
               className="hidden"
               onChange={handleFileChange}
               disabled={isUploading}
@@ -109,9 +90,9 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
               variant="outline" 
               onClick={() => document.getElementById('logo-upload')?.click()}
               disabled={isUploading}
-              className={`w-full ${isMobile ? 'text-base py-6' : ''} ${iosSafariStyles}`}
+              className="w-full"
             >
-              {isMobile ? "Selecionar ou tirar foto" : "Selecionar arquivo"}
+              Selecionar arquivo
             </Button>
           </>
         )}

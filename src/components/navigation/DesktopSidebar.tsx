@@ -33,7 +33,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     >
       <div className="p-6">
         <Link to="/" className="flex items-center justify-center mb-2 group hover:opacity-90 transition-opacity">
-          <FounderPilotLogo className="h-8 w-auto" showText={true} textClassName="text-lg font-semibold" />
+          <div className="flex items-center gap-2">
+            <FounderPilotLogo className="h-8 w-8 text-foreground" />
+            <h1 className="text-xl font-bold">FounderPilot</h1>
+          </div>
         </Link>
       </div>
 

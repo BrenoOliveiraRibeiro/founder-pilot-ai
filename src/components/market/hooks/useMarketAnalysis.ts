@@ -1,7 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { fromEmpresas } from "@/integrations/supabase/typedClient";
 
 export const useMarketAnalysis = () => {
   const [segment, setSegment] = useState('');
@@ -28,7 +28,8 @@ export const useMarketAnalysis = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          const { data: empresas, error } = await fromEmpresas()
+          const { data: empresas, error } = await supabase
+            .from('empresas')
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle();
@@ -71,7 +72,8 @@ export const useMarketAnalysis = () => {
       let empresa_id = null;
       
       if (session?.user) {
-        const { data: empresas } = await fromEmpresas()
+        const { data: empresas } = await supabase
+          .from('empresas')
           .select('id')
           .eq('user_id', session.user.id)
           .maybeSingle();

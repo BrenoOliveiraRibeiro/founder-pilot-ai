@@ -52,7 +52,7 @@ export const FloatingAIButton = () => {
           >
             <div className="p-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <h4 className="font-medium text-sm flex items-center gap-1.5">
-                <FounderPilotLogo className="w-3.5 h-3.5" />
+                <FounderPilotLogo className="w-3.5 h-3.5 text-primary" />
                 FounderPilot
               </h4>
               <Button
