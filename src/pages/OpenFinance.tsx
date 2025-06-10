@@ -1,14 +1,15 @@
 
 import React, { useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
-import { Info, Bug, AlertCircle } from "lucide-react";
+import { Info, Bug, AlertCircle, ExternalLink } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
-import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 const OpenFinance = () => {
   const {
@@ -20,17 +21,6 @@ const OpenFinance = () => {
   } = useOpenFinanceConnections();
 
   const {
-    selectedProvider,
-    setSelectedProvider,
-    connecting,
-    connectionProgress,
-    connectionStatus,
-    connectContainerRef,
-    pluggyWidgetLoaded,
-    useSandbox,
-    setUseSandbox,
-    providers,
-    handleConnect,
     testPluggyConnection,
     debugInfo
   } = useOpenFinanceConnection();
@@ -41,8 +31,7 @@ const OpenFinance = () => {
     console.log("OpenFinance component mounted/updated");
     console.log("Current empresa:", currentEmpresa);
     console.log("Auth loading:", authLoading);
-    console.log("Pluggy widget loaded:", pluggyWidgetLoaded);
-  }, [currentEmpresa, authLoading, pluggyWidgetLoaded]);
+  }, [currentEmpresa, authLoading]);
 
   const handleTestConnection = async () => {
     await testPluggyConnection();
@@ -93,23 +82,8 @@ const OpenFinance = () => {
         
         <div className="mb-6 space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className={`font-medium ${pluggyWidgetLoaded ? 'text-green-600' : 'text-red-500'}`}>
-              Pluggy Connect: {pluggyWidgetLoaded ? 'Carregado' : 'Não carregado'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
             <span className={`font-medium ${currentEmpresa ? 'text-green-600' : 'text-red-500'}`}>
               Empresa: {currentEmpresa ? currentEmpresa.nome || 'Selecionada' : 'Não selecionada'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`font-medium ${selectedProvider ? 'text-green-600' : 'text-red-500'}`}>
-              Banco: {selectedProvider ? providers.find(p => p.id === selectedProvider)?.name || selectedProvider : 'Não selecionado'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">
-              Modo: {useSandbox ? 'Sandbox (teste)' : 'Produção'}
             </span>
           </div>
         </div>
@@ -137,18 +111,73 @@ const OpenFinance = () => {
           />
         )}
         
-        <BankConnectionCard 
-          providers={providers}
-          selectedProvider={selectedProvider}
-          setSelectedProvider={setSelectedProvider}
-          connecting={connecting}
-          connectionProgress={connectionProgress}
-          connectionStatus={connectionStatus}
-          pluggyWidgetLoaded={pluggyWidgetLoaded}
-          useSandbox={useSandbox}
-          handleConnect={handleConnect}
-          connectContainerRef={connectContainerRef}
-        />
+        <Card className="border-none shadow-md">
+          <CardHeader className="border-b border-border pb-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-xl">Conectar com Pluggy OpenFinance</CardTitle>
+                <CardDescription>
+                  Use o widget oficial da Pluggy para conectar suas contas bancárias de forma segura
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                <img 
+                  src="https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=40&h=40&fit=crop" 
+                  alt="Pluggy" 
+                  className="w-10 h-10 rounded"
+                />
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Integração Pluggy OpenFinance
+                </h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Conecte suas contas bancárias com segurança total usando certificação OpenFinance 
+                  e criptografia de ponta a ponta.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <span className="text-green-600 font-semibold">✓</span>
+                  </div>
+                  <p className="text-gray-600">Segurança Total</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <span className="text-blue-600 font-semibold">⚡</span>
+                  </div>
+                  <p className="text-gray-600">Tempo Real</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <span className="text-purple-600 font-semibold">📊</span>
+                  </div>
+                  <p className="text-gray-600">Análises IA</p>
+                </div>
+              </div>
+
+              <Link to="/pluggy">
+                <Button className="w-full max-w-sm group transition-all duration-200">
+                  <span className="flex items-center">
+                    Abrir Integração Pluggy
+                    <ExternalLink className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Button>
+              </Link>
+              
+              <p className="text-xs text-gray-500">
+                Widget oficial da Pluggy com certificação OpenFinance
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
