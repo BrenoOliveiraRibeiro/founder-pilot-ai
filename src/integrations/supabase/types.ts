@@ -9,9 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      documentos: {
+        Row: {
+          arquivo_url: string
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          tamanho: number
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_url: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          tamanho: number
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_url?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tamanho?: number
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
-          created_at: string | null
+          created_at: string
           data_fundacao: string | null
           estagio: string | null
           id: string
@@ -19,12 +60,12 @@ export type Database = {
           nome: string
           num_funcionarios: number | null
           segmento: string | null
-          updated_at: string | null
-          user_id: string | null
+          updated_at: string
+          user_id: string
           website: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           data_fundacao?: string | null
           estagio?: string | null
           id?: string
@@ -32,12 +73,12 @@ export type Database = {
           nome: string
           num_funcionarios?: number | null
           segmento?: string | null
-          updated_at?: string | null
-          user_id?: string | null
+          updated_at?: string
+          user_id: string
           website?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           data_fundacao?: string | null
           estagio?: string | null
           id?: string
@@ -45,51 +86,43 @@ export type Database = {
           nome?: string
           num_funcionarios?: number | null
           segmento?: string | null
-          updated_at?: string | null
-          user_id?: string | null
+          updated_at?: string
+          user_id?: string
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "empresas_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       insights: {
         Row: {
-          data_criacao: string | null
+          data_criacao: string
           data_resolucao: string | null
           descricao: string
-          empresa_id: string | null
+          empresa_id: string
           id: string
           prioridade: string
-          status: string | null
+          status: string
           tipo: string
           titulo: string
         }
         Insert: {
-          data_criacao?: string | null
+          data_criacao?: string
           data_resolucao?: string | null
           descricao: string
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
           prioridade: string
-          status?: string | null
+          status: string
           tipo: string
           titulo: string
         }
         Update: {
-          data_criacao?: string | null
+          data_criacao?: string
           data_resolucao?: string | null
           descricao?: string
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
           prioridade?: string
-          status?: string | null
+          status?: string
           tipo?: string
           titulo?: string
         }
@@ -105,37 +138,37 @@ export type Database = {
       }
       integracoes_bancarias: {
         Row: {
-          created_at: string | null
+          created_at: string
           detalhes: Json | null
-          empresa_id: string | null
+          empresa_id: string
           id: string
           nome_banco: string
           status: string
           tipo_conexao: string
           ultimo_sincronismo: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           detalhes?: Json | null
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
           nome_banco: string
           status: string
           tipo_conexao: string
           ultimo_sincronismo?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           detalhes?: Json | null
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
           nome_banco?: string
           status?: string
           tipo_conexao?: string
           ultimo_sincronismo?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -152,40 +185,40 @@ export type Database = {
           burn_rate: number | null
           caixa_atual: number | null
           cash_flow: number | null
-          created_at: string | null
+          created_at: string
           data_referencia: string
-          empresa_id: string | null
+          empresa_id: string
           id: string
           mrr_growth: number | null
           receita_mensal: number | null
           runway_meses: number | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
           burn_rate?: number | null
           caixa_atual?: number | null
           cash_flow?: number | null
-          created_at?: string | null
+          created_at?: string
           data_referencia: string
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
           mrr_growth?: number | null
           receita_mensal?: number | null
           runway_meses?: number | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
           burn_rate?: number | null
           caixa_atual?: number | null
           cash_flow?: number | null
-          created_at?: string | null
+          created_at?: string
           data_referencia?: string
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
           mrr_growth?: number | null
           receita_mensal?: number | null
           runway_meses?: number | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -200,40 +233,43 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           cargo: string | null
-          created_at: string | null
+          created_at: string
           email: string | null
           id: string
           nome: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           cargo?: string | null
-          created_at?: string | null
+          created_at?: string
           email?: string | null
           id: string
           nome?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           cargo?: string | null
-          created_at?: string | null
+          created_at?: string
           email?: string | null
           id?: string
           nome?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       transacoes: {
         Row: {
           categoria: string
-          created_at: string | null
+          created_at: string
           data_transacao: string
           descricao: string
-          empresa_id: string | null
+          empresa_id: string
           id: string
           metodo_pagamento: string | null
           recorrente: boolean | null
@@ -242,10 +278,10 @@ export type Database = {
         }
         Insert: {
           categoria: string
-          created_at?: string | null
+          created_at?: string
           data_transacao: string
           descricao: string
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
           metodo_pagamento?: string | null
           recorrente?: boolean | null
@@ -254,10 +290,10 @@ export type Database = {
         }
         Update: {
           categoria?: string
-          created_at?: string | null
+          created_at?: string
           data_transacao?: string
           descricao?: string
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
           metodo_pagamento?: string | null
           recorrente?: boolean | null
@@ -274,14 +310,90 @@ export type Database = {
           },
         ]
       }
+      webhook_configs: {
+        Row: {
+          config: Json | null
+          created_at: string
+          empresa_id: string
+          id: string
+          provider: string
+          updated_at: string
+          webhook_url: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          provider: string
+          updated_at?: string
+          webhook_url: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          provider?: string
+          updated_at?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_executions: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          payload: Json | null
+          result: Json | null
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          source: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_executions_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      is_owner_of_empresa: {
-        Args: { empresa_uuid: string }
-        Returns: boolean
+      insert_demo_data: {
+        Args: { p_empresa_id: string }
+        Returns: undefined
       }
     }
     Enums: {
