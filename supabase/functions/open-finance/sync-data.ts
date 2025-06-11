@@ -78,6 +78,7 @@ export async function syncData(
       // For each integration, fetch updated data
       for (const integracao of integracoes) {
         try {
+          console.log(`Processando integração: ${integracao.id}, item_id: ${integracao.detalhes?.item_id}`);
           await processFinancialData(
             empresaId, 
             integracao.detalhes.item_id, 
@@ -87,6 +88,7 @@ export async function syncData(
             integracao.detalhes.sandbox || false, 
             supabase
           );
+          console.log(`Integração ${integracao.id} processada com sucesso`);
         } catch (error) {
           console.error(`Erro ao sincronizar integração ${integracao.id}:`, error);
         }
@@ -109,11 +111,20 @@ export async function syncData(
       .limit(1)
       .maybeSingle();
     
+    // Fetch transaction count to verify
+    const { count: transactionCount } = await supabase
+      .from("transacoes")
+      .select("*", { count: 'exact', head: true })
+      .eq("empresa_id", empresaId);
+    
+    console.log(`Sincronização concluída. Transações salvas: ${transactionCount}`);
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Dados sincronizados com sucesso", 
-        data: metricasData 
+        data: metricasData,
+        transactionCount: transactionCount
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
