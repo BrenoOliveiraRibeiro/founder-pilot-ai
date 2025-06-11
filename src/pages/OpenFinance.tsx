@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -13,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
+import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 
 declare global {
   interface Window {
@@ -49,6 +49,12 @@ const OpenFinance = () => {
   } = useOpenFinanceConnection();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
+
+  const {
+    updateFinancialData,
+    summary,
+    refreshFinancialData
+  } = usePluggyFinanceData();
 
   useEffect(() => {
     console.log("OpenFinance component mounted/updated");
@@ -154,10 +160,21 @@ const OpenFinance = () => {
       if (data.results && Array.isArray(data.results) && data.results.length > 0) {
         // Definir a primeira conta como selecionada por padrão
         setSelectedAccountId(data.results[0].id);
-        // Buscar transações para a primeira conta
-        const transactionsResponse = await fetchTransactions(data.results[0].id);
-        if (transactionsResponse) {
-          setTransactionsData(transactionsResponse);
+        
+        // Buscar transações para todas as contas
+        let allTransactions = [];
+        for (const account of data.results) {
+          const transactionsResponse = await fetchTransactions(account.id);
+          if (transactionsResponse && transactionsResponse.results) {
+            allTransactions = [...allTransactions, ...transactionsResponse.results];
+          }
+        }
+        
+        if (allTransactions.length > 0) {
+          setTransactionsData({ results: allTransactions });
+          
+          // Atualizar dados financeiros no hook
+          updateFinancialData(data.results, allTransactions);
         }
       }
       
@@ -326,11 +343,50 @@ const OpenFinance = () => {
             </div>
           </div>
 
+          {/* Resumo Financeiro */}
+          {summary.totalBalance > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4">
+                <h3 className="text-sm font-medium text-gray-600">Saldo Total</h3>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(summary.totalBalance, 'BRL')}
+                </p>
+              </Card>
+              <Card className="p-4">
+                <h3 className="text-sm font-medium text-gray-600">Entradas (Mês Atual)</h3>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(summary.monthlyIncome, 'BRL')}
+                </p>
+              </Card>
+              <Card className="p-4">
+                <h3 className="text-sm font-medium text-gray-600">Saídas (Mês Atual)</h3>
+                <p className="text-2xl font-bold text-red-600">
+                  {formatCurrency(summary.monthlyExpenses, 'BRL')}
+                </p>
+              </Card>
+              <Card className="p-4">
+                <h3 className="text-sm font-medium text-gray-600">Fluxo de Caixa</h3>
+                <p className={`text-2xl font-bold ${summary.cashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(summary.cashFlow, 'BRL')}
+                </p>
+              </Card>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Account Selection and Info */}
             <div className="lg:col-span-1">
               <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Selecionar Conta</h2>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={refreshFinancialData}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </div>
                 
                 {accountData?.results && accountData.results.length > 0 && (
                   <div className="mb-6">
