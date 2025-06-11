@@ -2,8 +2,48 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const FinanceOverviewTab: React.FC<{ runway: number }> = ({ runway }) => {
+export const FinanceOverviewTab: React.FC = () => {
+  const { currentEmpresa } = useAuth();
+  const { data, loading, error } = usePluggyFinanceData(currentEmpresa?.id || null);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-red-500">Erro ao carregar dados financeiros</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Usar dados reais ou fallback
+  const runway = data?.runway || 4.2;
+  const burnRate = data?.burnRate || 100000;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
@@ -19,7 +59,7 @@ export const FinanceOverviewTab: React.FC<{ runway: number }> = ({ runway }) => 
               {runway.toFixed(1)} meses
             </div>
             <div className="text-sm text-muted-foreground mb-4">
-              Burn rate mensal médio: {formatCurrency(100000)}
+              Burn rate mensal médio: {formatCurrency(burnRate)}
             </div>
             <div className="w-full bg-muted rounded-full h-2.5 mb-4">
               <div 
