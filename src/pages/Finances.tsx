@@ -9,16 +9,9 @@ import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTa
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
-import { useAuth } from "@/contexts/AuthContext";
-import { useFinanceData } from "@/hooks/useFinanceData";
 
 const FinancesPage = () => {
-  const { currentEmpresa } = useAuth();
-  const { metrics, loading } = useFinanceData(currentEmpresa?.id || null);
-
-  // Usar métricas mais recentes ou valor padrão
-  const latestMetrics = metrics[0];
-  const runway = latestMetrics?.runway_meses || 4.2;
+  const runway = 4.2; // em meses
 
   return (
     <AppLayout>
