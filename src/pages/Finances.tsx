@@ -12,14 +12,19 @@ import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
 import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 
 const FinancesPage = () => {
-  const { metrics } = usePluggyFinanceData();
+  const { metrics, loading, loadMetricsFromDatabase } = usePluggyFinanceData();
   const runway = metrics.runwayMeses;
+
+  // Recarregar métricas quando a página for montada
+  React.useEffect(() => {
+    loadMetricsFromDatabase();
+  }, []);
 
   return (
     <AppLayout>
       <FinanceHeader />
       <RunwayAlert runway={runway} />
-      <FinanceMetricsGrid />
+      <FinanceMetricsGrid loading={loading} />
 
       <Tabs defaultValue="overview">
         <TabsList className="mb-4">
@@ -30,7 +35,7 @@ const FinancesPage = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <FinanceOverviewTab runway={runway} />
+          <FinanceOverviewTab runway={runway} loading={loading} />
         </TabsContent>
 
         <TabsContent value="cashflow">

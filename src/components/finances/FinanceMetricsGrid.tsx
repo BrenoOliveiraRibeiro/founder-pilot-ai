@@ -5,14 +5,40 @@ import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const FinanceMetricsGrid: React.FC = () => {
+interface FinanceMetricsGridProps {
+  loading?: boolean;
+}
+
+export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ loading = false }) => {
   const { metrics, getCurrentDateInfo } = usePluggyFinanceData();
   const { now } = getCurrentDateInfo();
 
   // Calcular variação percentual (simulada para demonstração)
   const entradasVariacao = metrics.entradasMesAtual > 0 ? 12.5 : 0;
   const saidasVariacao = metrics.saidasMesAtual > 0 ? 13.6 : 0;
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {[1, 2, 3].map((index) => (
+          <Card key={index}>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <Skeleton className="h-4 w-4 mr-2" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <Skeleton className="h-4 w-40 mt-1" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

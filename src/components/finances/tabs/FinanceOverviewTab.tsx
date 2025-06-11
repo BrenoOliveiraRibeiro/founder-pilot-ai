@@ -3,9 +3,38 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const FinanceOverviewTab: React.FC<{ runway: number }> = ({ runway }) => {
+interface FinanceOverviewTabProps {
+  runway: number;
+  loading?: boolean;
+}
+
+export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, loading = false }) => {
   const { metrics } = usePluggyFinanceData();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2].map((index) => (
+          <Card key={index}>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-6">
+                <Skeleton className="h-16 w-24 mb-4" />
+                <Skeleton className="h-4 w-40 mb-4" />
+                <Skeleton className="h-2.5 w-full mb-4" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

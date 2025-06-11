@@ -7,10 +7,15 @@ import { useToast } from '@/hooks/use-toast';
 interface PluggyTransaction {
   id: string;
   description: string;
+  descriptionRaw?: string;
   amount: number;
   date: string;
   category?: string;
+  categoryId?: string;
   currencyCode?: string;
+  type: 'DEBIT' | 'CREDIT';
+  accountId: string;
+  status: string;
 }
 
 interface PluggyAccount {
@@ -19,6 +24,13 @@ interface PluggyAccount {
   type: string;
   balance: number;
   currencyCode: string;
+}
+
+interface PluggyApiResponse {
+  total: number;
+  totalPages: number;
+  page: number;
+  results: PluggyTransaction[];
 }
 
 interface FinanceMetrics {
@@ -70,11 +82,11 @@ export const usePluggyFinanceData = () => {
     try {
       const transacoesFormatadas = transactions.map(tx => ({
         empresa_id: currentEmpresa.id,
-        descricao: tx.description || 'Transação',
+        descricao: tx.description || tx.descriptionRaw || 'Transação',
         valor: tx.amount,
-        data_transacao: tx.date,
+        data_transacao: new Date(tx.date).toISOString().split('T')[0],
         categoria: tx.category || 'Outros',
-        tipo: tx.amount > 0 ? 'receita' : 'despesa',
+        tipo: tx.type === 'CREDIT' ? 'receita' : 'despesa',
         metodo_pagamento: 'Transferência',
         recorrente: false
       }));
@@ -164,19 +176,19 @@ export const usePluggyFinanceData = () => {
     
     // Transações do mês atual
     const transacoesMesAtual = transactions.filter(tx => {
-      const txDate = tx.date;
+      const txDate = new Date(tx.date).toISOString().split('T')[0];
       return txDate >= startOfMonth && txDate <= endOfMonth;
     });
     
-    // Entradas do mês atual (valores positivos)
+    // Entradas do mês atual (CREDIT)
     const entradasMesAtual = transacoesMesAtual
-      .filter(tx => tx.amount > 0)
-      .reduce((total, tx) => total + tx.amount, 0);
+      .filter(tx => tx.type === 'CREDIT')
+      .reduce((total, tx) => total + Math.abs(tx.amount), 0);
     
-    // Saídas do mês atual (valores negativos)
-    const saidasMesAtual = Math.abs(transacoesMesAtual
-      .filter(tx => tx.amount < 0)
-      .reduce((total, tx) => total + tx.amount, 0));
+    // Saídas do mês atual (DEBIT)
+    const saidasMesAtual = transacoesMesAtual
+      .filter(tx => tx.type === 'DEBIT')
+      .reduce((total, tx) => total + Math.abs(tx.amount), 0);
     
     // Cash flow (entradas - saídas)
     const cashFlow = entradasMesAtual - saidasMesAtual;
@@ -197,10 +209,13 @@ export const usePluggyFinanceData = () => {
     };
   };
 
-  const processPluggyData = async (accounts: PluggyAccount[], transactions: PluggyTransaction[]) => {
+  const processPluggyData = async (accounts: PluggyAccount[], transactionResponse: PluggyApiResponse) => {
     setLoading(true);
     
     try {
+      // Extrair transações do response da API
+      const transactions = transactionResponse.results;
+      
       // Calcular métricas
       const calculatedMetrics = calculateMetrics(accounts, transactions);
       setMetrics(calculatedMetrics);
@@ -213,7 +228,7 @@ export const usePluggyFinanceData = () => {
       
       toast({
         title: "Dados processados!",
-        description: "Informações financeiras foram atualizadas com sucesso.",
+        description: `${transactions.length} transações processadas e métricas atualizadas.`,
       });
       
     } catch (error) {
