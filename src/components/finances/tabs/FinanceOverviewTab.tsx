@@ -2,40 +2,8 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
-import { Skeleton } from "@/components/ui/skeleton";
 
-interface FinanceOverviewTabProps {
-  runway: number;
-  loading?: boolean;
-}
-
-export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, loading = false }) => {
-  const { metrics } = usePluggyFinanceData();
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[1, 2].map((index) => (
-          <Card key={index}>
-            <CardHeader>
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-6">
-                <Skeleton className="h-16 w-24 mb-4" />
-                <Skeleton className="h-4 w-40 mb-4" />
-                <Skeleton className="h-2.5 w-full mb-4" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
+export const FinanceOverviewTab: React.FC<{ runway: number }> = ({ runway }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
@@ -51,7 +19,7 @@ export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, 
               {runway.toFixed(1)} meses
             </div>
             <div className="text-sm text-muted-foreground mb-4">
-              Burn rate mensal médio: {formatCurrency(metrics.burnRate)}
+              Burn rate mensal médio: {formatCurrency(100000)}
             </div>
             <div className="w-full bg-muted rounded-full h-2.5 mb-4">
               <div 
@@ -74,30 +42,10 @@ export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, 
         <CardContent>
           <div className="space-y-4">
             {[
-              { 
-                title: "Cash Flow", 
-                value: formatCurrency(metrics.cashFlow), 
-                status: metrics.cashFlow > 0 ? "good" : "warning", 
-                target: ">R$ 0" 
-              },
-              { 
-                title: "Burn Rate", 
-                value: formatCurrency(metrics.burnRate), 
-                status: metrics.burnRate < metrics.saldoTotal * 0.1 ? "good" : "warning", 
-                target: "<10% do caixa" 
-              },
-              { 
-                title: "Runway", 
-                value: `${runway.toFixed(1)} meses`, 
-                status: runway > 6 ? "good" : runway > 3 ? "warning" : "critical", 
-                target: ">6 meses" 
-              },
-              { 
-                title: "Receita Mensal", 
-                value: formatCurrency(metrics.entradasMesAtual), 
-                status: metrics.entradasMesAtual > metrics.saidasMesAtual ? "good" : "warning", 
-                target: ">Despesas" 
-              }
+              { title: "Margem Bruta", value: "54%", status: "good", target: ">50%" },
+              { title: "Margem Líquida", value: "15%", status: "warning", target: ">20%" },
+              { title: "Eficiência de Capital", value: "1.8x", status: "good", target: ">1.5x" },
+              { title: "Burn Multiple", value: "2.1x", status: "warning", target: "<1.5x" }
             ].map((metric, index) => (
               <div key={index} className="flex items-center">
                 <div className={`w-3 h-3 rounded-full mr-3 ${
@@ -111,10 +59,7 @@ export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, 
                   </div>
                   <div className="flex justify-between items-center text-xs text-muted-foreground">
                     <span>Meta: {metric.target}</span>
-                    <span>{
-                      metric.status === 'good' ? 'Bom' : 
-                      metric.status === 'warning' ? 'Atenção' : 'Crítico'
-                    }</span>
+                    <span>{metric.status === 'good' ? 'Bom' : metric.status === 'warning' ? 'Atenção' : 'Crítico'}</span>
                   </div>
                 </div>
               </div>

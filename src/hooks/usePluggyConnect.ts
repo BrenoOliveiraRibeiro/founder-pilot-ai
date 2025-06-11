@@ -1,12 +1,6 @@
 
 import { useState, useEffect } from "react";
 
-declare global {
-  interface Window {
-    PluggyConnect: any;
-  }
-}
-
 export const usePluggyConnect = () => {
   const [pluggyWidgetLoaded, setPluggyWidgetLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -25,21 +19,18 @@ export const usePluggyConnect = () => {
     if (!document.getElementById("pluggy-script")) {
       const script = document.createElement("script");
       script.id = "pluggy-script";
-      script.src = "https://cdn.pluggy.ai/widget/pluggy-connect.umd.js";
+      script.src = "https://cdn.pluggy.ai/pluggy-connect/v2.js";
       script.async = true;
       
       script.onload = () => {
         console.log("Script do Pluggy Connect carregado com sucesso");
-        // Wait a bit for the global object to be available
-        setTimeout(() => {
-          if (window.PluggyConnect) {
-            console.log("Objeto PluggyConnect disponível na window");
-            setPluggyWidgetLoaded(true);
-          } else {
-            console.error("Script carregado, mas objeto PluggyConnect não disponível");
-            setLoadError("Script carregado, mas objeto PluggyConnect não disponível");
-          }
-        }, 100);
+        if (window.PluggyConnect) {
+          console.log("Objeto PluggyConnect disponível na window");
+          setPluggyWidgetLoaded(true);
+        } else {
+          console.error("Script carregado, mas objeto PluggyConnect não disponível");
+          setLoadError("Script carregado, mas objeto PluggyConnect não disponível");
+        }
       };
       
       script.onerror = (error) => {
