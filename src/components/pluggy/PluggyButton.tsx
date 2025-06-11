@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { usePluggyConnect } from "@/hooks/usePluggyConnect";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PluggyButtonProps {
   onSuccess: (item: any) => void;
@@ -13,7 +15,32 @@ interface PluggyButtonProps {
 export const PluggyButton: React.FC<PluggyButtonProps> = ({ onSuccess, isLoading = false }) => {
   const [connecting, setConnecting] = useState(false);
   const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
+  const { currentEmpresa } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const generateConnectToken = async () => {
+    if (!currentEmpresa?.id) {
+      throw new Error("Empresa não encontrada");
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('open-finance', {
+        body: {
+          action: 'authorize',
+          empresa_id: currentEmpresa.id,
+          institution: 'pluggy',
+          sandbox: true
+        }
+      });
+
+      if (error) throw error;
+
+      return data.connect_token;
+    } catch (error) {
+      console.error('Erro ao gerar connect token:', error);
+      throw new Error('Falha ao gerar token de conexão');
+    }
+  };
 
   const handleConnect = async () => {
     if (!pluggyWidgetLoaded) {
@@ -25,11 +52,20 @@ export const PluggyButton: React.FC<PluggyButtonProps> = ({ onSuccess, isLoading
       return;
     }
 
+    if (!currentEmpresa?.id) {
+      toast({
+        title: "Erro",
+        description: "Empresa não encontrada. Faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setConnecting(true);
 
     try {
-      // Generate a connect token (in a real app, this would come from your backend)
-      const connectToken = "test-connect-token";
+      // Gerar connect token através da função edge
+      const connectToken = await generateConnectToken();
 
       const pluggyConnect = await initializePluggyConnect(
         connectToken,
@@ -64,7 +100,7 @@ export const PluggyButton: React.FC<PluggyButtonProps> = ({ onSuccess, isLoading
       console.error("Erro ao inicializar Pluggy Connect:", error);
       toast({
         title: "Erro",
-        description: "Falha ao inicializar a conexão bancária.",
+        description: error instanceof Error ? error.message : "Falha ao inicializar a conexão bancária.",
         variant: "destructive",
       });
       setConnecting(false);
@@ -75,7 +111,7 @@ export const PluggyButton: React.FC<PluggyButtonProps> = ({ onSuccess, isLoading
     <div>
       <Button
         onClick={handleConnect}
-        disabled={!pluggyWidgetLoaded || connecting || isLoading}
+        disabled={!pluggyWidgetLoaded || connecting || isLoading || !currentEmpresa?.id}
         className="w-full"
       >
         {connecting || isLoading ? (
