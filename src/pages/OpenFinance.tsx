@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
-import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,8 +47,6 @@ const OpenFinance = () => {
     testPluggyConnection,
     debugInfo
   } = useOpenFinanceConnection();
-
-  const { fetchAndProcessTransactions } = usePluggyFinanceData();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
@@ -120,10 +118,6 @@ const OpenFinance = () => {
       
       const data = await response.json();
       console.log('Transactions data:', data);
-      
-      // Processar dados financeiros usando o hook
-      await fetchAndProcessTransactions(accountId);
-      
       return data;
     } catch (error) {
       console.error('Error fetching transactions:', error);

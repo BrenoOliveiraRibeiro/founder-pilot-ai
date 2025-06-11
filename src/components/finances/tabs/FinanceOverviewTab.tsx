@@ -3,23 +3,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 
-interface FinanceMetrics {
-  caixaAtual: number;
-  receitaMensal: number;
-  despesaMensal: number;
-  runwayMeses: number;
-  cashFlow: number;
-  burnRate: number;
-}
-
-interface FinanceOverviewTabProps {
-  runway: number;
-  metrics?: FinanceMetrics | null;
-}
-
-export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, metrics }) => {
-  const burnRate = metrics?.burnRate || 100000;
-  
+export const FinanceOverviewTab: React.FC<{ runway: number }> = ({ runway }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
@@ -35,7 +19,7 @@ export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ runway, 
               {runway.toFixed(1)} meses
             </div>
             <div className="text-sm text-muted-foreground mb-4">
-              Burn rate mensal médio: {formatCurrency(burnRate)}
+              Burn rate mensal médio: {formatCurrency(100000)}
             </div>
             <div className="w-full bg-muted rounded-full h-2.5 mb-4">
               <div 
