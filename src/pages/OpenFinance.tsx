@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
+import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +48,8 @@ const OpenFinance = () => {
     testPluggyConnection,
     debugInfo
   } = useOpenFinanceConnection();
+
+  const { processPluggyData, loading: processingData } = usePluggyFinanceData();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
@@ -158,6 +161,9 @@ const OpenFinance = () => {
         const transactionsResponse = await fetchTransactions(data.results[0].id);
         if (transactionsResponse) {
           setTransactionsData(transactionsResponse);
+          
+          // Processar e salvar dados financeiros
+          await processPluggyData(data.results, transactionsResponse.results || []);
         }
       }
       
@@ -322,6 +328,9 @@ const OpenFinance = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
                 <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
+                {processingData && (
+                  <p className="text-sm text-blue-600">Processando dados financeiros...</p>
+                )}
               </div>
             </div>
           </div>

@@ -9,9 +9,11 @@ import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTa
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
+import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 
 const FinancesPage = () => {
-  const runway = 4.2; // em meses
+  const { metrics } = usePluggyFinanceData();
+  const runway = metrics.runwayMeses;
 
   return (
     <AppLayout>
