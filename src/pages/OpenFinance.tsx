@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PluggyButton } from "@/components/pluggy/PluggyButton";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Loader2, PlusCircle, RefreshCw } from "lucide-react";
+import { CheckCircle, Loader2, PlusCircle, RefreshCw, AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +35,7 @@ interface Integration {
 const OpenFinancePage = () => {
   const [connecting, setConnecting] = useState(false);
   const { currentEmpresa } = useAuth();
-  const { activeIntegrations, loadActiveIntegrations } = useOpenFinanceConnections();
+  const { activeIntegrations, fetchIntegrations } = useOpenFinanceConnections();
   const [isSyncing, setIsSyncing] = useState(false);
   const { processPluggyData } = usePluggyFinanceData();
 
@@ -113,7 +114,7 @@ const OpenFinancePage = () => {
       });
       
       // Atualizar lista de integrações ativas
-      await loadActiveIntegrations();
+      await fetchIntegrations();
       
     } catch (error) {
       console.error('Erro ao processar dados do Pluggy:', error);
@@ -189,7 +190,7 @@ const OpenFinancePage = () => {
         description: "Dados bancários sincronizados com sucesso.",
       });
       
-      await loadActiveIntegrations();
+      await fetchIntegrations();
     } catch (error) {
       console.error('Erro ao sincronizar dados:', error);
       toast({
@@ -223,7 +224,7 @@ const OpenFinancePage = () => {
       });
 
       // Recarregar integrações ativas
-      await loadActiveIntegrations();
+      await fetchIntegrations();
     } catch (error) {
       console.error('Erro ao desconectar integração:', error);
       toast({
@@ -235,7 +236,7 @@ const OpenFinancePage = () => {
   };
 
   useEffect(() => {
-    loadActiveIntegrations();
+    fetchIntegrations();
   }, [currentEmpresa]);
 
   return (
