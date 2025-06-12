@@ -17,17 +17,35 @@ serve(async (req) => {
     // Use your specific Supabase and Pluggy credentials
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
-    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
+    
+    // Get Pluggy credentials from Supabase secrets
+    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
+    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
 
-    console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
-    console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
+    console.log("Environment check:");
+    console.log("- Supabase URL:", supabaseUrl);
+    console.log("- Service Key available:", !!supabaseServiceKey);
+    console.log("- Pluggy Client ID available:", !!pluggyClientId);
+    console.log("- Pluggy Client Secret available:", !!pluggyClientSecret);
+    
+    if (!pluggyClientId || !pluggyClientSecret) {
+      console.error("Missing Pluggy credentials");
+      return new Response(
+        JSON.stringify({ 
+          error: "Credenciais da Pluggy não configuradas",
+          details: "PLUGGY_CLIENT_ID ou PLUGGY_CLIENT_SECRET não encontrados"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
 
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
     const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
+
+    console.log("Request data:", { action, empresa_id, institution, item_id, sandbox });
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
