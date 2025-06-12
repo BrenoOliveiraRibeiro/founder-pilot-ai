@@ -32,7 +32,7 @@ export async function processFinancialData(
     const accounts = accountsResult.data.results;
     console.log(`Encontradas ${accounts.length} contas`);
     
-    // 2. Fetch transactions
+    // 2. Fetch transactions for the last 3 months
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     
@@ -59,7 +59,6 @@ export async function processFinancialData(
     console.log(`Encontradas ${allTransactions.length} transações ao total`);
     
     // 3. Calculate relevant metrics
-    // Current balance (sum of account balances)
     const caixaAtual = accounts.reduce((total, account) => total + (account.balance || 0), 0);
     
     // Separate transactions into revenue and expenses
@@ -78,9 +77,6 @@ export async function processFinancialData(
     // Calculate cash flow (revenue - expenses)
     const cashFlow = receitaMensal - burnRate;
     
-    // Calculate MRR growth (simplified)
-    const mrr_growth = 0; // Will be calculated with historical data later
-    
     console.log(`Métricas calculadas: Caixa: ${caixaAtual}, Receita: ${receitaMensal}, Burn: ${burnRate}, Runway: ${runwayMeses}`);
     
     // 4. Save calculated metrics
@@ -92,15 +88,17 @@ export async function processFinancialData(
         caixa_atual: caixaAtual,
         receita_mensal: receitaMensal,
         burn_rate: burnRate,
-        runway_meses: runwayMeses,
+        runway_meses: Math.round(runwayMeses),
         cash_flow: cashFlow,
-        mrr_growth: mrr_growth
+        mrr_growth: 0
       }]);
       
     if (metricasError) {
       console.error("Erro ao salvar métricas:", metricasError);
       throw metricasError;
     }
+    
+    console.log("Métricas salvas com sucesso");
     
     // 5. Clear existing transactions for this empresa to avoid duplicates
     const { error: deleteError } = await supabaseClient
@@ -112,7 +110,7 @@ export async function processFinancialData(
       console.warn("Aviso ao limpar transações existentes:", deleteError);
     }
     
-    // 6. Save ALL transactions (not just first 50)
+    // 6. Save transactions to Supabase
     if (allTransactions.length > 0) {
       const transacoesFormatadas = allTransactions.map(tx => ({
         empresa_id: empresaId,
@@ -122,7 +120,7 @@ export async function processFinancialData(
         categoria: tx.category || 'Outros',
         tipo: tx.amount > 0 ? 'receita' : 'despesa',
         metodo_pagamento: tx.type || 'Transferência',
-        recorrente: false // Will be determined through later analysis
+        recorrente: false
       }));
       
       console.log(`Salvando ${transacoesFormatadas.length} transações formatadas`);
@@ -148,13 +146,13 @@ export async function processFinancialData(
       console.log("Nenhuma transação para salvar");
     }
     
-    // 7. Generate insights (business rules)
+    // 7. Generate insights based on financial data
     await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, caixaAtual, supabaseClient);
     
     console.log("Processamento de dados financeiros concluído com sucesso");
     return true;
   } catch (error) {
     console.error("Erro ao processar dados financeiros:", error);
-    throw error; // Re-throw for proper handling at higher level
+    throw error;
   }
 }

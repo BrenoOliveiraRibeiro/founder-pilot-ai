@@ -19,7 +19,7 @@ export async function processCallback(
     );
   }
 
-  console.log(`Processing callback for item: ${itemId}, sandbox mode: ${sandbox}`);
+  console.log(`Processing callback for item: ${itemId}, empresa: ${empresaId}, sandbox mode: ${sandbox}`);
 
   try {
     // Get authentication token
@@ -63,8 +63,8 @@ export async function processCallback(
     const connector = connectorResult.success ? connectorResult.data : null;
     const institutionName = connector ? connector.name : item.connector.name;
     
-    // Update integration status in database
-    const { data, error } = await supabase
+    // Save integration to database
+    const { data: integrationData, error: integrationError } = await supabase
       .from("integracoes_bancarias")
       .insert([
         {
@@ -80,21 +80,29 @@ export async function processCallback(
             sandbox: sandbox
           }
         }
-      ]);
+      ])
+      .select()
+      .single();
 
-    if (error) {
-      console.error("Erro ao salvar integração:", error);
+    if (integrationError) {
+      console.error("Erro ao salvar integração:", integrationError);
       return new Response(
-        JSON.stringify({ error: "Falha ao salvar integração" }),
+        JSON.stringify({ error: "Falha ao salvar integração", details: integrationError }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
 
-    // Start initial data synchronization
+    console.log("Integração salva com sucesso:", integrationData);
+
+    // Start processing financial data
     await processFinancialData(empresaId, itemId, apiKey, pluggyClientId, pluggyClientSecret, sandbox, supabase);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Integração ativada com sucesso" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Integração ativada e dados sincronizados com sucesso",
+        integration: integrationData
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
