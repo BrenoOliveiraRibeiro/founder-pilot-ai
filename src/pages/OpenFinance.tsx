@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -11,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { pluggyAuth } from '@/utils/pluggyAuth';
 
 declare global {
   interface Window {
@@ -28,7 +29,6 @@ const OpenFinance = () => {
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
-  const [isProcessingData, setIsProcessingData] = useState(false);
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -40,8 +40,7 @@ const OpenFinance = () => {
     loading,
     syncing,
     handleSyncData,
-    formatDate,
-    fetchIntegrations
+    formatDate
   } = useOpenFinanceConnections();
 
   const {
@@ -100,107 +99,24 @@ const OpenFinance = () => {
     }
   }, [toast]);
 
-  const saveIntegrationToSupabase = async (itemId: string, institutionName: string) => {
-    if (!currentEmpresa?.id) {
-      throw new Error('Nenhuma empresa selecionada');
-    }
-
-    try {
-      console.log('Salvando integração no Supabase:', { itemId, institutionName });
-      
-      const { data, error } = await supabase
-        .from('integracoes_bancarias')
-        .insert([{
-          empresa_id: currentEmpresa.id,
-          nome_banco: institutionName,
-          tipo_conexao: 'Open Finance',
-          status: 'ativo',
-          detalhes: {
-            item_id: itemId,
-            sandbox: true,
-            provider: 'pluggy'
-          }
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao salvar integração:', error);
-        throw error;
-      }
-
-      console.log('Integração salva com sucesso:', data);
-      return data;
-    } catch (error) {
-      console.error('Erro ao salvar integração no Supabase:', error);
-      throw error;
-    }
-  };
-
-  const processFinancialDataWithSupabase = async (itemId: string) => {
-    if (!currentEmpresa?.id) {
-      throw new Error('Nenhuma empresa selecionada');
-    }
-
-    try {
-      console.log('Chamando edge function para processar dados financeiros');
-      setIsProcessingData(true);
-
-      const { data, error } = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'callback',
-          empresa_id: currentEmpresa.id,
-          item_id: itemId,
-          sandbox: true
-        }
-      });
-
-      if (error) {
-        console.error('Erro ao chamar edge function:', error);
-        throw error;
-      }
-
-      console.log('Edge function chamada com sucesso:', data);
-
-      // Sincronizar os dados financeiros
-      const syncResult = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'sync',
-          empresa_id: currentEmpresa.id,
-          sandbox: true
-        }
-      });
-
-      if (syncResult.error) {
-        console.error('Erro ao sincronizar dados:', syncResult.error);
-        throw syncResult.error;
-      }
-
-      console.log('Dados sincronizados com sucesso:', syncResult.data);
-      return syncResult.data;
-    } catch (error) {
-      console.error('Erro ao processar dados financeiros:', error);
-      throw error;
-    } finally {
-      setIsProcessingData(false);
-    }
-  };
-
   const fetchTransactions = async (accountId: string) => {
     try {
       console.log(`Fetching transactions for account: ${accountId}`);
-      const response = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'get_transactions',
-          account_id: accountId,
-        },
-      });
-  
-      if (response.error) {
-        throw new Error(`HTTP error! status: ${response.error.message}`);
+      const response = await pluggyAuth.makeAuthenticatedRequest(
+        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
+        {
+          method: 'GET',
+          headers: {
+            accept: 'application/json'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
-      const data = response.data;
+      
+      const data = await response.json();
       console.log('Transactions data:', data);
       return data;
     } catch (error) {
@@ -217,22 +133,25 @@ const OpenFinance = () => {
   const fetchAccountData = async (itemId: string) => {
     try {
       console.log(`Fetching account data for item: ${itemId}`);
-      const response = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'get_accounts',
-          item_id: itemId,
-        },
-      });
-  
-      if (response.error) {
-        throw new Error(`HTTP error! status: ${response.error.message}`);
+      const response = await pluggyAuth.makeAuthenticatedRequest(
+        `https://api.pluggy.ai/accounts?itemId=${itemId}`,
+        {
+          method: 'GET',
+          headers: {
+            accept: 'application/json'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
-      const data = response.data;
+      
+      const data = await response.json();
       console.log('Account data:', data);
       setAccountData(data);
-  
-      if (data && data.results && Array.isArray(data.results) && data.results.length > 0) {
+      
+      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
         // Definir a primeira conta como selecionada por padrão
         setSelectedAccountId(data.results[0].id);
         // Buscar transações para a primeira conta
@@ -241,7 +160,7 @@ const OpenFinance = () => {
           setTransactionsData(transactionsResponse);
         }
       }
-  
+      
       return data;
     } catch (error) {
       console.error('Error fetching account data:', error);
@@ -280,15 +199,6 @@ const OpenFinance = () => {
       return;
     }
 
-    if (!currentEmpresa?.id) {
-      toast({
-        title: "Erro",
-        description: "Você precisa ter uma empresa cadastrada para conectar contas bancárias.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Destroy any existing instance
     if (pluggyConnectInstanceRef.current) {
       console.log('Destroying existing Pluggy Connect instance');
@@ -304,63 +214,55 @@ const OpenFinance = () => {
     console.log("Iniciando conexão com Pluggy Connect...");
 
     try {
-      // Obter token para o widget do Pluggy via nossa edge function
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'authorize',
-          empresa_id: currentEmpresa.id,
-          institution: 'itau', // Pode ser configurável
-          sandbox: true
-        }
+      // Clear any cached token to force fresh authentication
+      pluggyAuth.clearToken();
+      
+      // Fetch connect token from Pluggy API using authenticated request
+      const response = await pluggyAuth.makeAuthenticatedRequest('https://api.pluggy.ai/connect_token', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          options: {
+            clientUserId: `user_${Date.now()}`, // Use unique user ID
+          },
+        }),
       });
 
-      if (tokenError || !tokenData?.connect_token) {
-        throw new Error('Falha ao obter token de conexão: ' + (tokenError?.message || 'Token não retornado'));
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      console.log('Token de conexão obtido com sucesso');
+      const tokenData = await response.json();
+      console.log('Connect token response:', tokenData);
+
+      if (!tokenData.accessToken) {
+        throw new Error('No access token received');
+      }
 
       // Create new instance
       pluggyConnectInstanceRef.current = new window.PluggyConnect({
-        connectToken: tokenData.connect_token,
+        connectToken: tokenData.accessToken,
         includeSandbox: true,
         onSuccess: async (itemData: any) => {
           console.log('Pluggy connect success!', itemData);
           console.log('Item ID:', itemData.item.id);
           
-          try {
-            // Armazenar o itemId
-            const receivedItemId = itemData.item.id;
-            setItemId(receivedItemId);
-            
-            // 1. Salvar a integração no Supabase
-            await saveIntegrationToSupabase(receivedItemId, itemData.item.connector?.name || 'Banco');
-            
-            // 2. Processar dados financeiros via edge function
-            await processFinancialDataWithSupabase(receivedItemId);
-            
-            // 3. Buscar dados da conta para exibição (opcional)
-            await fetchAccountData(receivedItemId);
-            
-            // 4. Atualizar lista de integrações
-            await fetchIntegrations();
-            
-            setIsConnecting(false);
-            setIsConnected(true);
-            
-            toast({
-              title: "Conexão estabelecida!",
-              description: "Sua conta bancária foi conectada e os dados foram sincronizados com sucesso.",
-            });
-          } catch (error) {
-            console.error('Erro ao processar dados após conexão:', error);
-            setIsConnecting(false);
-            toast({
-              title: "Erro ao processar dados",
-              description: error.message || "Conexão estabelecida, mas houve erro ao processar os dados.",
-              variant: "destructive",
-            });
-          }
+          // Armazenar o itemId
+          const receivedItemId = itemData.item.id;
+          setItemId(receivedItemId);
+          
+          // Buscar dados da conta usando o itemId
+          await fetchAccountData(receivedItemId);
+          
+          setIsConnecting(false);
+          setIsConnected(true);
+          toast({
+            title: "Conexão estabelecida!",
+            description: "Sua conta bancária foi conectada com sucesso via Pluggy OpenFinance.",
+          });
         },
         onError: (error: any) => {
           console.error('Pluggy Connect error:', error);
@@ -376,11 +278,11 @@ const OpenFinance = () => {
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
     } catch (error) {
-      console.error('Error connecting with Pluggy:', error);
+      console.error('Error fetching connect token or initializing Pluggy Connect:', error);
       setIsConnecting(false);
       toast({
         title: "Erro",
-        description: `Falha ao conectar: ${error.message || 'Erro desconhecido'}`,
+        description: `Falha ao obter token de conexão: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }
@@ -593,12 +495,6 @@ const OpenFinance = () => {
               Empresa: {currentEmpresa ? currentEmpresa.nome || 'Selecionada' : 'Não selecionada'}
             </span>
           </div>
-          {isProcessingData && (
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-3 w-3 animate-spin" />
-              <span className="text-blue-600">Processando dados financeiros...</span>
-            </div>
-          )}
         </div>
         
         {debugInfo && (
@@ -679,7 +575,7 @@ const OpenFinance = () => {
               <Button 
                 onClick={handlePluggyConnect}
                 className="w-full max-w-sm group transition-all duration-200"
-                disabled={isConnecting || !isScriptLoaded || !currentEmpresa?.id}
+                disabled={isConnecting || !isScriptLoaded}
               >
                 <span className="flex items-center">
                   {isConnecting ? 'Conectando...' : 'Abrir Widget Pluggy Connect'}
