@@ -3,13 +3,15 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Zap, Clock, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, Zap, Clock, Lock, ExternalLink } from "lucide-react";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { SecurityInfoItems } from "@/components/open-finance/SecurityInfoItems";
 import { TransactionsImporter } from "@/components/open-finance/TransactionsImporter";
 import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
+import { Link } from "react-router-dom";
 
 const OpenFinancePage = () => {
   const { activeIntegrations, syncing, handleSyncData, formatDate } = useOpenFinanceConnections();
@@ -38,6 +40,14 @@ const OpenFinancePage = () => {
             Conecte suas contas bancárias de forma segura e automática. 
             Importe suas transações e mantenha suas finanças sempre atualizadas.
           </p>
+          <div className="flex justify-center mt-4">
+            <Button asChild variant="outline">
+              <Link to="/pluggy-integration" className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Integração Pluggy
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="connect" className="w-full">
