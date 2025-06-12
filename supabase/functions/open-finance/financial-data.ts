@@ -32,7 +32,7 @@ export async function processFinancialData(
     const accounts = accountsResult.data.results;
     console.log(`Encontradas ${accounts.length} contas`);
     
-    // 2. Fetch transactions
+    // 2. Fetch transactions for the last 3 months
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     
@@ -59,7 +59,6 @@ export async function processFinancialData(
     console.log(`Encontradas ${allTransactions.length} transações ao total`);
     
     // 3. Calculate relevant metrics
-    // Current balance (sum of account balances)
     const caixaAtual = accounts.reduce((total, account) => total + (account.balance || 0), 0);
     
     // Separate transactions into revenue and expenses
@@ -78,9 +77,6 @@ export async function processFinancialData(
     // Calculate cash flow (revenue - expenses)
     const cashFlow = receitaMensal - burnRate;
     
-    // Calculate MRR growth (simplified)
-    const mrr_growth = 0; // Will be calculated with historical data later
-    
     console.log(`Métricas calculadas: Caixa: ${caixaAtual}, Receita: ${receitaMensal}, Burn: ${burnRate}, Runway: ${runwayMeses}`);
     
     // 4. Save calculated metrics
@@ -92,44 +88,71 @@ export async function processFinancialData(
         caixa_atual: caixaAtual,
         receita_mensal: receitaMensal,
         burn_rate: burnRate,
-        runway_meses: runwayMeses,
+        runway_meses: Math.round(runwayMeses),
         cash_flow: cashFlow,
-        mrr_growth: mrr_growth
+        mrr_growth: 0
       }]);
       
     if (metricasError) {
+      console.error("Erro ao salvar métricas:", metricasError);
       throw metricasError;
     }
     
-    // 5. Save relevant transactions
-    const transacoesFormatadas = allTransactions.slice(0, 50).map(tx => ({
-      empresa_id: empresaId,
-      descricao: tx.description,
-      valor: tx.amount,
-      data_transacao: tx.date,
-      categoria: tx.category || 'Outros',
-      tipo: tx.amount > 0 ? 'receita' : 'despesa',
-      metodo_pagamento: tx.type || 'Transferência',
-      recorrente: false // Will be determined through later analysis
-    }));
+    console.log("Métricas salvas com sucesso");
     
-    if (transacoesFormatadas.length > 0) {
-      const { error: txError } = await supabaseClient
-        .from("transacoes")
-        .insert(transacoesFormatadas);
-        
-      if (txError) {
-        console.error("Erro ao salvar transações:", txError);
-      }
+    // 5. Clear existing transactions for this empresa to avoid duplicates
+    const { error: deleteError } = await supabaseClient
+      .from("transacoes")
+      .delete()
+      .eq('empresa_id', empresaId);
+      
+    if (deleteError) {
+      console.warn("Aviso ao limpar transações existentes:", deleteError);
     }
     
-    // 6. Generate insights (business rules)
+    // 6. Save transactions to Supabase
+    if (allTransactions.length > 0) {
+      const transacoesFormatadas = allTransactions.map(tx => ({
+        empresa_id: empresaId,
+        descricao: tx.description || 'Transação sem descrição',
+        valor: tx.amount,
+        data_transacao: tx.date,
+        categoria: tx.category || 'Outros',
+        tipo: tx.amount > 0 ? 'receita' : 'despesa',
+        metodo_pagamento: tx.type || 'Transferência',
+        recorrente: false
+      }));
+      
+      console.log(`Salvando ${transacoesFormatadas.length} transações formatadas`);
+      
+      // Insert transactions in batches to avoid timeout
+      const batchSize = 100;
+      for (let i = 0; i < transacoesFormatadas.length; i += batchSize) {
+        const batch = transacoesFormatadas.slice(i, i + batchSize);
+        const { error: txError } = await supabaseClient
+          .from("transacoes")
+          .insert(batch);
+          
+        if (txError) {
+          console.error(`Erro ao salvar batch ${i + 1} de transações:`, txError);
+          throw txError;
+        } else {
+          console.log(`Batch ${Math.floor(i / batchSize) + 1} de transações salvo com sucesso`);
+        }
+      }
+      
+      console.log(`Total de ${transacoesFormatadas.length} transações salvas com sucesso`);
+    } else {
+      console.log("Nenhuma transação para salvar");
+    }
+    
+    // 7. Generate insights based on financial data
     await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, caixaAtual, supabaseClient);
     
     console.log("Processamento de dados financeiros concluído com sucesso");
     return true;
   } catch (error) {
     console.error("Erro ao processar dados financeiros:", error);
-    throw error; // Re-throw for proper handling at higher level
+    throw error;
   }
 }

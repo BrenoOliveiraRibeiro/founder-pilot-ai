@@ -8,25 +8,39 @@ import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
 
 serve(async (req) => {
+  console.log("=== Edge Function Open Finance Request ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {
-    // Use your specific Supabase and Pluggy credentials
+    // Environment validation
+    console.log("Environment check:");
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
-    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID");
+    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET");
 
-    console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
-    console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
+    console.log("- Supabase URL:", supabaseUrl);
+    console.log("- Service Key available:", !!supabaseServiceKey);
+    console.log("- Pluggy Client ID available:", !!pluggyClientId);
+    console.log("- Pluggy Client Secret available:", !!pluggyClientSecret);
 
-    // Inicializa cliente do Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    if (!supabaseServiceKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurado");
+    }
+
+    if (!pluggyClientId || !pluggyClientSecret) {
+      throw new Error("Credenciais Pluggy não configuradas");
+    }
 
     const requestData = await req.json();
+    console.log("Request data:", requestData);
+
     const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
 
     if (!empresa_id && action !== "test_connection") {
@@ -36,12 +50,17 @@ serve(async (req) => {
       );
     }
 
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Route to appropriate handler based on action
     switch (action) {
       case "test_connection":
+        console.log("Executando teste de conexão");
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
+        console.log("Executando autorização");
         return await authorizeConnection(
           empresa_id, 
           institution, 
@@ -52,6 +71,7 @@ serve(async (req) => {
         );
       
       case "callback":
+        console.log("Processando callback");
         return await processCallback(
           empresa_id, 
           item_id, 
@@ -63,6 +83,7 @@ serve(async (req) => {
         );
       
       case "sync":
+        console.log("Sincronizando dados");
         return await syncData(
           empresa_id, 
           requestData.integration_id, 
