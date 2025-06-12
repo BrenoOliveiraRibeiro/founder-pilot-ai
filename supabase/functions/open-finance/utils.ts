@@ -1,3 +1,4 @@
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,9 +7,10 @@ export const corsHeaders = {
 
 export async function getPluggyToken(pluggyClientId: string, pluggyClientSecret: string, sandbox: boolean) {
   try {
-    console.log(`Getting Pluggy token with client ID: ${pluggyClientId.substring(0, 8)}... (sandbox: ${sandbox})`);
+    // For debugging
+    console.log(`Getting Pluggy token with client ID: ${pluggyClientId.substring(0, 7)}... (sandbox: ${sandbox})`);
     
-    const baseUrl = 'https://api.pluggy.ai';
+    const baseUrl = sandbox ? 'https://api.pluggy.ai' : 'https://api.pluggy.ai';
     
     const response = await fetch(`${baseUrl}/auth`, {
       method: 'POST',
@@ -59,7 +61,7 @@ export async function callPluggyAPI(endpoint: string, method: string, apiKey: st
     
     const headers = {
       'Content-Type': 'application/json',
-      'X-API-KEY': apiKey,
+      'Authorization': `Bearer ${apiKey}`,
     };
     
     const options: RequestInit = {
@@ -136,7 +138,7 @@ export async function gerarInsights(empresaId: string, runwayMeses: number, burn
     }
 
     // Insight 3: Caixa atual
-    if (caixaAtual < 10000) {
+    if (caixaAtual < 1000) {
       insights.push({
         empresa_id: empresaId,
         tipo: "Alerta",
@@ -149,7 +151,7 @@ export async function gerarInsights(empresaId: string, runwayMeses: number, burn
     }
 
     // Insight 4: Receita mensal
-    if (receitaMensal > 50000) {
+    if (receitaMensal > 10000) {
       insights.push({
         empresa_id: empresaId,
         tipo: "Recomendação",
@@ -168,8 +170,6 @@ export async function gerarInsights(empresaId: string, runwayMeses: number, burn
 
       if (insightsError) {
         console.error("Erro ao salvar insights:", insightsError);
-      } else {
-        console.log(`${insights.length} insights salvos com sucesso`);
       }
     } else {
       console.log("Nenhum insight gerado");
