@@ -72,12 +72,12 @@ const OpenFinance = () => {
       script.src = 'https://cdn.pluggy.ai/pluggy-connect/v2.8.2/pluggy-connect.js';
       script.async = true;
       script.onload = () => {
-        console.log('Pluggy Connect script loaded successfully');
+        console.log('Pluggy Connect script loaded');
         setIsScriptLoaded(true);
         scriptLoadedRef.current = true;
       };
-      script.onerror = (error) => {
-        console.error('Failed to load Pluggy Connect script:', error);
+      script.onerror = () => {
+        console.error('Failed to load Pluggy Connect script');
         toast({
           title: "Erro",
           description: "Falha ao carregar o widget da Pluggy. Tente novamente.",
@@ -99,187 +99,6 @@ const OpenFinance = () => {
       };
     }
   }, [toast]);
-
-  const handlePluggyConnect = async () => {
-    console.log("=== Iniciando conexão Pluggy ===");
-    console.log("Script loaded:", isScriptLoaded);
-    console.log("Window.PluggyConnect available:", !!window.PluggyConnect);
-    console.log("Current empresa:", currentEmpresa);
-
-    if (!isScriptLoaded || !window.PluggyConnect) {
-      toast({
-        title: "Erro",
-        description: "Widget da Pluggy ainda não foi carregado. Aguarde um momento.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!currentEmpresa?.id) {
-      toast({
-        title: "Erro",
-        description: "Você precisa ter uma empresa cadastrada para conectar contas bancárias.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Destroy any existing instance
-    if (pluggyConnectInstanceRef.current) {
-      console.log('Destroying existing Pluggy Connect instance');
-      try {
-        pluggyConnectInstanceRef.current.destroy?.();
-      } catch (error) {
-        console.log('Error destroying previous instance:', error);
-      }
-      pluggyConnectInstanceRef.current = null;
-    }
-
-    setIsConnecting(true);
-    console.log("Obtendo token de conexão...");
-
-    try {
-      // Obter token para o widget do Pluggy via nossa edge function
-      console.log("Chamando edge function para obter token...");
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'authorize',
-          empresa_id: currentEmpresa.id,
-          institution: 'itau',
-          sandbox: true
-        }
-      });
-
-      console.log("Resposta da edge function:", { tokenData, tokenError });
-
-      if (tokenError) {
-        console.error('Erro da edge function:', tokenError);
-        throw new Error('Falha ao obter token de conexão: ' + tokenError.message);
-      }
-
-      if (!tokenData?.connect_token) {
-        console.error('Token não retornado:', tokenData);
-        throw new Error('Token de conexão não retornado pela API');
-      }
-
-      console.log('Token de conexão obtido com sucesso');
-
-      // Create new instance
-      console.log("Criando instância do Pluggy Connect...");
-      pluggyConnectInstanceRef.current = new window.PluggyConnect({
-        connectToken: tokenData.connect_token,
-        includeSandbox: true,
-        onSuccess: async (itemData: any) => {
-          console.log('=== Pluggy connect success! ===', itemData);
-          console.log('Item ID:', itemData.item.id);
-          
-          try {
-            const receivedItemId = itemData.item.id;
-            setItemId(receivedItemId);
-            
-            // 1. Salvar a integração no Supabase
-            console.log("Salvando integração no Supabase...");
-            const { data: integrationData, error: integrationError } = await supabase
-              .from('integracoes_bancarias')
-              .insert([{
-                empresa_id: currentEmpresa.id,
-                nome_banco: itemData.item.connector?.name || 'Banco',
-                tipo_conexao: 'Open Finance',
-                status: 'ativo',
-                detalhes: {
-                  item_id: receivedItemId,
-                  sandbox: true,
-                  provider: 'pluggy'
-                }
-              }])
-              .select()
-              .single();
-
-            if (integrationError) {
-              console.error('Erro ao salvar integração:', integrationError);
-              throw integrationError;
-            }
-
-            console.log('Integração salva com sucesso:', integrationData);
-            
-            // 2. Processar dados financeiros via edge function
-            console.log("Processando dados financeiros via callback...");
-            const { data: callbackData, error: callbackError } = await supabase.functions.invoke('open-finance', {
-              body: {
-                action: 'callback',
-                empresa_id: currentEmpresa.id,
-                item_id: receivedItemId,
-                sandbox: true
-              }
-            });
-
-            if (callbackError) {
-              console.error('Erro no callback:', callbackError);
-              throw callbackError;
-            }
-
-            console.log('Callback processado:', callbackData);
-
-            // 3. Sincronizar dados
-            console.log("Sincronizando dados...");
-            const { data: syncData, error: syncError } = await supabase.functions.invoke('open-finance', {
-              body: {
-                action: 'sync',
-                empresa_id: currentEmpresa.id,
-                sandbox: true
-              }
-            });
-
-            if (syncError) {
-              console.error('Erro na sincronização:', syncError);
-              throw syncError;
-            }
-
-            console.log('Dados sincronizados:', syncData);
-            
-            // 4. Atualizar lista de integrações
-            await fetchIntegrations();
-            
-            setIsConnecting(false);
-            setIsConnected(true);
-            
-            toast({
-              title: "Conexão estabelecida!",
-              description: `Sua conta bancária foi conectada e ${syncData.transactionCount || 0} transações foram sincronizadas.`,
-            });
-          } catch (error) {
-            console.error('Erro ao processar dados após conexão:', error);
-            setIsConnecting(false);
-            toast({
-              title: "Erro ao processar dados",
-              description: error.message || "Conexão estabelecida, mas houve erro ao processar os dados.",
-              variant: "destructive",
-            });
-          }
-        },
-        onError: (error: any) => {
-          console.error('Pluggy Connect error:', error);
-          setIsConnecting(false);
-          toast({
-            title: "Erro na conexão",
-            description: "Ocorreu um erro ao conectar com o banco. Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
-
-      console.log('Inicializando widget Pluggy Connect...');
-      pluggyConnectInstanceRef.current.init();
-    } catch (error) {
-      console.error('Erro geral na conexão:', error);
-      setIsConnecting(false);
-      toast({
-        title: "Erro",
-        description: `Falha ao conectar: ${error.message || 'Erro desconhecido'}`,
-        variant: "destructive",
-      });
-    }
-  };
 
   const saveIntegrationToSupabase = async (itemId: string, institutionName: string) => {
     if (!currentEmpresa?.id) {
@@ -448,6 +267,122 @@ const OpenFinance = () => {
       console.error('Error fetching transactions for selected account:', error);
     } finally {
       setIsLoadingTransactions(false);
+    }
+  };
+
+  const handlePluggyConnect = async () => {
+    if (!isScriptLoaded || !window.PluggyConnect) {
+      toast({
+        title: "Erro",
+        description: "Widget da Pluggy ainda não foi carregado. Aguarde um momento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentEmpresa?.id) {
+      toast({
+        title: "Erro",
+        description: "Você precisa ter uma empresa cadastrada para conectar contas bancárias.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Destroy any existing instance
+    if (pluggyConnectInstanceRef.current) {
+      console.log('Destroying existing Pluggy Connect instance');
+      try {
+        pluggyConnectInstanceRef.current.destroy?.();
+      } catch (error) {
+        console.log('Error destroying previous instance:', error);
+      }
+      pluggyConnectInstanceRef.current = null;
+    }
+
+    setIsConnecting(true);
+    console.log("Iniciando conexão com Pluggy Connect...");
+
+    try {
+      // Obter token para o widget do Pluggy via nossa edge function
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('open-finance', {
+        body: {
+          action: 'authorize',
+          empresa_id: currentEmpresa.id,
+          institution: 'itau', // Pode ser configurável
+          sandbox: true
+        }
+      });
+
+      if (tokenError || !tokenData?.connect_token) {
+        throw new Error('Falha ao obter token de conexão: ' + (tokenError?.message || 'Token não retornado'));
+      }
+
+      console.log('Token de conexão obtido com sucesso');
+
+      // Create new instance
+      pluggyConnectInstanceRef.current = new window.PluggyConnect({
+        connectToken: tokenData.connect_token,
+        includeSandbox: true,
+        onSuccess: async (itemData: any) => {
+          console.log('Pluggy connect success!', itemData);
+          console.log('Item ID:', itemData.item.id);
+          
+          try {
+            // Armazenar o itemId
+            const receivedItemId = itemData.item.id;
+            setItemId(receivedItemId);
+            
+            // 1. Salvar a integração no Supabase
+            await saveIntegrationToSupabase(receivedItemId, itemData.item.connector?.name || 'Banco');
+            
+            // 2. Processar dados financeiros via edge function
+            await processFinancialDataWithSupabase(receivedItemId);
+            
+            // 3. Buscar dados da conta para exibição (opcional)
+            await fetchAccountData(receivedItemId);
+            
+            // 4. Atualizar lista de integrações
+            await fetchIntegrations();
+            
+            setIsConnecting(false);
+            setIsConnected(true);
+            
+            toast({
+              title: "Conexão estabelecida!",
+              description: "Sua conta bancária foi conectada e os dados foram sincronizados com sucesso.",
+            });
+          } catch (error) {
+            console.error('Erro ao processar dados após conexão:', error);
+            setIsConnecting(false);
+            toast({
+              title: "Erro ao processar dados",
+              description: error.message || "Conexão estabelecida, mas houve erro ao processar os dados.",
+              variant: "destructive",
+            });
+          }
+        },
+        onError: (error: any) => {
+          console.error('Pluggy Connect error:', error);
+          setIsConnecting(false);
+          toast({
+            title: "Erro na conexão",
+            description: "Ocorreu um erro ao conectar com o banco. Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      console.log('Initializing Pluggy Connect widget...');
+      pluggyConnectInstanceRef.current.init();
+    } catch (error) {
+      console.error('Error connecting with Pluggy:', error);
+      setIsConnecting(false);
+      toast({
+        title: "Erro",
+        description: `Falha ao conectar: ${error.message || 'Erro desconhecido'}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -656,11 +591,6 @@ const OpenFinance = () => {
           <div className="flex items-center gap-2">
             <span className={`font-medium ${currentEmpresa ? 'text-green-600' : 'text-red-500'}`}>
               Empresa: {currentEmpresa ? currentEmpresa.nome || 'Selecionada' : 'Não selecionada'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`font-medium ${isScriptLoaded ? 'text-green-600' : 'text-orange-500'}`}>
-              Script Pluggy: {isScriptLoaded ? 'Carregado' : 'Carregando...'}
             </span>
           </div>
           {isProcessingData && (

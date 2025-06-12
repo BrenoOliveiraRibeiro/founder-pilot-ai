@@ -14,34 +14,19 @@ serve(async (req) => {
   }
 
   try {
-    console.log("=== Edge Function Open Finance Request ===");
-    console.log("Method:", req.method);
-    console.log("URL:", req.url);
-    
     // Use your specific Supabase and Pluggy credentials
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
     // Get Pluggy credentials from Supabase secrets
-    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID");
-    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET");
+    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
+    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
 
     console.log("Environment check:");
     console.log("- Supabase URL:", supabaseUrl);
     console.log("- Service Key available:", !!supabaseServiceKey);
     console.log("- Pluggy Client ID available:", !!pluggyClientId);
     console.log("- Pluggy Client Secret available:", !!pluggyClientSecret);
-    
-    if (!supabaseServiceKey) {
-      console.error("Missing Supabase Service Role Key");
-      return new Response(
-        JSON.stringify({ 
-          error: "Configuração do servidor incompleta",
-          details: "SUPABASE_SERVICE_ROLE_KEY não encontrada"
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
     
     if (!pluggyClientId || !pluggyClientSecret) {
       console.error("Missing Pluggy credentials");
@@ -72,11 +57,9 @@ serve(async (req) => {
     // Route to appropriate handler based on action
     switch (action) {
       case "test_connection":
-        console.log("Executando teste de conexão");
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
-        console.log("Executando autorização");
         return await authorizeConnection(
           empresa_id, 
           institution, 
@@ -87,7 +70,6 @@ serve(async (req) => {
         );
       
       case "callback":
-        console.log("Executando callback");
         return await processCallback(
           empresa_id, 
           item_id, 
@@ -99,7 +81,6 @@ serve(async (req) => {
         );
       
       case "sync":
-        console.log("Executando sincronização");
         return await syncData(
           empresa_id, 
           requestData.integration_id, 
@@ -111,7 +92,6 @@ serve(async (req) => {
         );
       
       default:
-        console.error("Ação não suportada:", action);
         return new Response(
           JSON.stringify({ error: "Ação não suportada" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
