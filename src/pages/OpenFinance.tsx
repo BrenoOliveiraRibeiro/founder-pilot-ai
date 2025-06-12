@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -12,7 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
-import { TransactionImporter } from "@/components/open-finance/TransactionImporter";
 
 declare global {
   interface Window {
@@ -329,7 +329,7 @@ const OpenFinance = () => {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Account Selection and Info */}
             <div className="lg:col-span-1">
-              <Card className="p-6 mb-6">
+              <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
                 
                 {accountData?.results && accountData.results.length > 0 && (
@@ -364,9 +364,6 @@ const OpenFinance = () => {
                   </div>
                 )}
               </Card>
-
-              {/* Adicionar componente de importação */}
-              <TransactionImporter itemId={itemId} />
             </div>
 
             {/* Transactions */}
