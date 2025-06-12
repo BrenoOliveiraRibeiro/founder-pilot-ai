@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Download, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Download, AlertCircle, CheckCircle, RefreshCw, Bug } from 'lucide-react';
 
 interface ImportLog {
   total_processed: number;
@@ -26,6 +26,7 @@ export const TransactionImporter: React.FC<TransactionImporterProps> = ({ itemId
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importLog, setImportLog] = useState<ImportLog | null>(null);
+  const [errorDetails, setErrorDetails] = useState<any>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
@@ -51,9 +52,15 @@ export const TransactionImporter: React.FC<TransactionImporterProps> = ({ itemId
     setIsImporting(true);
     setProgress(10);
     setImportLog(null);
+    setErrorDetails(null);
 
     try {
       console.log('Iniciando importação de transações...');
+      console.log('Dados da requisição:', {
+        empresa_id: currentEmpresa.id,
+        item_id: itemId
+      });
+      
       setProgress(25);
 
       // Chamar a Edge Function para importar transações
@@ -64,13 +71,22 @@ export const TransactionImporter: React.FC<TransactionImporterProps> = ({ itemId
         }
       });
 
+      console.log('Resposta da Edge Function:', { data, error });
       setProgress(100);
 
       if (error) {
-        throw error;
+        console.error('Erro da Edge Function:', error);
+        setErrorDetails(error);
+        throw new Error(`Erro da Edge Function: ${error.message || JSON.stringify(error)}`);
+      }
+
+      if (!data) {
+        throw new Error('Nenhum dado retornado da Edge Function');
       }
 
       if (!data.success) {
+        console.error('Falha na importação:', data);
+        setErrorDetails(data);
         throw new Error(data.error || 'Falha na importação');
       }
 
@@ -85,9 +101,17 @@ export const TransactionImporter: React.FC<TransactionImporterProps> = ({ itemId
 
     } catch (error: any) {
       console.error('Erro na importação:', error);
+      setErrorDetails(error);
+      
+      let errorMessage = "Falha ao importar transações da Pluggy";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro na importação",
-        description: error.message || "Falha ao importar transações da Pluggy",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -152,6 +176,35 @@ export const TransactionImporter: React.FC<TransactionImporterProps> = ({ itemId
             </div>
             <Progress value={progress} className="w-full" />
           </div>
+        )}
+
+        {/* Detalhes do erro */}
+        {errorDetails && (
+          <Alert variant="destructive">
+            <Bug className="h-4 w-4" />
+            <AlertDescription>
+              <details>
+                <summary className="cursor-pointer font-medium">
+                  Detalhes do erro (clique para expandir)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <div className="text-xs bg-destructive/5 p-2 rounded overflow-auto max-h-40">
+                    <pre>{JSON.stringify(errorDetails, null, 2)}</pre>
+                  </div>
+                  {currentEmpresa?.id && (
+                    <div className="text-xs">
+                      <strong>Empresa ID:</strong> {currentEmpresa.id}
+                    </div>
+                  )}
+                  {itemId && (
+                    <div className="text-xs">
+                      <strong>Item ID:</strong> {itemId}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Log da importação */}
