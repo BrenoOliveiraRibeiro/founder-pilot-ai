@@ -4,25 +4,30 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Zap, Clock, Lock } from "lucide-react";
-import { ProvidersList } from "@/components/open-finance/ProvidersList";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { SecurityInfoItems } from "@/components/open-finance/SecurityInfoItems";
 import { TransactionsImporter } from "@/components/open-finance/TransactionsImporter";
+import { BankConnectionCard } from "@/components/open-finance/BankConnectionCard";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
-
-// Mock providers data - em uma implementação real, isso viria de uma API
-const mockProviders = [
-  { id: "bradesco", name: "Bradesco", logo: "B", popular: true },
-  { id: "itau", name: "Itaú", logo: "I", popular: true },
-  { id: "santander", name: "Santander", logo: "S", popular: true },
-  { id: "bb", name: "Banco do Brasil", logo: "BB", popular: false },
-  { id: "cef", name: "Caixa Econômica", logo: "C", popular: false },
-  { id: "nubank", name: "Nubank", logo: "N", popular: true },
-];
+import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 
 const OpenFinancePage = () => {
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const { activeIntegrations, syncing, handleSyncData, formatDate } = useOpenFinanceConnections();
+  const {
+    selectedProvider,
+    setSelectedProvider,
+    connecting,
+    connectionProgress,
+    connectionStatus,
+    connectContainerRef,
+    pluggyWidgetLoaded,
+    useSandbox,
+    setUseSandbox,
+    providers,
+    handleConnect,
+    testPluggyConnection,
+    debugInfo
+  } = useOpenFinanceConnection();
 
   return (
     <AppLayout>
@@ -44,11 +49,31 @@ const OpenFinancePage = () => {
           </TabsList>
 
           <TabsContent value="connect" className="space-y-6">
-            <ProvidersList 
-              providers={mockProviders}
+            <BankConnectionCard
+              providers={providers}
               selectedProvider={selectedProvider}
               setSelectedProvider={setSelectedProvider}
+              connecting={connecting}
+              connectionProgress={connectionProgress}
+              connectionStatus={connectionStatus}
+              pluggyWidgetLoaded={pluggyWidgetLoaded}
+              useSandbox={useSandbox}
+              handleConnect={handleConnect}
+              connectContainerRef={connectContainerRef}
             />
+            
+            {debugInfo && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardHeader>
+                  <CardTitle className="text-yellow-800">Debug Info</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs text-yellow-700 overflow-auto">
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="active" className="space-y-6">
