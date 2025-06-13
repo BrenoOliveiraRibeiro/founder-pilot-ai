@@ -36,13 +36,14 @@ const Index = () => {
         console.log("Usuário autenticado:", user.email);
         console.log("Empresas:", empresas.length);
         
-        // Se o usuário está autenticado mas não tem empresa, enviar para onboarding
-        if (empresas.length === 0) {
-          console.log("Redirecionando para onboarding");
-          navigate("/onboarding");
-        } else {
-          console.log("Redirecionando para dashboard");
+        // Se o usuário está autenticado e tem empresas, enviar direto para o dashboard
+        if (empresas.length > 0) {
+          console.log("Usuário com empresas, redirecionando para dashboard");
           navigate("/dashboard");
+        } else {
+          // Se não tem empresa, enviar para onboarding
+          console.log("Usuário sem empresas, redirecionando para onboarding");
+          navigate("/onboarding");
         }
       } else {
         console.log("Usuário não autenticado, permanecendo na landing page");

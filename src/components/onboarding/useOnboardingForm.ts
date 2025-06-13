@@ -134,14 +134,14 @@ export const useOnboardingForm = () => {
       
       toast({
         title: "Empresa cadastrada com sucesso!",
-        description: `${empresa.nome} foi vinculada ao seu perfil. Agora vamos conectar seus dados financeiros.`,
+        description: `${empresa.nome} foi vinculada ao seu perfil.`,
       });
 
       // 5. Atualizar lista de empresas e definir como empresa atual
       await refreshEmpresas();
       
-      // 6. Navegar para conectar dados financeiros
-      navigate("/connect");
+      // 6. Navegar diretamente para o dashboard se a empresa foi criada com sucesso
+      navigate("/dashboard");
       
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);

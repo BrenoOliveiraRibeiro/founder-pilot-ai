@@ -60,11 +60,10 @@ export const ProtectedRoute = ({
   // Se precisar de autenticação e não estiver autenticado
   if (requireAuth && !user) {
     console.log("Redirecionando para autenticação:", redirectTo);
-    // Salvar origem para redirecionamento posterior
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Se estiver autenticado, verificar se precisa de onboarding
+  // Se estiver autenticado, verificar se precisa de onboarding ou pode ir direto para o dashboard
   if (
     requireAuth && 
     user && 
@@ -73,12 +72,11 @@ export const ProtectedRoute = ({
     !location.pathname.includes("/connect") && 
     !location.pathname.includes("/open-finance")
   ) {
-    console.log("Redirecionando para onboarding");
+    console.log("Usuário sem empresas, redirecionando para onboarding");
     return <Navigate to="/onboarding" replace />;
   }
 
   // Se NÃO precisar de autenticação (como na página de auth) mas o usuário já estiver autenticado
-  // Redirecionar para o dashboard sempre após login bem-sucedido
   if (!requireAuth && user) {
     // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
     if (empresas.length === 0) {
