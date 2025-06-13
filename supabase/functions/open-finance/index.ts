@@ -125,40 +125,22 @@ async function processFinancialDataDirectly(
     const transactions = transactionsData.results;
     console.log(`Processando ${transactions.length} transações`);
 
-    // Preparar dados das transações para inserção
+    // Preparar dados das transações para inserção na tabela 'transacoes'
     const transacoesParaInserir = transactions.map((tx: any) => ({
       empresa_id: empresaId,
-      item_id: itemId,
-      account_id: accountId,
-      transaction_id: tx.id,
       descricao: tx.description || 'Transação',
       valor: tx.amount || 0,
       data_transacao: tx.date,
       categoria: tx.category || 'Outros',
-      subcategoria: tx.subcategory || null,
       tipo: tx.amount > 0 ? 'receita' : 'despesa',
       metodo_pagamento: tx.type || 'Transferência',
-      moeda: tx.currencyCode || 'BRL',
-      status: tx.status || 'posted',
-      merchant_name: tx.merchant?.name || null,
-      merchant_category: tx.merchant?.category || null,
-      location_country: tx.location?.country || null,
-      location_city: tx.location?.city || null,
-      location_coordinates: tx.location?.coordinates ? JSON.stringify(tx.location.coordinates) : null,
-      reference: tx.reference || null,
-      balance_after: tx.balance || null,
-      tags: tx.tags ? JSON.stringify(tx.tags) : null,
-      full_data: JSON.stringify(tx),
-      sandbox: sandbox
+      recorrente: false // Pode ser determinado através de análise posterior
     }));
 
-    // Inserir transações usando upsert para evitar duplicatas
+    // Inserir transações na tabela 'transacoes'
     const { data: insertedData, error: insertError } = await supabase
-      .from("transacoes_bancarias")
-      .upsert(transacoesParaInserir, { 
-        onConflict: 'transaction_id,empresa_id',
-        ignoreDuplicates: false 
-      })
+      .from("transacoes")
+      .insert(transacoesParaInserir)
       .select();
 
     if (insertError) {
@@ -166,7 +148,7 @@ async function processFinancialDataDirectly(
       throw insertError;
     }
 
-    console.log(`${transacoesParaInserir.length} transações salvas com sucesso`);
+    console.log(`${transacoesParaInserir.length} transações salvas com sucesso na tabela 'transacoes'`);
 
     // Calcular métricas básicas
     const receitas = transactions.filter((tx: any) => tx.amount > 0);
@@ -179,7 +161,7 @@ async function processFinancialDataDirectly(
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Transações processadas e salvas com sucesso",
+        message: "Transações processadas e salvas com sucesso na tabela 'transacoes'",
         data: {
           transacoes_salvas: transacoesParaInserir.length,
           total_receitas: totalReceitas,
