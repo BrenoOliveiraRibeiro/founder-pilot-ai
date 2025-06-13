@@ -22,11 +22,11 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
     error: null,
   });
 
-  const { currentEmpresa } = useAuth();
+  const { currentEmpresa, user } = useAuth();
 
   useEffect(() => {
     const fetchTransactionsMetrics = async () => {
-      if (!currentEmpresa?.id) {
+      if (!currentEmpresa?.id || !user?.id) {
         setMetrics(prev => ({ ...prev, loading: false }));
         return;
       }
@@ -34,15 +34,20 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
       try {
         setMetrics(prev => ({ ...prev, loading: true, error: null }));
 
-        // Buscar todas as transações da empresa
+        console.log("Buscando transações para empresa:", currentEmpresa.id);
+
+        // Buscar todas as transações da empresa do usuário atual
         const { data: transacoes, error } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id);
 
         if (error) {
+          console.error("Erro ao buscar transações:", error);
           throw error;
         }
+
+        console.log("Transações encontradas:", transacoes?.length || 0);
 
         if (!transacoes || transacoes.length === 0) {
           setMetrics(prev => ({ ...prev, loading: false }));
@@ -62,6 +67,8 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
           return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
         });
 
+        console.log("Transações do mês atual:", transacoesMesAtual.length);
+
         // Calcular entradas e saídas do mês atual
         const entradasMesAtual = transacoesMesAtual
           .filter(tx => tx.tipo === 'receita')
@@ -73,6 +80,13 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
 
         const fluxoCaixaMesAtual = entradasMesAtual - saidasMesAtual;
 
+        console.log("Métricas calculadas:", {
+          saldoCaixa,
+          entradasMesAtual,
+          saidasMesAtual,
+          fluxoCaixaMesAtual
+        });
+
         setMetrics({
           saldoCaixa,
           entradasMesAtual,
@@ -82,7 +96,7 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
           error: null,
         });
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao buscar métricas de transações:', error);
         setMetrics(prev => ({
           ...prev,
@@ -93,7 +107,7 @@ export const useTransactionsMetrics = (): TransactionsMetrics => {
     };
 
     fetchTransactionsMetrics();
-  }, [currentEmpresa?.id]);
+  }, [currentEmpresa?.id, user?.id]);
 
   return metrics;
 };

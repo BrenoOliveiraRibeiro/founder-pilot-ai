@@ -19,7 +19,7 @@ export const useOnboardingForm = () => {
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [documents, setDocuments] = useState<Array<{ file: File, preview?: string }>>([]);
 
-  const { user, refreshEmpresas } = useAuth();
+  const { user, refreshEmpresas, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { uploadLogo, uploadDocuments } = useOnboardingUpload();
@@ -68,7 +68,7 @@ export const useOnboardingForm = () => {
   const handleSubmit = async () => {
     const values = form.getValues();
     
-    if (!user) {
+    if (!user?.id) {
       toast({
         title: "Erro",
         description: "Você precisa estar logado para continuar.",
@@ -81,12 +81,14 @@ export const useOnboardingForm = () => {
     setIsLoading(true);
     
     try {
-      // 1. Criar empresa
+      console.log("Criando empresa para usuário:", user.id);
+      
+      // 1. Criar empresa vinculada ao usuário
       const { data: empresa, error } = await supabase
         .from('empresas')
         .insert([
           {
-            user_id: user.id,
+            user_id: user.id, // Garantir vinculação ao usuário
             nome: values.nome,
             segmento: values.segmento || null,
             estagio: values.estagio || null,
@@ -98,31 +100,53 @@ export const useOnboardingForm = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao criar empresa:", error);
+        throw error;
+      }
+      
+      console.log("Empresa criada com sucesso:", empresa);
       
       // 2. Fazer upload do logo se existir
       if (logoFile && empresa) {
-        await uploadLogo(logoFile, user.id, empresa.id);
+        try {
+          await uploadLogo(logoFile, user.id, empresa.id);
+          console.log("Logo enviado com sucesso");
+        } catch (logoError) {
+          console.error("Erro ao enviar logo:", logoError);
+          // Não falhar o processo todo por erro de upload
+        }
       }
       
       // 3. Fazer upload dos documentos
       if (documents.length > 0) {
-        await uploadDocuments(documents, user.id, empresa.id);
+        try {
+          await uploadDocuments(documents, user.id, empresa.id);
+          console.log("Documentos enviados com sucesso");
+        } catch (docsError) {
+          console.error("Erro ao enviar documentos:", docsError);
+          // Não falhar o processo todo por erro de upload
+        }
       }
+      
+      // 4. Atualizar o perfil do usuário se necessário
+      await refreshProfile();
       
       toast({
         title: "Empresa cadastrada com sucesso!",
-        description: "Agora vamos conectar seus dados financeiros.",
+        description: `${empresa.nome} foi vinculada ao seu perfil. Agora vamos conectar seus dados financeiros.`,
       });
 
-      // Force reload the auth context to get updated empresas list
+      // 5. Atualizar lista de empresas e definir como empresa atual
       await refreshEmpresas();
+      
+      // 6. Navegar para conectar dados financeiros
       navigate("/connect");
       
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
       toast({
-        title: "Erro",
+        title: "Erro ao cadastrar empresa",
         description: error.message || "Não foi possível cadastrar a empresa. Tente novamente.",
         variant: "destructive",
       });

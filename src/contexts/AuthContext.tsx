@@ -17,6 +17,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   loading: boolean;
   refreshEmpresas: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,35 +27,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [currentEmpresa, setCurrentEmpresa] = useState<Empresa | null>(null);
+  const [currentEmpresa, setCurrentEmpresaState] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Função para salvar a empresa atual no localStorage
+  const setCurrentEmpresa = (empresa: Empresa) => {
+    setCurrentEmpresaState(empresa);
+    if (empresa) {
+      localStorage.setItem('currentEmpresaId', empresa.id);
+    } else {
+      localStorage.removeItem('currentEmpresaId');
+    }
+  };
+
+  // Função para recuperar a empresa atual do localStorage
+  const restoreCurrentEmpresa = (empresasList: Empresa[]) => {
+    const savedEmpresaId = localStorage.getItem('currentEmpresaId');
+    if (savedEmpresaId && empresasList.length > 0) {
+      const savedEmpresa = empresasList.find(emp => emp.id === savedEmpresaId);
+      if (savedEmpresa) {
+        setCurrentEmpresaState(savedEmpresa);
+        return;
+      }
+    }
+    
+    // Se não encontrar a empresa salva, usar a primeira disponível
+    if (empresasList.length > 0) {
+      setCurrentEmpresa(empresasList[0]);
+    }
+  };
 
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Buscando perfil do usuário:", userId);
-      // Buscar perfil
-      const { data: profileData, error: profileError } = await supabase
+      
+      // Buscar ou criar perfil
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileError) {
-        if (profileError.code !== 'PGRST116') { // Ignore "não encontrado" para novos usuários
-          console.error("Erro ao buscar perfil:", profileError);
-          throw profileError;
+      if (profileError && profileError.code === 'PGRST116') {
+        // Perfil não existe, criar um novo
+        console.log("Criando novo perfil para o usuário");
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: userId,
+              email: user?.email || null,
+              nome: user?.email?.split('@')[0] || null,
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Erro ao criar perfil:", createError);
+          throw createError;
         }
+        
+        profileData = newProfile;
+      } else if (profileError) {
+        console.error("Erro ao buscar perfil:", profileError);
+        throw profileError;
       }
       
       if (profileData) {
-        console.log("Perfil encontrado:", profileData);
+        console.log("Perfil encontrado/criado:", profileData);
         setProfile(profileData as Profile);
-      } else {
-        console.log("Perfil não encontrado, usuário pode ser novo");
       }
 
-      // Buscar empresas
+      // Buscar empresas do usuário
       await refreshEmpresas();
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
@@ -65,6 +111,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(profileData as Profile);
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
     }
   };
 
@@ -79,17 +142,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: empresasData, error: empresasError } = await supabase
         .from('empresas')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (empresasError) throw empresasError;
       
       console.log("Empresas carregadas:", empresasData);
       setEmpresas(empresasData as Empresa[]);
 
-      // Se houver empresas, definir a primeira como atual se nenhuma for selecionada
-      if (empresasData && empresasData.length > 0 && !currentEmpresa) {
-        console.log("Definindo empresa atual:", empresasData[0]);
-        setCurrentEmpresa(empresasData[0] as Empresa);
+      // Restaurar a empresa atual ou definir a primeira
+      if (empresasData && empresasData.length > 0) {
+        restoreCurrentEmpresa(empresasData as Empresa[]);
+      } else {
+        setCurrentEmpresaState(null);
+        localStorage.removeItem('currentEmpresaId');
       }
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
@@ -114,7 +180,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_OUT') {
           setProfile(null);
           setEmpresas([]);
-          setCurrentEmpresa(null);
+          setCurrentEmpresaState(null);
+          localStorage.removeItem('currentEmpresaId');
         }
         
         // Se o usuário fizer login, buscar perfil e empresas
@@ -159,7 +226,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     console.log("Tentando cadastro para:", email);
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      });
       console.log("Resposta de cadastro:", data ? "sucesso" : "falha", error);
       return { error };
     } catch (error) {
@@ -170,6 +243,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     console.log("Iniciando logout");
+    // Limpar dados locais antes do logout
+    localStorage.removeItem('currentEmpresaId');
     await supabase.auth.signOut();
     console.log("Logout concluído");
   };
@@ -185,7 +260,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     loading,
-    refreshEmpresas
+    refreshEmpresas,
+    refreshProfile
   };
 
   return (
