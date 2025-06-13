@@ -78,7 +78,7 @@ export const ProtectedRoute = ({
   }
 
   // Se NÃO precisar de autenticação (como na página de auth) mas o usuário já estiver autenticado
-  // Redirecionar para o dashboard ou onboarding conforme necessário
+  // Redirecionar para o dashboard sempre após login bem-sucedido
   if (!requireAuth && user) {
     // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
     if (empresas.length === 0) {

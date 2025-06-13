@@ -47,7 +47,8 @@ const Auth = () => {
           description: "Bem-vindo de volta!",
         });
         
-        // O redirecionamento será feito pelo ProtectedRoute
+        // Redirecionar diretamente para o dashboard após login bem-sucedido
+        navigate("/dashboard");
       } else {
         const { error } = await signUp(values.email, values.password);
         if (error) throw error;
