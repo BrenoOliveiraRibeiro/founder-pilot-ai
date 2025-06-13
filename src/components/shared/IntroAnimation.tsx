@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -14,6 +13,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
   className
 }) => {
   const [showAnimation, setShowAnimation] = useState(true);
+  const [playSound, setPlaySound] = useState(false);
   const [showTagline, setShowTagline] = useState(false);
 
   useEffect(() => {
@@ -25,6 +25,11 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       if (onComplete) onComplete();
       return;
     }
+
+    // Reproduz o som após um pequeno delay
+    const soundTimer = setTimeout(() => {
+      setPlaySound(true);
+    }, 800);
 
     // Exibe o slogan após um delay
     const taglineTimer = setTimeout(() => {
@@ -39,6 +44,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
     }, 6500);
 
     return () => {
+      clearTimeout(soundTimer);
       clearTimeout(taglineTimer);
       clearTimeout(animationTimer);
     };
@@ -57,6 +63,8 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       exit={{ opacity: 0 }}
       transition={{ duration: 1.0 }}
     >
+      {playSound && <IntroSound />}
+      
       <motion.div
         className="flex flex-col items-center justify-center space-y-10"
         initial={{ scale: 0.9, opacity: 0 }}
@@ -95,4 +103,23 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({
       </motion.div>
     </motion.div>
   );
+};
+
+// Componente para reproduzir o som de introdução
+const IntroSound = () => {
+  useEffect(() => {
+    try {
+      const audio = new Audio();
+      // Som suave e sofisticado similar ao do macOS/Superhuman
+      audio.src = "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3";
+      audio.volume = 0.4;
+      audio.play().catch(e => console.log("Erro ao reproduzir som:", e));
+    } catch (error) {
+      console.log("Erro ao criar objeto de áudio:", error);
+    }
+    
+    return () => {};
+  }, []);
+  
+  return null;
 };

@@ -9,15 +9,9 @@ import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTa
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePluggyFinanceData } from "@/hooks/usePluggyFinanceData";
 
 const FinancesPage = () => {
-  const { currentEmpresa } = useAuth();
-  const { data, loading } = usePluggyFinanceData(currentEmpresa?.id || null);
-  
-  // Usar dados reais ou fallback
-  const runway = data?.runway || 4.2;
+  const runway = 4.2; // em meses
 
   return (
     <AppLayout>
@@ -34,7 +28,7 @@ const FinancesPage = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <FinanceOverviewTab />
+          <FinanceOverviewTab runway={runway} />
         </TabsContent>
 
         <TabsContent value="cashflow">
