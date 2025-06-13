@@ -5,6 +5,7 @@ import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, Ar
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
+import { TransactionImporter } from "@/components/open-finance/TransactionImporter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -326,6 +327,11 @@ const OpenFinance = () => {
             </div>
           </div>
 
+          {/* Adicionar o TransactionImporter aqui */}
+          <div className="mb-6">
+            <TransactionImporter />
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Account Selection and Info */}
             <div className="lg:col-span-1">
@@ -519,6 +525,11 @@ const OpenFinance = () => {
             formatDate={formatDate}
           />
         )}
+
+        {/* Adicionar o TransactionImporter também na tela inicial */}
+        <div className="mb-6">
+          <TransactionImporter />
+        </div>
         
         <Card className="border-none shadow-md">
           <CardHeader className="border-b border-border pb-3">
