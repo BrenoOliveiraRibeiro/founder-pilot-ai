@@ -72,6 +72,17 @@ serve(async (req) => {
           supabase, 
           corsHeaders
         );
+
+      case "process_financial_data":
+        return await processFinancialDataDirectly(
+          empresa_id,
+          requestData.item_id,
+          requestData.account_id,
+          requestData.transactions_data,
+          sandbox,
+          supabase,
+          corsHeaders
+        );
       
       default:
         return new Response(
@@ -91,3 +102,103 @@ serve(async (req) => {
     );
   }
 });
+
+async function processFinancialDataDirectly(
+  empresaId: string,
+  itemId: string,
+  accountId: string,
+  transactionsData: any,
+  sandbox: boolean,
+  supabase: any,
+  corsHeaders: Record<string, string>
+) {
+  console.log(`Processando dados financeiros diretamente - Empresa: ${empresaId}, Item: ${itemId}, Account: ${accountId}`);
+  
+  try {
+    if (!transactionsData || !transactionsData.results || !Array.isArray(transactionsData.results)) {
+      return new Response(
+        JSON.stringify({ error: "Dados de transações inválidos" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const transactions = transactionsData.results;
+    console.log(`Processando ${transactions.length} transações`);
+
+    // Preparar dados das transações para inserção
+    const transacoesParaInserir = transactions.map((tx: any) => ({
+      empresa_id: empresaId,
+      item_id: itemId,
+      account_id: accountId,
+      transaction_id: tx.id,
+      descricao: tx.description || 'Transação',
+      valor: tx.amount || 0,
+      data_transacao: tx.date,
+      categoria: tx.category || 'Outros',
+      subcategoria: tx.subcategory || null,
+      tipo: tx.amount > 0 ? 'receita' : 'despesa',
+      metodo_pagamento: tx.type || 'Transferência',
+      moeda: tx.currencyCode || 'BRL',
+      status: tx.status || 'posted',
+      merchant_name: tx.merchant?.name || null,
+      merchant_category: tx.merchant?.category || null,
+      location_country: tx.location?.country || null,
+      location_city: tx.location?.city || null,
+      location_coordinates: tx.location?.coordinates ? JSON.stringify(tx.location.coordinates) : null,
+      reference: tx.reference || null,
+      balance_after: tx.balance || null,
+      tags: tx.tags ? JSON.stringify(tx.tags) : null,
+      full_data: JSON.stringify(tx),
+      sandbox: sandbox
+    }));
+
+    // Inserir transações usando upsert para evitar duplicatas
+    const { data: insertedData, error: insertError } = await supabase
+      .from("transacoes_bancarias")
+      .upsert(transacoesParaInserir, { 
+        onConflict: 'transaction_id,empresa_id',
+        ignoreDuplicates: false 
+      })
+      .select();
+
+    if (insertError) {
+      console.error("Erro ao inserir transações:", insertError);
+      throw insertError;
+    }
+
+    console.log(`${transacoesParaInserir.length} transações salvas com sucesso`);
+
+    // Calcular métricas básicas
+    const receitas = transactions.filter((tx: any) => tx.amount > 0);
+    const despesas = transactions.filter((tx: any) => tx.amount < 0);
+    
+    const totalReceitas = receitas.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount), 0);
+    const totalDespesas = Math.abs(despesas.reduce((sum: number, tx: any) => sum + tx.amount, 0));
+    const saldoLiquido = totalReceitas - totalDespesas;
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: "Transações processadas e salvas com sucesso",
+        data: {
+          transacoes_salvas: transacoesParaInserir.length,
+          total_receitas: totalReceitas,
+          total_despesas: totalDespesas,
+          saldo_liquido: saldoLiquido,
+          inserted_data: insertedData
+        }
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+    );
+
+  } catch (error) {
+    console.error("Erro ao processar dados financeiros:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: "Falha ao processar dados financeiros", 
+        message: error.message 
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+    );
+  }
+}

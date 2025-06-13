@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -13,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -29,6 +29,7 @@ const OpenFinance = () => {
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [isSavingTransactions, setIsSavingTransactions] = useState(false);
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -99,6 +100,57 @@ const OpenFinance = () => {
     }
   }, [toast]);
 
+  const saveTransactionsToSupabase = async (itemId: string, accountId: string, transactionsData: any) => {
+    if (!currentEmpresa?.id || !transactionsData?.results) return;
+
+    setIsSavingTransactions(true);
+    try {
+      console.log('Salvando transações no Supabase...', {
+        itemId,
+        accountId,
+        transactionsCount: transactionsData.results.length
+      });
+
+      // Chamar edge function para processar e salvar dados financeiros
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "process_financial_data",
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          account_id: accountId,
+          transactions_data: transactionsData,
+          sandbox: true
+        }
+      });
+
+      if (error) {
+        console.error("Erro ao salvar transações:", error);
+        toast({
+          title: "Erro ao salvar transações",
+          description: "Não foi possível salvar as transações no banco de dados.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Transações salvas com sucesso:", data);
+      toast({
+        title: "Transações salvas!",
+        description: `${transactionsData.results.length} transações foram salvas no banco de dados.`,
+      });
+
+    } catch (error) {
+      console.error("Erro ao salvar transações:", error);
+      toast({
+        title: "Erro",
+        description: "Erro interno ao salvar transações.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingTransactions(false);
+    }
+  };
+
   const fetchTransactions = async (accountId: string) => {
     try {
       console.log(`Fetching transactions for account: ${accountId}`);
@@ -118,6 +170,12 @@ const OpenFinance = () => {
       
       const data = await response.json();
       console.log('Transactions data:', data);
+      
+      // Salvar transações automaticamente no Supabase
+      if (data && data.results && data.results.length > 0) {
+        await saveTransactionsToSupabase(itemId, accountId, data);
+      }
+      
       return data;
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -154,7 +212,7 @@ const OpenFinance = () => {
       if (data.results && Array.isArray(data.results) && data.results.length > 0) {
         // Definir a primeira conta como selecionada por padrão
         setSelectedAccountId(data.results[0].id);
-        // Buscar transações para a primeira conta
+        // Buscar transações para a primeira conta (que automaticamente salvará no Supabase)
         const transactionsResponse = await fetchTransactions(data.results[0].id);
         if (transactionsResponse) {
           setTransactionsData(transactionsResponse);
@@ -254,14 +312,14 @@ const OpenFinance = () => {
           const receivedItemId = itemData.item.id;
           setItemId(receivedItemId);
           
-          // Buscar dados da conta usando o itemId
+          // Buscar dados da conta usando o itemId (que automaticamente salvará as transações)
           await fetchAccountData(receivedItemId);
           
           setIsConnecting(false);
           setIsConnected(true);
           toast({
             title: "Conexão estabelecida!",
-            description: "Sua conta bancária foi conectada com sucesso via Pluggy OpenFinance.",
+            description: "Sua conta bancária foi conectada com sucesso e as transações estão sendo salvas.",
           });
         },
         onError: (error: any) => {
@@ -322,6 +380,9 @@ const OpenFinance = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
                 <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
+                {isSavingTransactions && (
+                  <p className="text-blue-600 text-sm">Salvando transações no banco de dados...</p>
+                )}
               </div>
             </div>
           </div>
@@ -371,8 +432,10 @@ const OpenFinance = () => {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Transações Recentes</h2>
-                  {isLoadingTransactions && (
-                    <span className="text-sm text-gray-500">Carregando...</span>
+                  {(isLoadingTransactions || isSavingTransactions) && (
+                    <span className="text-sm text-gray-500">
+                      {isSavingTransactions ? 'Salvando...' : 'Carregando...'}
+                    </span>
                   )}
                 </div>
 
