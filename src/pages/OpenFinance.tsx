@@ -298,7 +298,7 @@ const OpenFinance = () => {
       toast({
         title: "Erro",
         description: `Falha ao obter token de conexão: ${error.message || 'Erro desconhecido'}`,
-        variant: "destructiva",
+        variant: "destructive",
       });
     }
   };
