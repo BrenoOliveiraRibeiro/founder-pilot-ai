@@ -43,10 +43,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [currentEmpresa, setCurrentEmpresaState] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
   const { toast } = useToast();
 
   // Função para salvar a empresa atual no localStorage
   const setCurrentEmpresa = (empresa: Empresa) => {
+    console.log("Definindo empresa atual:", empresa?.nome);
     setCurrentEmpresaState(empresa);
     if (empresa) {
       localStorage.setItem('currentEmpresaId', empresa.id);
@@ -57,18 +59,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Função para recuperar a empresa atual do localStorage
   const restoreCurrentEmpresa = (empresasList: Empresa[]) => {
+    console.log("Restaurando empresa atual do localStorage, empresas disponíveis:", empresasList.length);
     const savedEmpresaId = localStorage.getItem('currentEmpresaId');
+    
     if (savedEmpresaId && empresasList.length > 0) {
       const savedEmpresa = empresasList.find(emp => emp.id === savedEmpresaId);
       if (savedEmpresa) {
+        console.log("Empresa salva encontrada:", savedEmpresa.nome);
         setCurrentEmpresaState(savedEmpresa);
         return;
+      } else {
+        console.log("Empresa salva não encontrada nas empresas do usuário");
       }
     }
     
     // Se não encontrar a empresa salva, usar a primeira disponível
     if (empresasList.length > 0) {
+      console.log("Usando primeira empresa disponível:", empresasList[0].nome);
       setCurrentEmpresa(empresasList[0]);
+    } else {
+      console.log("Nenhuma empresa disponível");
+      setCurrentEmpresaState(null);
+      localStorage.removeItem('currentEmpresaId');
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (!user?.id) {
+      console.log("Não é possível atualizar perfil sem usuário");
+      return;
+    }
+    
+    try {
+      console.log("Atualizando perfil do usuário:", user.id);
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      console.log("Perfil atualizado:", profileData);
+      setProfile(profileData as Profile);
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+    }
+  };
+
+  const refreshEmpresas = async () => {
+    // Usar session?.user para garantir que temos um usuário válido
+    const currentUser = session?.user || user;
+    
+    if (!currentUser) {
+      console.log("Não é possível buscar empresas sem usuário autenticado");
+      setEmpresasLoaded(true);
+      return;
+    }
+    
+    try {
+      console.log("Buscando empresas para o usuário:", currentUser.id);
+      const { data: empresasData, error: empresasError } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (empresasError) {
+        console.error("Erro ao buscar empresas:", empresasError);
+        throw empresasError;
+      }
+      
+      console.log("Empresas carregadas:", empresasData?.length || 0);
+      const empresasList = (empresasData as Empresa[]) || [];
+      setEmpresas(empresasList);
+      setEmpresasLoaded(true);
+
+      // Restaurar a empresa atual ou definir a primeira
+      if (empresasList.length > 0) {
+        restoreCurrentEmpresa(empresasList);
+      } else {
+        console.log("Usuário não possui empresas cadastradas");
+        setCurrentEmpresaState(null);
+        localStorage.removeItem('currentEmpresaId');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar empresas:', error);
+      setEmpresasLoaded(true);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -114,8 +195,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(profileData as Profile);
       }
 
-      // Buscar empresas do usuário
-      await refreshEmpresas();
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
       toast({
@@ -123,76 +202,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Não foi possível carregar seus dados. Por favor, tente novamente.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const refreshProfile = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(profileData as Profile);
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-    }
-  };
-
-  const refreshEmpresas = async () => {
-    if (!user) {
-      console.log("Não é possível buscar empresas sem usuário autenticado");
-      return;
-    }
-    
-    try {
-      console.log("Buscando empresas para o usuário:", user.id);
-      const { data: empresasData, error: empresasError } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (empresasError) throw empresasError;
-      
-      console.log("Empresas carregadas:", empresasData);
-      setEmpresas(empresasData as Empresa[]);
-
-      // Restaurar a empresa atual ou definir a primeira
-      if (empresasData && empresasData.length > 0) {
-        restoreCurrentEmpresa(empresasData as Empresa[]);
-      } else {
-        setCurrentEmpresaState(null);
-        localStorage.removeItem('currentEmpresaId');
-      }
-    } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // UseEffect para inicialização da sessão
   useEffect(() => {
-    console.log("AuthProvider inicializado");
+    console.log("AuthProvider inicializado - verificando sessão existente");
     
     // Verificar se já existe uma sessão primeiro
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Sessão existente:", session ? "sim" : "não");
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      console.log("Sessão inicial:", initialSession ? "encontrada" : "não encontrada");
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
       
-      if (session?.user) {
-        // Buscar o perfil e empresas do usuário
-        fetchUserProfile(session.user.id);
+      if (initialSession?.user) {
+        // Buscar o perfil do usuário
+        fetchUserProfile(initialSession.user.id);
       } else {
         setLoading(false);
       }
@@ -200,23 +225,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Configurar listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Evento de autenticação:", event);
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, newSession) => {
+        console.log("Evento de autenticação:", event, newSession ? "com sessão" : "sem sessão");
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
 
         // Se o usuário fizer logout, limpar os dados
         if (event === 'SIGNED_OUT') {
+          console.log("Usuário fez logout - limpando dados");
           setProfile(null);
           setEmpresas([]);
           setCurrentEmpresaState(null);
+          setEmpresasLoaded(false);
           localStorage.removeItem('currentEmpresaId');
           setLoading(false);
         }
         
-        // Se o usuário fizer login, buscar perfil e empresas
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          fetchUserProfile(session.user.id);
+        // Se o usuário fizer login, buscar perfil
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user) {
+          console.log("Usuário autenticado - buscando perfil");
+          fetchUserProfile(newSession.user.id);
         }
       }
     );
@@ -227,9 +255,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // UseEffect separado para carregar empresas quando o usuário estiver disponível
+  useEffect(() => {
+    if (user && !empresasLoaded) {
+      console.log("Usuário disponível - carregando empresas");
+      refreshEmpresas();
+    }
+  }, [user, empresasLoaded]);
+
+  // UseEffect para controlar o estado de loading
+  useEffect(() => {
+    if (user) {
+      // Se temos usuário, aguardar empresas serem carregadas
+      if (empresasLoaded) {
+        console.log("Dados carregados - removendo loading");
+        setLoading(false);
+      }
+    } else {
+      // Se não temos usuário, não estamos loading
+      setLoading(false);
+    }
+  }, [user, empresasLoaded]);
+
   const signIn = async (email: string, password: string) => {
     console.log("Tentando login para:", email);
     try {
+      // Reset do estado de empresas para forçar recarregamento
+      setEmpresasLoaded(false);
+      setEmpresas([]);
+      setCurrentEmpresaState(null);
+      
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       console.log("Resposta de login:", data ? "sucesso" : "falha", error);
       return { error };
@@ -261,6 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Iniciando logout");
     // Limpar dados locais antes do logout
     localStorage.removeItem('currentEmpresaId');
+    setEmpresasLoaded(false);
     await supabase.auth.signOut();
     console.log("Logout concluído");
   };
