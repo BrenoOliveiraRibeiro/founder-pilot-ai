@@ -38,32 +38,6 @@ export type Transacao = {
   created_at: string;
 }
 
-export type TransacaoBancaria = {
-  id: string;
-  empresa_id: string;
-  integracao_id: string;
-  account_id: string;
-  transaction_id: string;
-  descricao: string;
-  valor: number;
-  data_transacao: string;
-  categoria: string | null;
-  subcategoria: string | null;
-  tipo: 'receita' | 'despesa';
-  metodo_pagamento: string | null;
-  codigo_moeda: string;
-  balance_after: number | null;
-  merchant_name: string | null;
-  merchant_category: string | null;
-  location: string | null;
-  reference: string | null;
-  status: string;
-  tags: string[] | null;
-  metadata: any | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export type Metrica = {
   id: string;
   empresa_id: string;

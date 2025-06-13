@@ -21,20 +21,6 @@ export async function processFinancialData(
       }
       apiKey = tokenResult.data.apiKey;
     }
-
-    // Get integration info
-    const { data: integracao, error: integracaoError } = await supabaseClient
-      .from("integracoes_bancarias")
-      .select("id")
-      .eq("empresa_id", empresaId)
-      .eq("detalhes->item_id", itemId)
-      .single();
-
-    if (integracaoError || !integracao) {
-      throw new Error("Integração não encontrada");
-    }
-
-    const integracaoId = integracao.id;
     
     // 1. Fetch accounts
     const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
@@ -64,11 +50,7 @@ export async function processFinancialData(
       );
       
       if (transactionsResult.success && transactionsResult.data.results) {
-        const accountTransactions = transactionsResult.data.results.map(tx => ({
-          ...tx,
-          accountInfo: account
-        }));
-        allTransactions = [...allTransactions, ...accountTransactions];
+        allTransactions = [...allTransactions, ...transactionsResult.data.results];
       } else {
         console.warn(`Erro ao buscar transações para a conta ${account.id}:`, transactionsResult.error);
       }
@@ -76,51 +58,7 @@ export async function processFinancialData(
     
     console.log(`Encontradas ${allTransactions.length} transações ao total`);
     
-    // 3. Save detailed banking transactions
-    if (allTransactions.length > 0) {
-      const transacoesBancariasBatch = allTransactions.map(tx => ({
-        empresa_id: empresaId,
-        integracao_id: integracaoId,
-        account_id: tx.accountId || tx.accountInfo?.id,
-        transaction_id: tx.id,
-        descricao: tx.description || 'Transação bancária',
-        valor: parseFloat(tx.amount.toString()),
-        data_transacao: tx.date,
-        categoria: tx.category || null,
-        subcategoria: tx.subcategory || null,
-        tipo: tx.amount > 0 ? 'receita' : 'despesa',
-        metodo_pagamento: tx.type || null,
-        codigo_moeda: tx.currencyCode || 'BRL',
-        balance_after: tx.balance ? parseFloat(tx.balance.toString()) : null,
-        merchant_name: tx.merchant?.name || null,
-        merchant_category: tx.merchant?.category || null,
-        location: tx.location || null,
-        reference: tx.reference || null,
-        status: 'processed',
-        metadata: {
-          original_data: tx,
-          account_info: tx.accountInfo
-        }
-      }));
-
-      // Insert in batches to avoid conflicts
-      for (let i = 0; i < transacoesBancariasBatch.length; i += 100) {
-        const batch = transacoesBancariasBatch.slice(i, i + 100);
-        
-        const { error: txBancariaError } = await supabaseClient
-          .from("transacoes_bancarias")
-          .upsert(batch, { 
-            onConflict: 'account_id,transaction_id',
-            ignoreDuplicates: false 
-          });
-          
-        if (txBancariaError) {
-          console.error("Erro ao salvar transações bancárias:", txBancariaError);
-        }
-      }
-    }
-    
-    // 4. Calculate relevant metrics
+    // 3. Calculate relevant metrics
     // Current balance (sum of account balances)
     const caixaAtual = accounts.reduce((total, account) => total + (account.balance || 0), 0);
     
@@ -145,7 +83,7 @@ export async function processFinancialData(
     
     console.log(`Métricas calculadas: Caixa: ${caixaAtual}, Receita: ${receitaMensal}, Burn: ${burnRate}, Runway: ${runwayMeses}`);
     
-    // 5. Save calculated metrics
+    // 4. Save calculated metrics
     const { error: metricasError } = await supabaseClient
       .from("metricas")
       .insert([{
@@ -163,7 +101,7 @@ export async function processFinancialData(
       throw metricasError;
     }
     
-    // 6. Save relevant transactions (legacy table for compatibility)
+    // 5. Save relevant transactions
     const transacoesFormatadas = allTransactions.slice(0, 50).map(tx => ({
       empresa_id: empresaId,
       descricao: tx.description,
@@ -185,7 +123,7 @@ export async function processFinancialData(
       }
     }
     
-    // 7. Generate insights (business rules)
+    // 6. Generate insights (business rules)
     await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, caixaAtual, supabaseClient);
     
     console.log("Processamento de dados financeiros concluído com sucesso");
