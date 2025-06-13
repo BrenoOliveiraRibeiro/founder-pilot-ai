@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -49,7 +48,6 @@ const OpenFinance = () => {
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
-  // Hook de persistência da conexão Pluggy
   const {
     connectionData,
     loading: connectionLoading,
@@ -57,7 +55,8 @@ const OpenFinance = () => {
     clearConnection,
     syncData,
     fetchTransactions,
-    fetchAccountData
+    fetchAccountData,
+    saveTransactionsToDatabase
   } = usePluggyConnectionPersistence();
 
   useEffect(() => {
@@ -118,55 +117,20 @@ const OpenFinance = () => {
     }
   }, [connectionData?.accountData, selectedAccountId]);
 
-  const saveTransactionsToSupabase = async (itemId: string, accountId: string, transactionsData: any) => {
-    if (!currentEmpresa?.id || !transactionsData?.results) return;
+  const formatCurrency = (amount: number, currencyCode: string) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: currencyCode || 'BRL'
+    }).format(amount);
+  };
 
-    setIsSavingTransactions(true);
-    try {
-      console.log('Salvando transações no Supabase...', {
-        itemId,
-        accountId,
-        transactionsCount: transactionsData.results.length
-      });
+  const formatDateTransaction = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
 
-      // Chamar edge function para processar e salvar dados financeiros
-      const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: {
-          action: "process_financial_data",
-          empresa_id: currentEmpresa.id,
-          item_id: itemId,
-          account_id: accountId,
-          transactions_data: transactionsData,
-          sandbox: true
-        }
-      });
-
-      if (error) {
-        console.error("Erro ao salvar transações:", error);
-        toast({
-          title: "Erro ao salvar transações",
-          description: "Não foi possível salvar as transações no banco de dados.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("Transações salvas com sucesso:", data);
-      toast({
-        title: "Transações salvas!",
-        description: `${transactionsData.results.length} transações foram salvas no banco de dados.`,
-      });
-
-    } catch (error) {
-      console.error("Erro ao salvar transações:", error);
-      toast({
-        title: "Erro",
-        description: "Erro interno ao salvar transações.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingTransactions(false);
-    }
+  const getSelectedAccount = () => {
+    if (!connectionData?.accountData?.results || !selectedAccountId) return null;
+    return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
   const handleAccountSelection = async (accountId: string) => {
@@ -177,14 +141,38 @@ const OpenFinance = () => {
       if (connectionData?.itemId) {
         const transactionsResponse = await fetchTransactions(accountId);
         if (transactionsResponse && transactionsResponse.results) {
-          // Salvar transações automaticamente no Supabase
-          await saveTransactionsToSupabase(connectionData.itemId, accountId, transactionsResponse);
+          // Usar a nova função para salvar sem duplicatas
+          setIsSavingTransactions(true);
+          const result = await saveTransactionsToDatabase(
+            connectionData.itemId, 
+            accountId, 
+            transactionsResponse
+          );
+          
+          if (result.success) {
+            toast({
+              title: "Transações processadas!",
+              description: result.message,
+            });
+          } else {
+            toast({
+              title: "Aviso",
+              description: result.message,
+              variant: "default",
+            });
+          }
         }
       }
     } catch (error) {
       console.error('Error fetching transactions for selected account:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar transações da conta selecionada.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingTransactions(false);
+      setIsSavingTransactions(false);
     }
   };
 
@@ -268,19 +256,28 @@ const OpenFinance = () => {
               const firstAccountId = accountData.results[0].id;
               setSelectedAccountId(firstAccountId);
               
-              // Buscar transações para a primeira conta
+              // Buscar transações para a primeira conta com verificação de duplicatas
               const transactionsResponse = await fetchTransactions(firstAccountId);
               if (transactionsResponse) {
-                await saveTransactionsToSupabase(receivedItemId, firstAccountId, transactionsResponse);
+                setIsSavingTransactions(true);
+                const result = await saveTransactionsToDatabase(
+                  receivedItemId, 
+                  firstAccountId, 
+                  transactionsResponse
+                );
+                
+                if (result.success) {
+                  toast({
+                    title: "Conexão estabelecida!",
+                    description: `Conexão realizada! ${result.message}`,
+                  });
+                }
+                setIsSavingTransactions(false);
               }
             }
           }
           
           setIsConnecting(false);
-          toast({
-            title: "Conexão estabelecida!",
-            description: "Sua conta bancária foi conectada com sucesso e as transações estão sendo salvas.",
-          });
         },
         onError: (error: any) => {
           console.error('Pluggy Connect error:', error);
@@ -301,29 +298,13 @@ const OpenFinance = () => {
       toast({
         title: "Erro",
         description: `Falha ao obter token de conexão: ${error.message || 'Erro desconhecido'}`,
-        variant: "destructive",
+        variant: "destructiva",
       });
     }
   };
 
   const handleTestConnection = async () => {
     await testPluggyConnection();
-  };
-
-  const formatCurrency = (amount: number, currencyCode: string) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currencyCode || 'BRL'
-    }).format(amount);
-  };
-
-  const formatDateTransaction = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getSelectedAccount = () => {
-    if (!connectionData?.accountData?.results || !selectedAccountId) return null;
-    return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
   // Se estiver carregando conexão, mostrar loading

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,6 +110,47 @@ export const usePluggyConnectionPersistence = () => {
     } catch (error) {
       console.error('Erro ao buscar dados da conta:', error);
       return null;
+    }
+  };
+
+  // Função para verificar e filtrar transações duplicadas
+  const filterDuplicateTransactions = async (transactions: any[], empresaId: string) => {
+    if (!transactions || transactions.length === 0) return [];
+
+    try {
+      // Buscar transações existentes dos últimos 6 meses para comparação
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const { data: existingTransactions, error } = await supabase
+        .from('transacoes')
+        .select('descricao, valor, data_transacao')
+        .eq('empresa_id', empresaId)
+        .gte('data_transacao', sixMonthsAgo.toISOString().split('T')[0]);
+
+      if (error) {
+        console.error('Erro ao buscar transações existentes:', error);
+        return transactions; // Se houver erro, retorna todas as transações
+      }
+
+      // Criar um Set de chaves únicas das transações existentes
+      const existingKeys = new Set(
+        existingTransactions?.map(tx => 
+          `${tx.descricao}_${tx.valor}_${tx.data_transacao}`
+        ) || []
+      );
+
+      // Filtrar apenas transações que não existem
+      const newTransactions = transactions.filter(tx => {
+        const key = `${tx.description || 'Transação'}_${tx.amount}_${tx.date}`;
+        return !existingKeys.has(key);
+      });
+
+      console.log(`Filtradas ${transactions.length - newTransactions.length} transações duplicadas`);
+      return newTransactions;
+    } catch (error) {
+      console.error('Erro ao filtrar duplicatas:', error);
+      return transactions; // Em caso de erro, retorna todas as transações
     }
   };
 
@@ -268,6 +308,61 @@ export const usePluggyConnectionPersistence = () => {
     }
   }, [connectionData?.itemId, currentEmpresa?.id, toast]);
 
+  // Nova função para salvar transações sem duplicatas
+  const saveTransactionsToDatabase = async (itemId: string, accountId: string, transactionsData: any) => {
+    if (!currentEmpresa?.id || !transactionsData?.results) return { success: false, message: 'Dados inválidos' };
+
+    try {
+      console.log('Verificando duplicatas antes de salvar transações...');
+      
+      // Filtrar transações duplicadas
+      const filteredTransactions = await filterDuplicateTransactions(
+        transactionsData.results,
+        currentEmpresa.id
+      );
+
+      if (filteredTransactions.length === 0) {
+        console.log('Nenhuma transação nova para salvar');
+        return { 
+          success: true, 
+          message: 'Todas as transações já estão salvas no banco de dados',
+          newTransactions: 0,
+          totalTransactions: transactionsData.results.length
+        };
+      }
+
+      // Chamar edge function para processar apenas as transações novas
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "process_financial_data",
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          account_id: accountId,
+          transactions_data: { results: filteredTransactions },
+          sandbox: true
+        }
+      });
+
+      if (error) {
+        console.error("Erro ao salvar transações:", error);
+        return { success: false, message: 'Erro ao salvar no banco de dados' };
+      }
+
+      console.log("Transações salvas com sucesso:", data);
+      return { 
+        success: true, 
+        message: `${filteredTransactions.length} novas transações salvas`,
+        newTransactions: filteredTransactions.length,
+        totalTransactions: transactionsData.results.length,
+        data 
+      };
+
+    } catch (error) {
+      console.error("Erro ao processar transações:", error);
+      return { success: false, message: 'Erro interno ao processar transações' };
+    }
+  };
+
   useEffect(() => {
     loadExistingConnection();
   }, [loadExistingConnection]);
@@ -279,6 +374,7 @@ export const usePluggyConnectionPersistence = () => {
     clearConnection,
     syncData,
     fetchTransactions,
-    fetchAccountData: (itemId: string) => fetchAccountData(itemId)
+    fetchAccountData: (itemId: string) => fetchAccountData(itemId),
+    saveTransactionsToDatabase
   };
 };
