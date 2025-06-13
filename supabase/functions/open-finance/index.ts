@@ -115,6 +115,29 @@ async function processFinancialDataDirectly(
   console.log(`Processando dados financeiros diretamente - Empresa: ${empresaId}, Item: ${itemId}, Account: ${accountId}`);
   
   try {
+    // 1. Validar se a empresa existe primeiro
+    console.log(`Validando existência da empresa: ${empresaId}`);
+    const { data: empresa, error: empresaError } = await supabase
+      .from('empresas')
+      .select('id, nome')
+      .eq('id', empresaId)
+      .single();
+
+    if (empresaError || !empresa) {
+      console.error("Empresa não encontrada:", empresaError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Empresa não encontrada", 
+          message: `Empresa com ID ${empresaId} não existe no banco de dados`,
+          empresa_id: empresaId
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    console.log(`Empresa encontrada: ${empresa.nome} (ID: ${empresa.id})`);
+
+    // 2. Validar dados de transações
     if (!transactionsData || !transactionsData.results || !Array.isArray(transactionsData.results)) {
       return new Response(
         JSON.stringify({ error: "Dados de transações inválidos" }),
@@ -123,9 +146,9 @@ async function processFinancialDataDirectly(
     }
 
     const transactions = transactionsData.results;
-    console.log(`Processando ${transactions.length} transações`);
+    console.log(`Processando ${transactions.length} transações para empresa ${empresa.nome}`);
 
-    // Preparar dados das transações para inserção na tabela 'transacoes'
+    // 3. Preparar dados das transações para inserção na tabela 'transacoes'
     const transacoesParaInserir = transactions.map((tx: any) => ({
       empresa_id: empresaId,
       descricao: tx.description || 'Transação',
@@ -137,7 +160,8 @@ async function processFinancialDataDirectly(
       recorrente: false // Pode ser determinado através de análise posterior
     }));
 
-    // Inserir transações na tabela 'transacoes'
+    // 4. Inserir transações na tabela 'transacoes'
+    console.log(`Inserindo ${transacoesParaInserir.length} transações no banco de dados`);
     const { data: insertedData, error: insertError } = await supabase
       .from("transacoes")
       .insert(transacoesParaInserir)
@@ -145,12 +169,19 @@ async function processFinancialDataDirectly(
 
     if (insertError) {
       console.error("Erro ao inserir transações:", insertError);
-      throw insertError;
+      return new Response(
+        JSON.stringify({ 
+          error: "Falha ao inserir transações", 
+          message: insertError.message,
+          details: insertError
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
 
     console.log(`${transacoesParaInserir.length} transações salvas com sucesso na tabela 'transacoes'`);
 
-    // Calcular métricas básicas
+    // 5. Calcular métricas básicas
     const receitas = transactions.filter((tx: any) => tx.amount > 0);
     const despesas = transactions.filter((tx: any) => tx.amount < 0);
     
@@ -163,6 +194,8 @@ async function processFinancialDataDirectly(
         success: true, 
         message: "Transações processadas e salvas com sucesso na tabela 'transacoes'",
         data: {
+          empresa_nome: empresa.nome,
+          empresa_id: empresaId,
           transacoes_salvas: transacoesParaInserir.length,
           total_receitas: totalReceitas,
           total_despesas: totalDespesas,
