@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -191,8 +192,40 @@ export const useOpenFinanceConnection = () => {
       
       console.log("Registrando item no backend:", itemId);
       
-      // Registrar o item no backend
-      const { data, error } = await supabase.functions.invoke("open-finance", {
+      // Buscar informações do provedor selecionado
+      const selectedProviderInfo = providers.find(p => p.id === selectedProvider);
+      const providerName = selectedProviderInfo?.name || selectedProvider || 'Banco Conectado';
+      
+      // Criar registro na tabela integracoes_bancarias
+      const { data: integrationData, error: integrationError } = await supabase
+        .from("integracoes_bancarias")
+        .insert([
+          {
+            empresa_id: currentEmpresa.id,
+            nome_banco: providerName,
+            tipo_conexao: "Open Finance",
+            status: "ativo",
+            ultimo_sincronismo: new Date().toISOString(),
+            detalhes: { 
+              item_id: itemId,
+              provider_id: selectedProvider,
+              sandbox: useSandbox,
+              created_via: "pluggy_widget"
+            }
+          }
+        ])
+        .select()
+        .single();
+
+      if (integrationError) {
+        console.error("Erro ao criar integração:", integrationError);
+        throw new Error("Falha ao registrar a integração bancária");
+      }
+
+      console.log("Integração criada com sucesso:", integrationData);
+
+      // Registrar o item no backend via callback (opcional para sincronização adicional)
+      const { data: callbackData, error: callbackError } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "callback",
           empresa_id: currentEmpresa.id,
@@ -201,19 +234,19 @@ export const useOpenFinanceConnection = () => {
         }
       });
 
-      if (error) {
-        console.error("Erro no callback:", error);
-        setDebugInfo({ error, step: "callback" });
-        throw error;
+      if (callbackError) {
+        console.warn("Aviso no callback (não crítico):", callbackError);
+        // Não interromper o fluxo por erro no callback
+      } else {
+        console.log("Callback executado com sucesso:", callbackData);
       }
 
-      console.log("Callback bem-sucedido:", data);
       setConnectionProgress(100);
       setConnectionStatus("Concluído!");
       
       toast({
         title: "Conta conectada com sucesso!",
-        description: `Sua conta foi conectada via Open Finance e os dados estão sendo sincronizados.`,
+        description: `Sua conta ${providerName} foi conectada via Open Finance e está pronta para sincronização.`,
       });
 
       // Atualizar a lista de integrações
