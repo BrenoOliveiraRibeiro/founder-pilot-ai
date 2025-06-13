@@ -6,6 +6,7 @@ import { testPluggyConnection } from "./test-connection.ts";
 import { authorizeConnection } from "./authorize.ts";
 import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
+import { processFinancialData } from "./financial-data.ts";
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -72,6 +73,39 @@ serve(async (req) => {
           supabase, 
           corsHeaders
         );
+      
+      case "process_financial_data":
+        console.log(`Processando dados financeiros para empresa ${empresa_id}, item ${item_id}`);
+        try {
+          const result = await processFinancialData(
+            empresa_id,
+            item_id,
+            null, // apiKey will be obtained in the function
+            pluggyClientId,
+            pluggyClientSecret,
+            sandbox,
+            supabase
+          );
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Dados financeiros processados com sucesso",
+              processed: result 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        } catch (error) {
+          console.error("Erro ao processar dados financeiros:", error);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Erro ao processar dados financeiros", 
+              message: error.message 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+          );
+        }
       
       default:
         return new Response(

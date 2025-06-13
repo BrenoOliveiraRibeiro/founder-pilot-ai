@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
+import { useBankingTransactions } from "@/hooks/useBankingTransactions";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -26,9 +27,8 @@ const OpenFinance = () => {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [itemId, setItemId] = useState<string>('');
   const [accountData, setAccountData] = useState<any>(null);
-  const [transactionsData, setTransactionsData] = useState<any>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [isProcessingData, setIsProcessingData] = useState(false);
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -47,6 +47,18 @@ const OpenFinance = () => {
     testPluggyConnection,
     debugInfo
   } = useOpenFinanceConnection();
+
+  const {
+    transactions,
+    loading: transactionsLoading,
+    totalBalance,
+    fetchTransactions: fetchBankingTransactions,
+    getTransactionsByCategory,
+    getMonthlyTrend,
+    getUniqueAccounts,
+    formatCurrency,
+    formatDate: formatTransactionDate
+  } = useBankingTransactions();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
@@ -99,34 +111,51 @@ const OpenFinance = () => {
     }
   }, [toast]);
 
-  const fetchTransactions = async (accountId: string) => {
+  const processFinancialData = async (itemId: string) => {
+    if (!currentEmpresa?.id) {
+      console.error("Empresa não encontrada para processar dados financeiros");
+      return false;
+    }
+
+    setIsProcessingData(true);
+    console.log(`Processando dados financeiros para item: ${itemId}, empresa: ${currentEmpresa.id}`);
+
     try {
-      console.log(`Fetching transactions for account: ${accountId}`);
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
-        {
-          method: 'GET',
-          headers: {
-            accept: 'application/json'
-          }
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "process_financial_data",
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          sandbox: true
         }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Transactions data:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao buscar transações. Tente novamente.",
-        variant: "destructive",
       });
-      return null;
+
+      if (error) {
+        console.error("Erro ao processar dados financeiros:", error);
+        throw error;
+      }
+
+      console.log("Dados financeiros processados com sucesso:", data);
+      
+      // Atualizar transações bancárias após processamento
+      await fetchBankingTransactions();
+      
+      toast({
+        title: "Dados processados!",
+        description: "Os dados financeiros foram salvos no banco de dados.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Erro no processamento:", error);
+      toast({
+        title: "Erro no processamento",
+        description: error.message || "Não foi possível processar os dados financeiros.",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsProcessingData(false);
     }
   };
 
@@ -154,12 +183,10 @@ const OpenFinance = () => {
       if (data.results && Array.isArray(data.results) && data.results.length > 0) {
         // Definir a primeira conta como selecionada por padrão
         setSelectedAccountId(data.results[0].id);
-        // Buscar transações para a primeira conta
-        const transactionsResponse = await fetchTransactions(data.results[0].id);
-        if (transactionsResponse) {
-          setTransactionsData(transactionsResponse);
-        }
       }
+      
+      // Processar dados financeiros após buscar contas
+      await processFinancialData(itemId);
       
       return data;
     } catch (error) {
@@ -167,7 +194,7 @@ const OpenFinance = () => {
       toast({
         title: "Erro",
         description: "Falha ao buscar dados da conta. Tente novamente.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return null;
     }
@@ -175,18 +202,8 @@ const OpenFinance = () => {
 
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
-    setIsLoadingTransactions(true);
-    
-    try {
-      const transactionsResponse = await fetchTransactions(accountId);
-      if (transactionsResponse) {
-        setTransactionsData(transactionsResponse);
-      }
-    } catch (error) {
-      console.error('Error fetching transactions for selected account:', error);
-    } finally {
-      setIsLoadingTransactions(false);
-    }
+    // Recarregar transações do banco quando trocar de conta
+    await fetchBankingTransactions(accountId);
   };
 
   const handlePluggyConnect = async () => {
@@ -277,7 +294,7 @@ const OpenFinance = () => {
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching connect token or initializing Pluggy Connect:', error);
       setIsConnecting(false);
       toast({
@@ -290,17 +307,6 @@ const OpenFinance = () => {
 
   const handleTestConnection = async () => {
     await testPluggyConnection();
-  };
-
-  const formatCurrency = (amount: number, currencyCode: string) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currencyCode || 'BRL'
-    }).format(amount);
-  };
-
-  const formatDateTransaction = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
   const getSelectedAccount = () => {
@@ -326,11 +332,20 @@ const OpenFinance = () => {
             </div>
           </div>
 
+          {isProcessingData && (
+            <Alert className="mb-6">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                Processando e salvando dados financeiros no banco de dados...
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Account Selection and Info */}
             <div className="lg:col-span-1">
               <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
+                <h2 className="text-lg font-semibold mb-4">Informações da Conta</h2>
                 
                 {accountData?.results && accountData.results.length > 0 && (
                   <div className="mb-6">
@@ -363,20 +378,35 @@ const OpenFinance = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Banking Transactions Summary */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-medium text-gray-900 mb-2">Resumo das Transações</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total de transações:</span>
+                      <span className="font-medium">{transactions.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Saldo total:</span>
+                      <span className="font-medium">{formatCurrency(totalBalance)}</span>
+                    </div>
+                  </div>
+                </div>
               </Card>
             </div>
 
-            {/* Transactions */}
+            {/* Banking Transactions from Database */}
             <div className="lg:col-span-2">
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold">Transações Recentes</h2>
-                  {isLoadingTransactions && (
+                  <h2 className="text-lg font-semibold">Transações Salvas (Banco de Dados)</h2>
+                  {transactionsLoading && (
                     <span className="text-sm text-gray-500">Carregando...</span>
                   )}
                 </div>
 
-                {transactionsData?.results && transactionsData.results.length > 0 ? (
+                {transactions && transactions.length > 0 ? (
                   <div className="overflow-hidden">
                     <Table>
                       <TableHeader>
@@ -388,33 +418,33 @@ const OpenFinance = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {transactionsData.results.slice(0, 10).map((transaction: any, index: number) => (
-                          <TableRow key={index}>
+                        {transactions.slice(0, 10).map((transaction) => (
+                          <TableRow key={transaction.id}>
                             <TableCell className="font-medium">
-                              {formatDateTransaction(transaction.date)}
+                              {formatTransactionDate(transaction.data_transacao)}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                {transaction.amount > 0 ? (
+                                {transaction.valor > 0 ? (
                                   <ArrowUpCircle className="w-4 h-4 text-green-600" />
                                 ) : (
                                   <ArrowDownCircle className="w-4 h-4 text-red-600" />
                                 )}
-                                <span className="truncate max-w-xs" title={transaction.description}>
-                                  {transaction.description || 'Transação'}
+                                <span className="truncate max-w-xs" title={transaction.descricao}>
+                                  {transaction.descricao}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell>
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                {transaction.category || 'Outros'}
+                                {transaction.categoria || 'Outros'}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <span className={`font-medium ${
-                                transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
+                                transaction.valor > 0 ? 'text-green-600' : 'text-red-600'
                               }`}>
-                                {formatCurrency(Math.abs(transaction.amount), transaction.currencyCode || 'BRL')}
+                                {formatCurrency(Math.abs(transaction.valor), transaction.codigo_moeda)}
                               </span>
                             </TableCell>
                           </TableRow>
@@ -422,10 +452,10 @@ const OpenFinance = () => {
                       </TableBody>
                     </Table>
                     
-                    {transactionsData.results.length > 10 && (
+                    {transactions.length > 10 && (
                       <div className="mt-4 text-center">
                         <p className="text-sm text-gray-500">
-                          Mostrando 10 de {transactionsData.results.length} transações
+                          Mostrando 10 de {transactions.length} transações salvas
                         </p>
                       </div>
                     )}
@@ -434,7 +464,7 @@ const OpenFinance = () => {
                   <div className="text-center py-8">
                     <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">
-                      {isLoadingTransactions ? 'Carregando transações...' : 'Nenhuma transação encontrada'}
+                      {transactionsLoading ? 'Carregando transações...' : 'Nenhuma transação encontrada no banco de dados'}
                     </p>
                   </div>
                 )}
@@ -449,6 +479,7 @@ const OpenFinance = () => {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
+        
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold">Open Finance</h1>
