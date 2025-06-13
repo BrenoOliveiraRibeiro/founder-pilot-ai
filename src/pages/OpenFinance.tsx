@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
+import { usePluggyConnectionPersistence } from "@/hooks/usePluggyConnectionPersistence";
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,11 +24,7 @@ declare global {
 
 const OpenFinance = () => {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [itemId, setItemId] = useState<string>('');
-  const [accountData, setAccountData] = useState<any>(null);
-  const [transactionsData, setTransactionsData] = useState<any>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [isSavingTransactions, setIsSavingTransactions] = useState(false);
@@ -51,11 +49,23 @@ const OpenFinance = () => {
 
   const { currentEmpresa, loading: authLoading } = useAuth();
 
+  // Hook de persistência da conexão Pluggy
+  const {
+    connectionData,
+    loading: connectionLoading,
+    saveConnection,
+    clearConnection,
+    syncData,
+    fetchTransactions,
+    fetchAccountData
+  } = usePluggyConnectionPersistence();
+
   useEffect(() => {
     console.log("OpenFinance component mounted/updated");
     console.log("Current empresa:", currentEmpresa);
     console.log("Auth loading:", authLoading);
-  }, [currentEmpresa, authLoading]);
+    console.log("Connection data:", connectionData);
+  }, [currentEmpresa, authLoading, connectionData]);
 
   useEffect(() => {
     // Check if script is already loaded
@@ -99,6 +109,14 @@ const OpenFinance = () => {
       };
     }
   }, [toast]);
+
+  // Auto-selecionar primeira conta quando dados estão disponíveis
+  useEffect(() => {
+    if (connectionData?.accountData?.results && connectionData.accountData.results.length > 0 && !selectedAccountId) {
+      const firstAccountId = connectionData.accountData.results[0].id;
+      setSelectedAccountId(firstAccountId);
+    }
+  }, [connectionData?.accountData, selectedAccountId]);
 
   const saveTransactionsToSupabase = async (itemId: string, accountId: string, transactionsData: any) => {
     if (!currentEmpresa?.id || !transactionsData?.results) return;
@@ -151,94 +169,17 @@ const OpenFinance = () => {
     }
   };
 
-  const fetchTransactions = async (accountId: string) => {
-    try {
-      console.log(`Fetching transactions for account: ${accountId}`);
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
-        {
-          method: 'GET',
-          headers: {
-            accept: 'application/json'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Transactions data:', data);
-      
-      // Salvar transações automaticamente no Supabase
-      if (data && data.results && data.results.length > 0) {
-        await saveTransactionsToSupabase(itemId, accountId, data);
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao buscar transações. Tente novamente.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
-
-  const fetchAccountData = async (itemId: string) => {
-    try {
-      console.log(`Fetching account data for item: ${itemId}`);
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/accounts?itemId=${itemId}`,
-        {
-          method: 'GET',
-          headers: {
-            accept: 'application/json'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Account data:', data);
-      setAccountData(data);
-      
-      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-        // Definir a primeira conta como selecionada por padrão
-        setSelectedAccountId(data.results[0].id);
-        // Buscar transações para a primeira conta (que automaticamente salvará no Supabase)
-        const transactionsResponse = await fetchTransactions(data.results[0].id);
-        if (transactionsResponse) {
-          setTransactionsData(transactionsResponse);
-        }
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching account data:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao buscar dados da conta. Tente novamente.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
-
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setIsLoadingTransactions(true);
     
     try {
-      const transactionsResponse = await fetchTransactions(accountId);
-      if (transactionsResponse) {
-        setTransactionsData(transactionsResponse);
+      if (connectionData?.itemId) {
+        const transactionsResponse = await fetchTransactions(accountId);
+        if (transactionsResponse && transactionsResponse.results) {
+          // Salvar transações automaticamente no Supabase
+          await saveTransactionsToSupabase(connectionData.itemId, accountId, transactionsResponse);
+        }
       }
     } catch (error) {
       console.error('Error fetching transactions for selected account:', error);
@@ -308,15 +249,34 @@ const OpenFinance = () => {
           console.log('Pluggy connect success!', itemData);
           console.log('Item ID:', itemData.item.id);
           
-          // Armazenar o itemId
           const receivedItemId = itemData.item.id;
-          setItemId(receivedItemId);
           
-          // Buscar dados da conta usando o itemId (que automaticamente salvará as transações)
-          await fetchAccountData(receivedItemId);
+          // Buscar dados da conta usando o itemId
+          const accountData = await fetchAccountData(receivedItemId);
+          
+          if (accountData) {
+            // Salvar conexão na base de dados
+            await saveConnection(
+              receivedItemId, 
+              accountData, 
+              tokenData.accessToken,
+              itemData.item.connector?.name || 'Banco Conectado'
+            );
+
+            // Se temos contas, selecionar a primeira automaticamente
+            if (accountData.results && accountData.results.length > 0) {
+              const firstAccountId = accountData.results[0].id;
+              setSelectedAccountId(firstAccountId);
+              
+              // Buscar transações para a primeira conta
+              const transactionsResponse = await fetchTransactions(firstAccountId);
+              if (transactionsResponse) {
+                await saveTransactionsToSupabase(receivedItemId, firstAccountId, transactionsResponse);
+              }
+            }
+          }
           
           setIsConnecting(false);
-          setIsConnected(true);
           toast({
             title: "Conexão estabelecida!",
             description: "Sua conta bancária foi conectada com sucesso e as transações estão sendo salvas.",
@@ -362,11 +322,26 @@ const OpenFinance = () => {
   };
 
   const getSelectedAccount = () => {
-    if (!accountData?.results || !selectedAccountId) return null;
-    return accountData.results.find((account: any) => account.id === selectedAccountId);
+    if (!connectionData?.accountData?.results || !selectedAccountId) return null;
+    return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
-  if (isConnected) {
+  // Se estiver carregando conexão, mostrar loading
+  if (connectionLoading) {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto py-8">
+          <div className="flex items-center justify-center">
+            <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+            <span>Carregando conexão...</span>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Se já está conectado, mostrar interface conectada
+  if (connectionData?.isConnected) {
     const selectedAccount = getSelectedAccount();
     
     return (
@@ -380,9 +355,20 @@ const OpenFinance = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
                 <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
-                {isSavingTransactions && (
-                  <p className="text-blue-600 text-sm">Salvando transações no banco de dados...</p>
+                {(isSavingTransactions || isLoadingTransactions) && (
+                  <p className="text-blue-600 text-sm">
+                    {isSavingTransactions ? 'Salvando transações...' : 'Carregando transações...'}
+                  </p>
                 )}
+              </div>
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" onClick={syncData}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sincronizar
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearConnection}>
+                  Desconectar
+                </Button>
               </div>
             </div>
           </div>
@@ -393,14 +379,14 @@ const OpenFinance = () => {
               <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
                 
-                {accountData?.results && accountData.results.length > 0 && (
+                {connectionData.accountData?.results && connectionData.accountData.results.length > 0 && (
                   <div className="mb-6">
                     <Select value={selectedAccountId} onValueChange={handleAccountSelection}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Escolha uma conta" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accountData.results.map((account: any) => (
+                        {connectionData.accountData.results.map((account: any) => (
                           <SelectItem key={account.id} value={account.id}>
                             {account.name} - {account.type}
                           </SelectItem>
@@ -439,7 +425,7 @@ const OpenFinance = () => {
                   )}
                 </div>
 
-                {transactionsData?.results && transactionsData.results.length > 0 ? (
+                {connectionData.transactionsData?.results && connectionData.transactionsData.results.length > 0 ? (
                   <div className="overflow-hidden">
                     <Table>
                       <TableHeader>
@@ -451,7 +437,7 @@ const OpenFinance = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {transactionsData.results.slice(0, 10).map((transaction: any, index: number) => (
+                        {connectionData.transactionsData.results.slice(0, 10).map((transaction: any, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">
                               {formatDateTransaction(transaction.date)}
@@ -485,10 +471,10 @@ const OpenFinance = () => {
                       </TableBody>
                     </Table>
                     
-                    {transactionsData.results.length > 10 && (
+                    {connectionData.transactionsData.results.length > 10 && (
                       <div className="mt-4 text-center">
                         <p className="text-sm text-gray-500">
-                          Mostrando 10 de {transactionsData.results.length} transações
+                          Mostrando 10 de {connectionData.transactionsData.results.length} transações
                         </p>
                       </div>
                     )}
@@ -499,6 +485,16 @@ const OpenFinance = () => {
                     <p className="text-gray-500">
                       {isLoadingTransactions ? 'Carregando transações...' : 'Nenhuma transação encontrada'}
                     </p>
+                    {selectedAccountId && !isLoadingTransactions && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-4"
+                        onClick={() => handleAccountSelection(selectedAccountId)}
+                      >
+                        Recarregar Transações
+                      </Button>
+                    )}
                   </div>
                 )}
               </Card>
@@ -509,6 +505,7 @@ const OpenFinance = () => {
     );
   }
 
+  // Interface para conectar nova conta
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">

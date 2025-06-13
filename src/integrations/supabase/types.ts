@@ -138,10 +138,13 @@ export type Database = {
       }
       integracoes_bancarias: {
         Row: {
+          account_data: Json | null
+          connection_token: string | null
           created_at: string
           detalhes: Json | null
           empresa_id: string
           id: string
+          item_id: string | null
           nome_banco: string
           status: string
           tipo_conexao: string
@@ -149,10 +152,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_data?: Json | null
+          connection_token?: string | null
           created_at?: string
           detalhes?: Json | null
           empresa_id: string
           id?: string
+          item_id?: string | null
           nome_banco: string
           status: string
           tipo_conexao: string
@@ -160,10 +166,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_data?: Json | null
+          connection_token?: string | null
           created_at?: string
           detalhes?: Json | null
           empresa_id?: string
           id?: string
+          item_id?: string | null
           nome_banco?: string
           status?: string
           tipo_conexao?: string
