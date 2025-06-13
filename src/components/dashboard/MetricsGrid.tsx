@@ -1,4 +1,3 @@
-
 import React from "react";
 import { MetricCard } from "./MetricCard";
 import { 
@@ -13,23 +12,33 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 
 export const MetricsGrid = () => {
   const { currentEmpresa } = useAuth();
-  const { metrics, loading, isRunwayCritical } = useFinanceData(currentEmpresa?.id || null);
+  const { metrics, loading: financeLoading, isRunwayCritical } = useFinanceData(currentEmpresa?.id || null);
+  const { 
+    saldoCaixa, 
+    entradasMesAtual, 
+    saidasMesAtual, 
+    fluxoCaixaMesAtual,
+    loading: transactionsLoading 
+  } = useTransactionsMetrics();
 
-  // Usar dados de métricas da API ou fallback para valores de exemplo
-  const cashBalance = metrics?.caixa_atual ?? 124500;
-  const monthlyRevenue = metrics?.receita_mensal ?? 45800;
-  const monthlyBurn = metrics?.burn_rate ?? 38200;
-  const runway = metrics?.runway_meses ?? 3.5;
-  const mrrGrowth = metrics?.mrr_growth ?? 12.5;
+  const loading = financeLoading || transactionsLoading;
+
+  // Usar dados das transações quando disponíveis, caso contrário usar dados de métricas ou fallback
+  const cashBalance = saldoCaixa || metrics?.caixa_atual || 124500;
+  const monthlyRevenue = entradasMesAtual || metrics?.receita_mensal || 45800;
+  const monthlyBurn = saidasMesAtual || metrics?.burn_rate || 38200;
+  const runway = metrics?.runway_meses || 3.5;
+  const mrrGrowth = metrics?.mrr_growth || 12.5;
   const burnRate = monthlyBurn / 4; // Semanal (ou do banco de dados se disponível)
-  const cashFlow = metrics?.cash_flow ?? 7600;
+  const cashFlow = fluxoCaixaMesAtual || metrics?.cash_flow || 7600;
 
-  // Configuração das animações de entrada
+  // ... keep existing code (containerVariants, itemVariants, etc)
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -82,9 +91,9 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Saldo em Caixa"
             value={`R$${cashBalance.toLocaleString('pt-BR')}`}
-            description="Total disponível"
+            description={saldoCaixa ? "Baseado em transações conectadas" : "Total disponível"}
             icon={<DollarSign className="h-5 w-5 text-primary" />}
-            tooltip="Seu saldo total em caixa em todas as contas conectadas"
+            tooltip="Seu saldo total em caixa baseado nas transações das contas conectadas"
             loading={loading}
             className="border-primary/20 bg-primary/5"
           />
@@ -95,9 +104,9 @@ export const MetricsGrid = () => {
             title="Receita Mensal"
             value={`R$${monthlyRevenue.toLocaleString('pt-BR')}`}
             change={12}
-            description="vs. mês anterior"
+            description={entradasMesAtual ? "mês atual" : "vs. mês anterior"}
             icon={<BanknoteIcon className="h-5 w-5 text-blue-500" />}
-            tooltip="Sua receita total para o mês atual"
+            tooltip="Sua receita total para o mês atual baseada nas transações"
             loading={loading}
             className="border-blue-200 bg-blue-50 dark:border-blue-900/30 dark:bg-blue-900/10"
           />
@@ -108,9 +117,9 @@ export const MetricsGrid = () => {
             title="Gastos Mensais"
             value={`R$${monthlyBurn.toLocaleString('pt-BR')}`}
             change={-8}
-            description="vs. mês anterior"
+            description={saidasMesAtual ? "mês atual" : "vs. mês anterior"}
             icon={<CreditCard className="h-5 w-5 text-red-500" />}
-            tooltip="Suas despesas totais para o mês atual"
+            tooltip="Suas despesas totais para o mês atual baseadas nas transações"
             loading={loading}
             className="border-red-200 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10"
           />
@@ -164,9 +173,9 @@ export const MetricsGrid = () => {
             title="Fluxo de Caixa"
             value={`R$${cashFlow.toLocaleString('pt-BR')}`}
             change={-22}
-            description="vs. mês anterior"
+            description={fluxoCaixaMesAtual ? "mês atual" : "vs. mês anterior"}
             icon={<Wallet className="h-5 w-5 text-amber-500" />}
-            tooltip="Fluxo de caixa líquido (receita menos despesas)"
+            tooltip="Fluxo de caixa líquido (receita menos despesas) do mês atual"
             loading={loading}
             className="border-amber-200 bg-amber-50 dark:border-amber-900/30 dark:bg-amber-900/10"
           />
