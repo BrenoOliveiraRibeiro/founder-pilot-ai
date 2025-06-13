@@ -310,6 +310,99 @@ export type Database = {
           },
         ]
       }
+      transacoes_bancarias: {
+        Row: {
+          account_id: string
+          balance_after: number | null
+          categoria: string | null
+          codigo_moeda: string | null
+          created_at: string
+          data_transacao: string
+          descricao: string
+          empresa_id: string
+          id: string
+          integracao_id: string
+          location: string | null
+          merchant_category: string | null
+          merchant_name: string | null
+          metadata: Json | null
+          metodo_pagamento: string | null
+          reference: string | null
+          status: string | null
+          subcategoria: string | null
+          tags: string[] | null
+          tipo: string
+          transaction_id: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          account_id: string
+          balance_after?: number | null
+          categoria?: string | null
+          codigo_moeda?: string | null
+          created_at?: string
+          data_transacao: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          integracao_id: string
+          location?: string | null
+          merchant_category?: string | null
+          merchant_name?: string | null
+          metadata?: Json | null
+          metodo_pagamento?: string | null
+          reference?: string | null
+          status?: string | null
+          subcategoria?: string | null
+          tags?: string[] | null
+          tipo: string
+          transaction_id: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          account_id?: string
+          balance_after?: number | null
+          categoria?: string | null
+          codigo_moeda?: string | null
+          created_at?: string
+          data_transacao?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          integracao_id?: string
+          location?: string | null
+          merchant_category?: string | null
+          merchant_name?: string | null
+          metadata?: Json | null
+          metodo_pagamento?: string | null
+          reference?: string | null
+          status?: string | null
+          subcategoria?: string | null
+          tags?: string[] | null
+          tipo?: string
+          transaction_id?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_bancarias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_bancarias_integracao_id_fkey"
+            columns: ["integracao_id"]
+            isOneToOne: false
+            referencedRelation: "integracoes_bancarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_configs: {
         Row: {
           config: Json | null
