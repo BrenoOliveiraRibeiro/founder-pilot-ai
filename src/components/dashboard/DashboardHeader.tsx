@@ -1,9 +1,9 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { OnboardingTooltip } from "../ui/onboarding-tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { FriendlyLoadingMessage } from "../ui/friendly-loading-message";
 import { motion } from "framer-motion";
@@ -94,22 +94,16 @@ export const DashboardHeader = () => {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-          <OnboardingTooltip
-            id="refresh-button"
-            title="Atualizar Dados"
-            description="Clique aqui para atualizar seus dados financeiros e obter insights mais recentes."
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="hover-lift micro-feedback focus-ring"
           >
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={handleRefresh} 
-              disabled={isRefreshing}
-              className="hover-lift micro-feedback focus-ring"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? "Atualizando..." : "Atualizar"}
-            </Button>
-          </OnboardingTooltip>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? "Atualizando..." : "Atualizar"}
+          </Button>
         </motion.div>
       </div>
       
