@@ -107,8 +107,7 @@ export const FloatingAIButton = () => {
               className={cn(
                 "rounded-full h-16 w-16 shadow-lg hover:shadow-xl transition-all duration-300",
                 "bg-gradient-to-br from-primary to-primary/80",
-                "hover:scale-105 active:scale-95",
-                "animate-pulse-subtle"
+                "hover:scale-105 active:scale-95"
               )}
               onClick={handleClick}
             >

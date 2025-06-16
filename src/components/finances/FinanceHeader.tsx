@@ -40,7 +40,6 @@ export const FinanceHeader: React.FC = () => {
             />
           </PopoverContent>
         </Popover>
-        <Button>Conectar contas</Button>
       </div>
     </div>
   );
