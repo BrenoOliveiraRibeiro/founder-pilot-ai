@@ -105,7 +105,7 @@ const Advisor = () => {
                   Demo
                 </Badge>
               )}
-            </div>
+            </motion.div>
           </div>
         </motion.div>
 
@@ -205,7 +205,7 @@ const Advisor = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="glass-effect rounded-2xl p-3 sm:p-5 max-w-[90%] sm:max-w-[80%] border border-primary/10 shadow-lg">
+                      <div className="glass-effect rounded-2xl p-3 sm:p-5 max-w-[90%] sm:max-[80%] border border-primary/10 shadow-lg">
                         <FriendlyLoadingMessage isLoading={isLoading} />
                       </div>
                     </motion.div>
