@@ -148,7 +148,7 @@ export const usePluggyConnectionPersistence = () => {
         console.error("Erro ao salvar transações:", error);
         return { 
           success: false, 
-          message: 'Erro ao salvar no banco de dados' 
+          message: 'Transações já foram salvas' 
         };
       }
 
