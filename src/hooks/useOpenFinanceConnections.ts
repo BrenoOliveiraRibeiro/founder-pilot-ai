@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +44,8 @@ export const useOpenFinanceConnections = () => {
     if (!currentEmpresa?.id) return;
 
     setSyncing(integracaoId);
+    console.log(`Iniciando sincronização da integração ${integracaoId} para empresa ${currentEmpresa.id}`);
+    
     try {
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
@@ -54,27 +55,40 @@ export const useOpenFinanceConnections = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro na chamada da função:", error);
+        throw error;
+      }
 
-      // Determinar mensagem baseada no resultado
-      let message = "Dados sincronizados!";
-      let description = "Os dados financeiros da sua empresa foram atualizados.";
+      console.log("Resultado da sincronização:", data);
+
+      // Determinar mensagem e tipo de toast baseado no resultado
+      let title = "Sincronização concluída";
+      let description = "Os dados foram processados com sucesso.";
+      let variant: "default" | "destructive" = "default";
       
-      if (data && data.newTransactions !== undefined) {
+      if (data && typeof data.newTransactions !== 'undefined') {
         if (data.newTransactions > 0) {
+          title = "Dados sincronizados!";
           description = `${data.newTransactions} novas transações foram salvas automaticamente.`;
           if (data.duplicates > 0) {
             description += ` (${data.duplicates} duplicatas ignoradas)`;
           }
+        } else if (data.duplicates > 0) {
+          title = "Nenhuma transação nova";
+          description = "Todas as transações já estão salvas no sistema.";
         } else {
-          message = "Sincronização concluída";
-          description = "Nenhuma transação nova encontrada. Todos os dados estão atualizados.";
+          title = "Sincronização concluída";
+          description = "Nenhuma transação encontrada para sincronizar.";
         }
+      } else if (data && data.message) {
+        description = data.message;
       }
 
       toast({
-        title: message,
+        title: title,
         description: description,
+        variant: variant
       });
 
       // Update the list of integrations to show the latest sync
@@ -82,9 +96,15 @@ export const useOpenFinanceConnections = () => {
       refreshEmpresas();
     } catch (error: any) {
       console.error("Erro ao sincronizar dados:", error);
+      
+      let errorMessage = "Não foi possível sincronizar os dados financeiros. Tente novamente.";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro ao sincronizar dados",
-        description: error.message || "Não foi possível sincronizar os dados financeiros. Tente novamente.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

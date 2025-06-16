@@ -29,12 +29,13 @@ export async function processFinancialData(
     let accountData = null;
     
     if (!targetAccountId) {
+      console.log(`Buscando contas para item ${itemId}`);
       const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
       if (accountsResult.success && accountsResult.data.results && accountsResult.data.results.length > 0) {
         // Use the first account by default
         targetAccountId = accountsResult.data.results[0].id;
         accountData = accountsResult.data.results[0];
-        console.log(`Usando conta padrão: ${targetAccountId}`);
+        console.log(`Usando conta padrão: ${targetAccountId} (${accountData.name})`);
       } else {
         console.warn("Nenhuma conta encontrada para o item:", itemId);
         return {
@@ -70,6 +71,7 @@ export async function processFinancialData(
       
       if (transactionsResult.success && transactionsResult.data.results) {
         allTransactions = transactionsResult.data.results;
+        console.log(`Transações obtidas da API: ${allTransactions.length}`);
       } else {
         console.warn(`Erro ao buscar transações para a conta ${targetAccountId}:`, transactionsResult.error);
         allTransactions = [];
@@ -90,7 +92,6 @@ export async function processFinancialData(
     }
     
     // Preparar transações formatadas para inserção
-    // O trigger do banco gerará automaticamente o hash e evitará duplicatas
     const transacoesFormatadas = allTransactions.map(tx => ({
       empresa_id: empresaId,
       descricao: tx.description || 'Transação',
@@ -105,43 +106,67 @@ export async function processFinancialData(
     
     console.log(`Tentando inserir ${transacoesFormatadas.length} transações`);
     
-    // Inserir transações usando upsert para lidar com duplicatas de forma mais elegante
+    // Inserir transações com tratamento adequado de duplicatas
     let insertedCount = 0;
     let duplicateCount = 0;
     
     // Processar em lotes para melhor performance
-    const batchSize = 100;
+    const batchSize = 50;
     for (let i = 0; i < transacoesFormatadas.length; i += batchSize) {
       const batch = transacoesFormatadas.slice(i, i + batchSize);
       
       try {
-        const { data, error, count } = await supabaseClient
+        console.log(`Processando lote ${Math.floor(i / batchSize) + 1} de ${Math.ceil(transacoesFormatadas.length / batchSize)}: ${batch.length} transações`);
+        
+        const { data, error } = await supabaseClient
           .from("transacoes")
           .insert(batch)
           .select('id');
         
         if (error) {
-          // Se há erro de constraint (duplicata), contar como duplicata
-          if (error.code === '23505') { // unique constraint violation
-            console.log(`Lote ${i / batchSize + 1}: ${batch.length} transações já existem (duplicatas)`);
-            duplicateCount += batch.length;
+          // Se há erro de constraint (duplicata), processar individualmente para contar
+          if (error.code === '23505') {
+            console.log(`Lote com duplicatas detectadas, processando individualmente...`);
+            
+            for (const tx of batch) {
+              try {
+                const { error: singleError } = await supabaseClient
+                  .from("transacoes")
+                  .insert([tx])
+                  .select('id');
+                
+                if (singleError) {
+                  if (singleError.code === '23505') {
+                    duplicateCount++;
+                  } else {
+                    console.error('Erro inesperado ao inserir transação:', singleError);
+                  }
+                } else {
+                  insertedCount++;
+                }
+              } catch (singleTxError) {
+                console.error('Erro individual:', singleTxError);
+                duplicateCount++;
+              }
+            }
           } else {
-            console.error(`Erro ao inserir lote ${i / batchSize + 1}:`, error);
+            console.error(`Erro não relacionado a duplicatas no lote:`, error);
             throw error;
           }
         } else {
           const batchInserted = data ? data.length : 0;
           insertedCount += batchInserted;
-          console.log(`Lote ${i / batchSize + 1}: ${batchInserted} transações inseridas`);
+          console.log(`Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações inseridas com sucesso`);
         }
       } catch (batchError) {
-        console.error(`Erro no lote ${i / batchSize + 1}:`, batchError);
-        // Tentar inserir uma por uma para identificar duplicatas específicas
+        console.error(`Erro crítico no lote ${Math.floor(i / batchSize) + 1}:`, batchError);
+        // Em caso de erro crítico, tentar individualmente
         for (const tx of batch) {
           try {
             const { error: singleError } = await supabaseClient
               .from("transacoes")
-              .insert([tx]);
+              .insert([tx])
+              .select('id');
             
             if (singleError) {
               if (singleError.code === '23505') {
@@ -153,17 +178,19 @@ export async function processFinancialData(
               insertedCount++;
             }
           } catch (singleTxError) {
-            console.error('Erro individual:', singleTxError);
+            console.error('Erro individual crítico:', singleTxError);
             duplicateCount++;
           }
         }
       }
     }
     
-    console.log(`Resultado: ${insertedCount} novas transações, ${duplicateCount} duplicatas ignoradas`);
+    console.log(`Resultado final: ${insertedCount} novas transações inseridas, ${duplicateCount} duplicatas ignoradas`);
     
     // Calcular métricas apenas se houver transações novas
     if (insertedCount > 0) {
+      console.log('Atualizando métricas devido a novas transações...');
+      
       // Buscar dados da conta para calcular métricas se não tivermos
       if (!accountData && targetAccountId) {
         const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
@@ -214,15 +241,21 @@ export async function processFinancialData(
         // Gerar insights apenas se houve mudanças significativas
         await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, caixaAtual, supabaseClient);
       }
+    } else {
+      console.log('Nenhuma transação nova - métricas não atualizadas');
     }
     
     console.log("Processamento de dados financeiros concluído com sucesso");
     
+    // Determinar mensagem de retorno
     let message = "";
     if (insertedCount > 0) {
       message = `${insertedCount} novas transações processadas`;
+      if (duplicateCount > 0) {
+        message += ` (${duplicateCount} duplicatas ignoradas)`;
+      }
     } else if (duplicateCount > 0) {
-      message = "Nenhuma transação nova - todas já existem";
+      message = "Nenhuma transação nova - todas já estão salvas";
     } else {
       message = "Nenhuma transação nova encontrada";
     }

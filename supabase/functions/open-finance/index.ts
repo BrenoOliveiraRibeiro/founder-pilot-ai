@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 import { corsHeaders } from "./utils.ts";
@@ -74,15 +73,70 @@ serve(async (req) => {
         );
 
       case "process_financial_data":
-        return await processFinancialDataDirectly(
-          empresa_id,
-          requestData.item_id,
-          requestData.account_id,
-          requestData.transactions_data,
-          sandbox,
-          supabase,
-          corsHeaders
-        );
+        // Use processFinancialData directly para consistência
+        console.log(`Processando dados financeiros diretamente - Empresa: ${empresa_id}, Item: ${requestData.item_id}, Account: ${requestData.account_id}`);
+        
+        try {
+          // 1. Validar se a empresa existe primeiro
+          console.log(`Validando existência da empresa: ${empresa_id}`);
+          const { data: empresa, error: empresaError } = await supabase
+            .from('empresas')
+            .select('id, nome')
+            .eq('id', empresa_id)
+            .single();
+
+          if (empresaError || !empresa) {
+            console.error("Empresa não encontrada:", empresaError);
+            return new Response(
+              JSON.stringify({ 
+                error: "Empresa não encontrada", 
+                message: `Empresa com ID ${empresa_id} não existe no banco de dados`,
+                empresa_id: empresa_id
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+            );
+          }
+
+          console.log(`Empresa encontrada: ${empresa.nome} (ID: ${empresa.id})`);
+
+          // 2. Usar processFinancialData para consistência
+          const result = await processFinancialData(
+            empresa_id,
+            requestData.item_id,
+            requestData.account_id,
+            requestData.transactions_data,
+            null, // apiKey será obtido dentro da função
+            pluggyClientId,
+            pluggyClientSecret,
+            sandbox,
+            supabase
+          );
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: result.message,
+              data: {
+                empresa_nome: empresa.nome,
+                empresa_id: empresa_id,
+                newTransactions: result.newTransactions,
+                duplicates: result.duplicates,
+                total: result.total
+              }
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+
+        } catch (error) {
+          console.error("Erro ao processar dados financeiros:", error);
+          return new Response(
+            JSON.stringify({ 
+              error: "Falha ao processar dados financeiros", 
+              message: error.message 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+          );
+        }
       
       default:
         return new Response(
@@ -103,117 +157,5 @@ serve(async (req) => {
   }
 });
 
-async function processFinancialDataDirectly(
-  empresaId: string,
-  itemId: string,
-  accountId: string,
-  transactionsData: any,
-  sandbox: boolean,
-  supabase: any,
-  corsHeaders: Record<string, string>
-) {
-  console.log(`Processando dados financeiros diretamente - Empresa: ${empresaId}, Item: ${itemId}, Account: ${accountId}`);
-  
-  try {
-    // 1. Validar se a empresa existe primeiro
-    console.log(`Validando existência da empresa: ${empresaId}`);
-    const { data: empresa, error: empresaError } = await supabase
-      .from('empresas')
-      .select('id, nome')
-      .eq('id', empresaId)
-      .single();
-
-    if (empresaError || !empresa) {
-      console.error("Empresa não encontrada:", empresaError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Empresa não encontrada", 
-          message: `Empresa com ID ${empresaId} não existe no banco de dados`,
-          empresa_id: empresaId
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
-      );
-    }
-
-    console.log(`Empresa encontrada: ${empresa.nome} (ID: ${empresa.id})`);
-
-    // 2. Validar dados de transações
-    if (!transactionsData || !transactionsData.results || !Array.isArray(transactionsData.results)) {
-      return new Response(
-        JSON.stringify({ error: "Dados de transações inválidos" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
-
-    const transactions = transactionsData.results;
-    console.log(`Processando ${transactions.length} transações para empresa ${empresa.nome}`);
-
-    // 3. Preparar dados das transações para inserção na tabela 'transacoes'
-    const transacoesParaInserir = transactions.map((tx: any) => ({
-      empresa_id: empresaId,
-      descricao: tx.description || 'Transação',
-      valor: tx.amount || 0,
-      data_transacao: tx.date,
-      categoria: tx.category || 'Outros',
-      tipo: tx.amount > 0 ? 'receita' : 'despesa',
-      metodo_pagamento: tx.type || 'Transferência',
-      recorrente: false // Pode ser determinado através de análise posterior
-    }));
-
-    // 4. Inserir transações na tabela 'transacoes'
-    console.log(`Inserindo ${transacoesParaInserir.length} transações no banco de dados`);
-    const { data: insertedData, error: insertError } = await supabase
-      .from("transacoes")
-      .insert(transacoesParaInserir)
-      .select();
-
-    if (insertError) {
-      console.error("Erro ao inserir transações:", insertError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Falha ao inserir transações", 
-          message: insertError.message,
-          details: insertError
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
-
-    console.log(`${transacoesParaInserir.length} transações salvas com sucesso na tabela 'transacoes'`);
-
-    // 5. Calcular métricas básicas
-    const receitas = transactions.filter((tx: any) => tx.amount > 0);
-    const despesas = transactions.filter((tx: any) => tx.amount < 0);
-    
-    const totalReceitas = receitas.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount), 0);
-    const totalDespesas = Math.abs(despesas.reduce((sum: number, tx: any) => sum + tx.amount, 0));
-    const saldoLiquido = totalReceitas - totalDespesas;
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Transações processadas e salvas com sucesso na tabela 'transacoes'",
-        data: {
-          empresa_nome: empresa.nome,
-          empresa_id: empresaId,
-          transacoes_salvas: transacoesParaInserir.length,
-          total_receitas: totalReceitas,
-          total_despesas: totalDespesas,
-          saldo_liquido: saldoLiquido,
-          inserted_data: insertedData
-        }
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
-
-  } catch (error) {
-    console.error("Erro ao processar dados financeiros:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Falha ao processar dados financeiros", 
-        message: error.message 
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
-  }
-}
+// Remove the old processFinancialDataDirectly function as it's no longer needed
+// All processing now uses the unified processFinancialData function
