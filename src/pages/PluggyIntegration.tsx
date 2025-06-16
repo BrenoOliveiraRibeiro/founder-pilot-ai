@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { ArrowLeft, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
+import { usePluggyConnectionPersistence } from '@/hooks/usePluggyConnectionPersistence';
 
 declare global {
   interface Window {
@@ -16,18 +17,27 @@ declare global {
 
 const PluggyIntegration = () => {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [itemId, setItemId] = useState<string>('');
-  const [accountData, setAccountData] = useState<any>(null);
-  const [transactionsData, setTransactionsData] = useState<any>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const { toast } = useToast();
   
+  const {
+    connectionData,
+    loading,
+    processingTransactions,
+    saveConnection,
+    fetchTransactions,
+    fetchAccountData
+  } = usePluggyConnectionPersistence();
+  
   // Use ref to track the current instance
   const pluggyConnectInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+
+  const isConnected = connectionData?.isConnected || false;
+  const accountData = connectionData?.accountData;
+  const transactionsData = connectionData?.transactionsData;
 
   useEffect(() => {
     // Check if script is already loaded
@@ -72,89 +82,24 @@ const PluggyIntegration = () => {
     }
   }, [toast]);
 
-  const fetchTransactions = async (accountId: string) => {
-    try {
-      console.log(`Fetching transactions for account: ${accountId}`);
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
-        {
-          method: 'GET',
-          headers: {
-            accept: 'application/json'
-          }
-        }
-      );
+  // Auto-select first account and load transactions when account data is available
+  useEffect(() => {
+    if (accountData?.results && Array.isArray(accountData.results) && accountData.results.length > 0 && !selectedAccountId) {
+      const firstAccountId = accountData.results[0].id;
+      setSelectedAccountId(firstAccountId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Transactions data:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao buscar transações. Tente novamente.",
-        variant: "destructive",
-      });
-      return null;
+      // Automaticamente carregar e salvar transações da primeira conta
+      handleAccountSelection(firstAccountId);
     }
-  };
-
-  const fetchAccountData = async (itemId: string) => {
-    try {
-      console.log(`Fetching account data for item: ${itemId}`);
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/accounts?itemId=${itemId}`,
-        {
-          method: 'GET',
-          headers: {
-            accept: 'application/json'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Account data:', data);
-      setAccountData(data);
-      
-      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-        // Definir a primeira conta como selecionada por padrão
-        setSelectedAccountId(data.results[0].id);
-        // Buscar transações para a primeira conta
-        const transactionsResponse = await fetchTransactions(data.results[0].id);
-        if (transactionsResponse) {
-          setTransactionsData(transactionsResponse);
-        }
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching account data:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao buscar dados da conta. Tente novamente.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
+  }, [accountData, selectedAccountId]);
 
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setIsLoadingTransactions(true);
     
     try {
-      const transactionsResponse = await fetchTransactions(accountId);
-      if (transactionsResponse) {
-        setTransactionsData(transactionsResponse);
-      }
+      // Buscar transações - elas serão automaticamente salvas pelo hook
+      await fetchTransactions(accountId);
     } catch (error) {
       console.error('Error fetching transactions for selected account:', error);
     } finally {
@@ -223,18 +168,22 @@ const PluggyIntegration = () => {
           console.log('Pluggy connect success!', itemData);
           console.log('Item ID:', itemData.item.id);
           
-          // Armazenar o itemId
+          // Armazenar o itemId e buscar dados da conta
           const receivedItemId = itemData.item.id;
-          setItemId(receivedItemId);
+          const accountDataResponse = await fetchAccountData(receivedItemId);
           
-          // Buscar dados da conta usando o itemId
-          await fetchAccountData(receivedItemId);
+          // Salvar conexão
+          await saveConnection(
+            receivedItemId,
+            accountDataResponse,
+            undefined,
+            'Banco via Pluggy'
+          );
           
           setIsConnecting(false);
-          setIsConnected(true);
           toast({
             title: "Conexão estabelecida!",
-            description: "Sua conta bancária foi conectada com sucesso via Pluggy OpenFinance.",
+            description: "Sua conta bancária foi conectada com sucesso. As transações serão carregadas automaticamente.",
           });
         },
         onError: (error: any) => {
@@ -243,7 +192,6 @@ const PluggyIntegration = () => {
           toast({
             title: "Erro na conexão",
             description: "Ocorreu um erro ao conectar com o banco. Tente novamente.",
-            variant: "destructive",
           });
         },
       });
@@ -277,6 +225,17 @@ const PluggyIntegration = () => {
     return accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Carregando...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (isConnected) {
     const selectedAccount = getSelectedAccount();
     
@@ -296,6 +255,12 @@ const PluggyIntegration = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
                 <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
+                {processingTransactions && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-600">Processando transações automaticamente...</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -345,8 +310,13 @@ const PluggyIntegration = () => {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Transações Recentes</h2>
-                  {isLoadingTransactions && (
-                    <span className="text-sm text-gray-500">Carregando...</span>
+                  {(isLoadingTransactions || processingTransactions) && (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm text-gray-500">
+                        {processingTransactions ? 'Salvando automaticamente...' : 'Carregando...'}
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -420,6 +390,7 @@ const PluggyIntegration = () => {
     );
   }
 
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
@@ -494,7 +465,14 @@ const PluggyIntegration = () => {
                 className="w-full" 
                 disabled={isConnecting || !isScriptLoaded}
               >
-                {isConnecting ? 'Conectando...' : 'Abrir Widget Pluggy Connect'}
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  'Abrir Widget Pluggy Connect'
+                )}
               </Button>
               {!isScriptLoaded && (
                 <p className="text-sm text-gray-500 mt-2">
@@ -507,7 +485,7 @@ const PluggyIntegration = () => {
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>
               <strong>Nota:</strong> Widget oficial da Pluggy com certificação OpenFinance.
-              Todas as conexões são seguras e criptografadas.
+              Todas as conexões são seguras e criptografadas. As transações são salvas automaticamente.
             </p>
           </div>
         </div>
