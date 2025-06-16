@@ -4,7 +4,7 @@ import { getPluggyToken, callPluggyAPI, gerarInsights } from "./utils.ts";
 export async function processFinancialData(
   empresaId: string, 
   itemId: string, 
-  accountId: string, 
+  accountId: string | null, 
   transactionsData: any,
   apiKey: string | null,
   pluggyClientId: string, 
@@ -13,7 +13,7 @@ export async function processFinancialData(
   supabaseClient: any
 ) {
   try {
-    console.log(`Iniciando processamento de dados financeiros para empresa ${empresaId}, item ${itemId}, conta ${accountId}, sandbox: ${sandbox}`);
+    console.log(`Iniciando processamento de dados financeiros para empresa ${empresaId}, item ${itemId}, sandbox: ${sandbox}`);
     
     // Get API key if not provided
     if (!apiKey) {
@@ -24,6 +24,29 @@ export async function processFinancialData(
       apiKey = tokenResult.data.apiKey;
     }
     
+    // Get account data to determine which account to use
+    let targetAccountId = accountId;
+    let accountData = null;
+    
+    if (!targetAccountId) {
+      const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
+      if (accountsResult.success && accountsResult.data.results && accountsResult.data.results.length > 0) {
+        // Use the first account by default
+        targetAccountId = accountsResult.data.results[0].id;
+        accountData = accountsResult.data.results[0];
+        console.log(`Usando conta padrão: ${targetAccountId}`);
+      } else {
+        console.warn("Nenhuma conta encontrada para o item:", itemId);
+        return {
+          success: true,
+          message: "Nenhuma conta encontrada",
+          newTransactions: 0,
+          duplicates: 0,
+          total: 0
+        };
+      }
+    }
+    
     // Use provided transactions data or fetch from API
     let allTransactions = [];
     
@@ -31,8 +54,8 @@ export async function processFinancialData(
       console.log(`Usando transações fornecidas: ${transactionsData.results.length}`);
       allTransactions = transactionsData.results;
     } else {
-      // Fallback: fetch from API
-      console.log(`Buscando transações da API para conta ${accountId}`);
+      // Fetch from API
+      console.log(`Buscando transações da API para conta ${targetAccountId}`);
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       
@@ -40,7 +63,7 @@ export async function processFinancialData(
       const toDate = new Date().toISOString().split('T')[0];
       
       const transactionsResult = await callPluggyAPI(
-        `/transactions?accountId=${accountId}&from=${fromDate}&to=${toDate}`, 
+        `/transactions?accountId=${targetAccountId}&from=${fromDate}&to=${toDate}`, 
         'GET',
         apiKey
       );
@@ -48,7 +71,7 @@ export async function processFinancialData(
       if (transactionsResult.success && transactionsResult.data.results) {
         allTransactions = transactionsResult.data.results;
       } else {
-        console.warn(`Erro ao buscar transações para a conta ${accountId}:`, transactionsResult.error);
+        console.warn(`Erro ao buscar transações para a conta ${targetAccountId}:`, transactionsResult.error);
         allTransactions = [];
       }
     }
@@ -61,7 +84,8 @@ export async function processFinancialData(
         success: true,
         message: "Nenhuma transação encontrada para processar",
         newTransactions: 0,
-        duplicates: 0
+        duplicates: 0,
+        total: 0
       };
     }
     
@@ -140,12 +164,11 @@ export async function processFinancialData(
     
     // Calcular métricas apenas se houver transações novas
     if (insertedCount > 0) {
-      // Buscar dados da conta para calcular métricas
-      let accountData = null;
-      if (!transactionsData) {
+      // Buscar dados da conta para calcular métricas se não tivermos
+      if (!accountData && targetAccountId) {
         const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
         if (accountsResult.success && accountsResult.data.results) {
-          accountData = accountsResult.data.results.find((acc: any) => acc.id === accountId);
+          accountData = accountsResult.data.results.find((acc: any) => acc.id === targetAccountId);
         }
       }
       
@@ -194,9 +217,19 @@ export async function processFinancialData(
     }
     
     console.log("Processamento de dados financeiros concluído com sucesso");
+    
+    let message = "";
+    if (insertedCount > 0) {
+      message = `${insertedCount} novas transações processadas`;
+    } else if (duplicateCount > 0) {
+      message = "Nenhuma transação nova - todas já existem";
+    } else {
+      message = "Nenhuma transação nova encontrada";
+    }
+    
     return {
       success: true,
-      message: `${insertedCount} novas transações processadas`,
+      message: message,
       newTransactions: insertedCount,
       duplicates: duplicateCount,
       total: allTransactions.length

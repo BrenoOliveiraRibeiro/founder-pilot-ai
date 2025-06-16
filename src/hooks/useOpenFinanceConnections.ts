@@ -56,9 +56,25 @@ export const useOpenFinanceConnections = () => {
 
       if (error) throw error;
 
+      // Determinar mensagem baseada no resultado
+      let message = "Dados sincronizados!";
+      let description = "Os dados financeiros da sua empresa foram atualizados.";
+      
+      if (data && data.newTransactions !== undefined) {
+        if (data.newTransactions > 0) {
+          description = `${data.newTransactions} novas transações foram salvas automaticamente.`;
+          if (data.duplicates > 0) {
+            description += ` (${data.duplicates} duplicatas ignoradas)`;
+          }
+        } else {
+          message = "Sincronização concluída";
+          description = "Nenhuma transação nova encontrada. Todos os dados estão atualizados.";
+        }
+      }
+
       toast({
-        title: "Dados sincronizados!",
-        description: "Os dados financeiros da sua empresa foram atualizados.",
+        title: message,
+        description: description,
       });
 
       // Update the list of integrations to show the latest sync

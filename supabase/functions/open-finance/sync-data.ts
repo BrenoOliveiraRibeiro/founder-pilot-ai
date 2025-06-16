@@ -38,9 +38,13 @@ export async function syncData(
       }
       
       console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}`);
-      await processFinancialData(
+      
+      // Para integração específica, buscar transações e salvar automaticamente
+      const result = await processFinancialData(
         empresaId, 
         integracao.detalhes.item_id, 
+        null, // accountId será determinado automaticamente
+        null, // transactionsData será buscado da API
         apiKey,
         pluggyClientId, 
         pluggyClientSecret, 
@@ -53,6 +57,17 @@ export async function syncData(
         .from("integracoes_bancarias")
         .update({ ultimo_sincronismo: new Date().toISOString() })
         .eq("id", integracao.id);
+        
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: result.message,
+          newTransactions: result.newTransactions || 0,
+          duplicates: result.duplicates || 0,
+          total: result.total || 0
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     } else {
       // Fetch all active integrations for the company
       const { data: integracoes, error: integracoesError } = await supabase
@@ -75,18 +90,28 @@ export async function syncData(
       
       console.log(`Encontradas ${integracoes.length} integrações ativas`);
       
-      // For each integration, fetch updated data
+      let totalNewTransactions = 0;
+      let totalDuplicates = 0;
+      let totalProcessed = 0;
+      
+      // For each integration, fetch updated data and save automatically
       for (const integracao of integracoes) {
         try {
-          await processFinancialData(
+          const result = await processFinancialData(
             empresaId, 
             integracao.detalhes.item_id, 
+            null, // accountId será determinado automaticamente
+            null, // transactionsData será buscado da API
             apiKey,
             pluggyClientId, 
             pluggyClientSecret, 
             integracao.detalhes.sandbox || false, 
             supabase
           );
+          
+          totalNewTransactions += result.newTransactions || 0;
+          totalDuplicates += result.duplicates || 0;
+          totalProcessed += result.total || 0;
         } catch (error) {
           console.error(`Erro ao sincronizar integração ${integracao.id}:`, error);
         }
@@ -98,25 +123,38 @@ export async function syncData(
         .update({ ultimo_sincronismo: new Date().toISOString() })
         .eq("empresa_id", empresaId)
         .eq("tipo_conexao", "Open Finance");
+      
+      // Fetch updated metrics to return to client
+      const { data: metricasData } = await supabase
+        .from("metricas")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("data_referencia", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      let message = "";
+      if (totalNewTransactions > 0) {
+        message = `${totalNewTransactions} novas transações sincronizadas`;
+        if (totalDuplicates > 0) {
+          message += ` (${totalDuplicates} duplicatas ignoradas)`;
+        }
+      } else {
+        message = "Nenhuma transação nova encontrada";
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: message,
+          newTransactions: totalNewTransactions,
+          duplicates: totalDuplicates,
+          total: totalProcessed,
+          data: metricasData 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
-    
-    // Fetch updated metrics to return to client
-    const { data: metricasData } = await supabase
-      .from("metricas")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .order("data_referencia", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Dados sincronizados com sucesso", 
-        data: metricasData 
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
   } catch (error) {
     console.error("Erro na sincronização:", error);
     return new Response(
