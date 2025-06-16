@@ -1,49 +1,62 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Sparkles, AlertCircle, MessageSquare, LayoutDashboard } from "lucide-react";
+import { Download, RefreshCw, Sparkles, AlertCircle, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { FriendlyLoadingMessage } from "../ui/friendly-loading-message";
 import { motion } from "framer-motion";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
+import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 
 export const DashboardHeader = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const lastUpdated = new Date().toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
   const { currentEmpresa } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { metrics, refetch } = useOpenFinanceDashboard();
 
-  const handleRefresh = () => {
+  const lastUpdated = metrics?.ultimaAtualizacao 
+    ? new Date(metrics.ultimaAtualizacao).toLocaleDateString("pt-BR", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : new Date().toLocaleDateString("pt-BR", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
     
-    // Show toast to improve feedback
     toast({
       title: "Atualizando dados",
-      description: "Seus dados estão sendo atualizados...",
+      description: "Sincronizando dados do Open Finance...",
       className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
     });
     
-    // Simulate refresh
-    setTimeout(() => {
-      setIsRefreshing(false);
+    try {
+      await refetch();
       
       toast({
         title: "Dados atualizados",
-        description: "Seus dados foram atualizados com sucesso.",
+        description: "Seus dados foram sincronizados com sucesso.",
         className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
       });
-      
-      window.location.reload();
-    }, 1500);
+    } catch (error) {
+      toast({
+        title: "Erro na atualização",
+        description: "Não foi possível sincronizar os dados. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleAskAI = () => {
@@ -64,6 +77,26 @@ export const DashboardHeader = () => {
   const itemVariants = {
     hidden: { y: -10, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  };
+
+  const getRecommendationText = () => {
+    if (!metrics) {
+      return "Conecte suas contas bancárias para análises personalizadas com base em dados reais.";
+    }
+
+    if (metrics.integracoesAtivas === 0) {
+      return "Conecte suas contas bancárias via Open Finance para obter insights precisos baseados em dados reais.";
+    }
+
+    if (metrics.alertaCritico) {
+      return `Seu runway é crítico: apenas ${metrics.runwayMeses.toFixed(1)} meses restantes. Recomendo revisar despesas urgentemente.`;
+    }
+
+    if (metrics.fluxoCaixa < 0) {
+      return `Seu fluxo de caixa está negativo este mês. Considere revisar suas despesas ou aumentar a receita.`;
+    }
+
+    return `Baseado nos dados reais: ${metrics.runwayMeses.toFixed(1)} meses de runway. Continue monitorando suas métricas.`;
   };
 
   return (
@@ -102,7 +135,7 @@ export const DashboardHeader = () => {
             className="hover-lift micro-feedback focus-ring"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? "Atualizando..." : "Atualizar"}
+            {isRefreshing ? "Sincronizando..." : "Sincronizar"}
           </Button>
         </motion.div>
       </div>
@@ -114,11 +147,15 @@ export const DashboardHeader = () => {
         <p>Última atualização: <span className="text-foreground/80">{lastUpdated}</span></p>
         <div className="flex items-center gap-2">
           <motion.div 
-            className="w-2 h-2 rounded-full bg-green-500" 
+            className={`w-2 h-2 rounded-full ${metrics?.integracoesAtivas ? 'bg-green-500' : 'bg-amber-500'}`}
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
           ></motion.div>
-          <span>Dados conectados</span>
+          <span>
+            {metrics?.integracoesAtivas 
+              ? `${metrics.integracoesAtivas} conta(s) conectada(s)` 
+              : "Dados simulados"}
+          </span>
         </div>
       </motion.div>
       
@@ -149,14 +186,15 @@ export const DashboardHeader = () => {
             </div>
             <h3 className="font-medium text-foreground flex items-center gap-2">
               <span className="gradient-text">FounderPilot</span>
+              {metrics?.integracoesAtivas > 0 && (
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                  Dados Reais
+                </span>
+              )}
             </h3>
           </div>
           <p className="text-sm text-foreground/80 leading-relaxed text-pretty">
-            {currentEmpresa && currentEmpresa.nome === "Synapsia" ? (
-              <>Seu burn rate aumentou 15% este mês. Considere revisar suas despesas de marketing que cresceram significativamente.</>
-            ) : (
-              <>Seu burn rate aumentou 15% este mês. Considere revisar suas assinaturas e despesas recentes.</>
-            )}
+            {getRecommendationText()}
           </p>
         </div>
         <Button 
@@ -171,13 +209,15 @@ export const DashboardHeader = () => {
         </Button>
       </motion.div>
       
-      <motion.div
-        className="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 ml-1"
-        variants={itemVariants}
-      >
-        <AlertCircle className="h-3.5 w-3.5" />
-        <span>Sua runway atual é de 3.2 meses – recomendamos ação imediata</span>
-      </motion.div>
+      {metrics?.alertaCritico && (
+        <motion.div
+          className="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 ml-1"
+          variants={itemVariants}
+        >
+          <AlertCircle className="h-3.5 w-3.5" />
+          <span>Runway crítico detectado: {metrics.runwayMeses.toFixed(1)} meses restantes baseado em dados reais</span>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

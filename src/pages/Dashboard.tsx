@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { MetricsGrid } from "@/components/dashboard/MetricsGrid";
+import { OpenFinanceMetricsGrid } from "@/components/dashboard/OpenFinanceMetricsGrid";
 import { RunwayChart } from "@/components/dashboard/RunwayChart";
 import { InsightsCard } from "@/components/dashboard/InsightsCard";
 import { TransactionsCard } from "@/components/dashboard/TransactionsCard";
@@ -10,12 +10,12 @@ import { AIAdvisorCard } from "@/components/dashboard/AIAdvisorCard";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFinanceData } from "@/hooks/useFinanceData";
+import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const { currentEmpresa } = useAuth();
-  const { isRunwayCritical, metrics } = useFinanceData(currentEmpresa?.id || null);
+  const { metrics } = useOpenFinanceDashboard();
   const [isPageLoading, setIsPageLoading] = useState(true);
   
   useEffect(() => {
@@ -34,7 +34,7 @@ const Dashboard = () => {
       setTimeout(() => {
         toast({
           title: "Bem-vindo ao FounderPilot AI",
-          description: "Seu copiloto estratégico para tomada de decisões de negócios.",
+          description: "Seu copiloto estratégico para tomada de decisões de negócios com dados reais.",
           className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
           duration: 5000,
         });
@@ -42,18 +42,18 @@ const Dashboard = () => {
       }, 2500);
     }
     
-    // Alerta de runway crítico
-    if (isRunwayCritical) {
+    // Alerta de runway crítico baseado em dados reais
+    if (metrics?.alertaCritico) {
       setTimeout(() => {
         toast({
-          title: "ALERTA: Runway Crítico",
-          description: `Seu runway atual é de apenas ${metrics?.runway_meses?.toFixed(1)} meses. Acesse a seção de Finanças para mais detalhes.`,
+          title: "ALERTA: Runway Crítico (Dados Reais)",
+          description: `Seu runway atual é de apenas ${metrics.runwayMeses.toFixed(1)} meses baseado em dados reais das suas contas. Acesse a seção de Finanças para mais detalhes.`,
           variant: "destructive",
           duration: 8000,
         });
       }, 3000);
     }
-  }, [toast, isRunwayCritical, metrics?.runway_meses]);
+  }, [toast, metrics?.alertaCritico, metrics?.runwayMeses]);
 
   // Configuração das animações
   const containerVariants = {
@@ -96,7 +96,7 @@ const Dashboard = () => {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="text-lg font-medium text-primary"
             >
-              Carregando dados financeiros...
+              Carregando dados financeiros reais...
             </motion.p>
             <motion.div
               initial={{ opacity: 0, width: 0 }}
@@ -134,7 +134,7 @@ const Dashboard = () => {
         </motion.div>
         
         <motion.div variants={itemVariants} className="mb-6">
-          <MetricsGrid />
+          <OpenFinanceMetricsGrid />
         </motion.div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -195,9 +195,9 @@ const Dashboard = () => {
         >
           <div className="bg-gradient-to-r from-primary/80 to-primary/90 text-white px-4 py-2 rounded-full shadow-premium text-sm flex items-center gap-2 hover:shadow-premium-hover transition-all duration-300 cursor-pointer">
             <span className="animate-pulse-subtle">●</span>
-            {currentEmpresa 
-              ? `Analisando os dados financeiros de ${currentEmpresa.nome}...` 
-              : "Conecte suas contas para mais insights"}
+            {metrics?.integracoesAtivas ? 
+              `Analisando dados reais de ${metrics.integracoesAtivas} conta(s) conectada(s) de ${currentEmpresa?.nome}...` : 
+              "Conecte suas contas para análises com dados reais"}
           </div>
         </motion.div>
       </motion.div>
