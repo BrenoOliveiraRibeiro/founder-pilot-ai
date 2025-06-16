@@ -283,6 +283,7 @@ export type Database = {
           metodo_pagamento: string | null
           recorrente: boolean | null
           tipo: string
+          transaction_hash: string | null
           valor: number
         }
         Insert: {
@@ -295,6 +296,7 @@ export type Database = {
           metodo_pagamento?: string | null
           recorrente?: boolean | null
           tipo: string
+          transaction_hash?: string | null
           valor: number
         }
         Update: {
@@ -307,6 +309,7 @@ export type Database = {
           metodo_pagamento?: string | null
           recorrente?: boolean | null
           tipo?: string
+          transaction_hash?: string | null
           valor?: number
         }
         Relationships: [
@@ -400,6 +403,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_transaction_hash: {
+        Args: {
+          p_descricao: string
+          p_valor: number
+          p_data_transacao: string
+          p_empresa_id: string
+        }
+        Returns: string
+      }
       insert_demo_data: {
         Args: { p_empresa_id: string }
         Returns: undefined

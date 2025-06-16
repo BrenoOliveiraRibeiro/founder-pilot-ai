@@ -26,7 +26,6 @@ const OpenFinance = () => {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
-  const [isSavingTransactions, setIsSavingTransactions] = useState(false);
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -51,12 +50,13 @@ const OpenFinance = () => {
   const {
     connectionData,
     loading: connectionLoading,
+    processingTransactions,
     saveConnection,
     clearConnection,
     syncData,
     fetchTransactions,
     fetchAccountData,
-    saveTransactionsToDatabase
+    processAndSaveTransactions
   } = usePluggyConnectionPersistence();
 
   useEffect(() => {
@@ -67,7 +67,6 @@ const OpenFinance = () => {
   }, [currentEmpresa, authLoading, connectionData]);
 
   useEffect(() => {
-    // Check if script is already loaded
     if (window.PluggyConnect && !scriptLoadedRef.current) {
       console.log('Pluggy Connect script already available');
       setIsScriptLoaded(true);
@@ -75,7 +74,6 @@ const OpenFinance = () => {
       return;
     }
 
-    // Only load script if not already loaded
     if (!scriptLoadedRef.current) {
       const script = document.createElement('script');
       script.src = 'https://cdn.pluggy.ai/pluggy-connect/v2.8.2/pluggy-connect.js';
@@ -96,7 +94,6 @@ const OpenFinance = () => {
       document.head.appendChild(script);
 
       return () => {
-        // Cleanup on unmount
         if (pluggyConnectInstanceRef.current) {
           try {
             pluggyConnectInstanceRef.current.destroy?.();
@@ -120,7 +117,7 @@ const OpenFinance = () => {
   const formatCurrency = (amount: number, currencyCode: string) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: currencyCode || 'BRL'
+      currencyCode: currencyCode || 'BRL'
     }).format(amount);
   };
 
@@ -133,6 +130,7 @@ const OpenFinance = () => {
     return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
+  // Função melhorada para seleção de conta (sem salvamento automático)
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setIsLoadingTransactions(true);
@@ -140,28 +138,8 @@ const OpenFinance = () => {
     try {
       if (connectionData?.itemId) {
         const transactionsResponse = await fetchTransactions(accountId);
-        if (transactionsResponse && transactionsResponse.results) {
-          // Usar a nova função para salvar sem duplicatas
-          setIsSavingTransactions(true);
-          const result = await saveTransactionsToDatabase(
-            connectionData.itemId, 
-            accountId, 
-            transactionsResponse
-          );
-          
-          if (result.success) {
-            toast({
-              title: "Transações processadas!",
-              description: result.message,
-            });
-          } else {
-            toast({
-              title: "Aviso",
-              description: result.message,
-              variant: "default",
-            });
-          }
-        }
+        // Não salvar automaticamente - apenas buscar para visualização
+        console.log('Transações carregadas para visualização:', transactionsResponse?.results?.length || 0);
       }
     } catch (error) {
       console.error('Error fetching transactions for selected account:', error);
@@ -172,7 +150,51 @@ const OpenFinance = () => {
       });
     } finally {
       setIsLoadingTransactions(false);
-      setIsSavingTransactions(false);
+    }
+  };
+
+  // Nova função específica para salvar transações
+  const handleSaveTransactions = async () => {
+    if (!connectionData?.itemId || !selectedAccountId || !connectionData?.transactionsData) {
+      toast({
+        title: "Erro",
+        description: "Dados insuficientes para salvar transações.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await processAndSaveTransactions(
+        connectionData.itemId,
+        selectedAccountId,
+        connectionData.transactionsData
+      );
+
+      if (result.success) {
+        let message = result.message;
+        if (result.newTransactions && result.skippedDuplicates) {
+          message += ` (${result.skippedDuplicates} duplicatas ignoradas)`;
+        }
+        
+        toast({
+          title: "Transações processadas!",
+          description: message,
+        });
+      } else {
+        toast({
+          title: "Aviso",
+          description: result.message,
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving transactions:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar transações.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -186,7 +208,6 @@ const OpenFinance = () => {
       return;
     }
 
-    // Destroy any existing instance
     if (pluggyConnectInstanceRef.current) {
       console.log('Destroying existing Pluggy Connect instance');
       try {
@@ -201,10 +222,8 @@ const OpenFinance = () => {
     console.log("Iniciando conexão com Pluggy Connect...");
 
     try {
-      // Clear any cached token to force fresh authentication
       pluggyAuth.clearToken();
       
-      // Fetch connect token from Pluggy API using authenticated request
       const response = await pluggyAuth.makeAuthenticatedRequest('https://api.pluggy.ai/connect_token', {
         method: 'POST',
         headers: {
@@ -213,7 +232,7 @@ const OpenFinance = () => {
         },
         body: JSON.stringify({
           options: {
-            clientUserId: `user_${Date.now()}`, // Use unique user ID
+            clientUserId: `user_${Date.now()}`,
           },
         }),
       });
@@ -229,7 +248,6 @@ const OpenFinance = () => {
         throw new Error('No access token received');
       }
 
-      // Create new instance
       pluggyConnectInstanceRef.current = new window.PluggyConnect({
         connectToken: tokenData.accessToken,
         includeSandbox: true,
@@ -239,11 +257,9 @@ const OpenFinance = () => {
           
           const receivedItemId = itemData.item.id;
           
-          // Buscar dados da conta usando o itemId
           const accountData = await fetchAccountData(receivedItemId);
           
           if (accountData) {
-            // Salvar conexão na base de dados
             await saveConnection(
               receivedItemId, 
               accountData, 
@@ -251,29 +267,17 @@ const OpenFinance = () => {
               itemData.item.connector?.name || 'Banco Conectado'
             );
 
-            // Se temos contas, selecionar a primeira automaticamente
             if (accountData.results && accountData.results.length > 0) {
               const firstAccountId = accountData.results[0].id;
               setSelectedAccountId(firstAccountId);
               
-              // Buscar transações para a primeira conta com verificação de duplicatas
-              const transactionsResponse = await fetchTransactions(firstAccountId);
-              if (transactionsResponse) {
-                setIsSavingTransactions(true);
-                const result = await saveTransactionsToDatabase(
-                  receivedItemId, 
-                  firstAccountId, 
-                  transactionsResponse
-                );
-                
-                if (result.success) {
-                  toast({
-                    title: "Conexão estabelecida!",
-                    description: `Conexão realizada! ${result.message}`,
-                  });
-                }
-                setIsSavingTransactions(false);
-              }
+              // Apenas buscar transações, não salvar automaticamente
+              await fetchTransactions(firstAccountId);
+              
+              toast({
+                title: "Conexão estabelecida!",
+                description: "Conexão realizada com sucesso. Use o botão 'Salvar Transações' para processar os dados.",
+              });
             }
           }
           
@@ -336,9 +340,9 @@ const OpenFinance = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
                 <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
-                {(isSavingTransactions || isLoadingTransactions) && (
+                {(processingTransactions || isLoadingTransactions) && (
                   <p className="text-blue-600 text-sm">
-                    {isSavingTransactions ? 'Salvando transações...' : 'Carregando transações...'}
+                    {processingTransactions ? 'Processando transações...' : 'Carregando transações...'}
                   </p>
                 )}
               </div>
@@ -399,11 +403,22 @@ const OpenFinance = () => {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Transações Recentes</h2>
-                  {(isLoadingTransactions || isSavingTransactions) && (
-                    <span className="text-sm text-gray-500">
-                      {isSavingTransactions ? 'Salvando...' : 'Carregando...'}
-                    </span>
-                  )}
+                  <div className="flex gap-2">
+                    {(isLoadingTransactions || processingTransactions) && (
+                      <span className="text-sm text-gray-500">
+                        {processingTransactions ? 'Processando...' : 'Carregando...'}
+                      </span>
+                    )}
+                    {connectionData.transactionsData?.results && selectedAccountId && (
+                      <Button 
+                        size="sm" 
+                        onClick={handleSaveTransactions}
+                        disabled={processingTransactions}
+                      >
+                        {processingTransactions ? 'Salvando...' : 'Salvar Transações'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {connectionData.transactionsData?.results && connectionData.transactionsData.results.length > 0 ? (
@@ -486,7 +501,6 @@ const OpenFinance = () => {
     );
   }
 
-  // Interface para conectar nova conta
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
