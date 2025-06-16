@@ -8,10 +8,12 @@ import { InsightsCard } from "@/components/dashboard/InsightsCard";
 import { TransactionsCard } from "@/components/dashboard/TransactionsCard";
 import { AIAdvisorCard } from "@/components/dashboard/AIAdvisorCard";
 import { motion } from "framer-motion";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
 const Dashboard = () => {
+  const { toast } = useToast();
   const { currentEmpresa } = useAuth();
   const { isRunwayCritical, metrics } = useFinanceData(currentEmpresa?.id || null);
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -24,6 +26,34 @@ const Dashboard = () => {
     
     return () => clearTimeout(timer);
   }, []);
+  
+  useEffect(() => {
+    // Welcome toast na primeira visita
+    const hasVisitedDashboard = localStorage.getItem('hasVisitedDashboard');
+    if (!hasVisitedDashboard) {
+      setTimeout(() => {
+        toast({
+          title: "Bem-vindo ao FounderPilot AI",
+          description: "Seu copiloto estratégico para tomada de decisões de negócios.",
+          className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
+          duration: 5000,
+        });
+        localStorage.setItem('hasVisitedDashboard', 'true');
+      }, 2500);
+    }
+    
+    // Alerta de runway crítico
+    if (isRunwayCritical) {
+      setTimeout(() => {
+        toast({
+          title: "ALERTA: Runway Crítico",
+          description: `Seu runway atual é de apenas ${metrics?.runway_meses?.toFixed(1)} meses. Acesse a seção de Finanças para mais detalhes.`,
+          variant: "destructive",
+          duration: 8000,
+        });
+      }, 3000);
+    }
+  }, [toast, isRunwayCritical, metrics?.runway_meses]);
 
   // Configuração das animações
   const containerVariants = {
