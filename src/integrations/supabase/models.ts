@@ -60,6 +60,9 @@ export type IntegracaoBancaria = {
   status: string;
   ultimo_sincronismo: string | null;
   detalhes: any | null;
+  account_data: any | null;
+  item_id: string | null;
+  connection_token: string | null;
   created_at: string;
   updated_at: string;
 }
