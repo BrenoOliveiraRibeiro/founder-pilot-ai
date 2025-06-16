@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -227,8 +226,7 @@ export const usePluggyConnectionPersistence = () => {
         message: `${filteredTransactions.length} novas transações salvas`,
         newTransactions: filteredTransactions.length,
         totalTransactions: transactionsData.results.length,
-        skippedDuplicates,
-        data 
+        skippedDuplicates
       };
 
     } catch (error) {

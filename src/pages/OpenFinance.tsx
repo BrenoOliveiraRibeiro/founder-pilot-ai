@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -117,7 +118,7 @@ const OpenFinance = () => {
   const formatCurrency = (amount: number, currencyCode: string) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currencyCode: currencyCode || 'BRL'
+      currency: currencyCode || 'BRL'
     }).format(amount);
   };
 
