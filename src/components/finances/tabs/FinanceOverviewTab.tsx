@@ -97,10 +97,14 @@ export const FinanceOverviewTab: React.FC = () => {
           let caixaAtual = 0;
           if (integracoes) {
             caixaAtual = integracoes.reduce((total, integracao) => {
-              if (integracao.account_data?.results) {
-                return total + integracao.account_data.results.reduce((sum: number, account: any) => {
-                  return sum + (account.balance || 0);
-                }, 0);
+              // Type check for account_data
+              if (integracao.account_data && typeof integracao.account_data === 'object' && integracao.account_data !== null) {
+                const accountData = integracao.account_data as any;
+                if (accountData.results && Array.isArray(accountData.results)) {
+                  return total + accountData.results.reduce((sum: number, account: any) => {
+                    return sum + (account.balance || 0);
+                  }, 0);
+                }
               }
               return total;
             }, 0);

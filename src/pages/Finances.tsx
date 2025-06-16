@@ -28,7 +28,7 @@ const FinancesPage = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <FinanceOverviewTab runway={runway} />
+          <FinanceOverviewTab />
         </TabsContent>
 
         <TabsContent value="cashflow">
