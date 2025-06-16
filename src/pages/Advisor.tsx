@@ -11,8 +11,10 @@ import { ChatMessage } from "@/components/advisor/ChatMessage";
 import { EmptyStateView } from "@/components/advisor/EmptyStateView";
 import { ChatInputForm } from "@/components/advisor/ChatInputForm";
 import { ErrorMessage } from "@/components/advisor/ErrorMessage";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Database, AlertCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Advisor = () => {
   const { currentEmpresa, profile } = useAuth();
@@ -30,7 +32,9 @@ const Advisor = () => {
     handleSendMessage,
     handleInputChange,
     handleSuggestionClick,
-    scrollToBottom
+    scrollToBottom,
+    hasFinancialData,
+    financialMetrics
   } = useAdvisorChat({
     empresaId: currentEmpresa?.id,
     empresaNome: currentEmpresa?.nome,
@@ -73,7 +77,7 @@ const Advisor = () => {
               <Sparkles className={`${isMobile ? "h-6 w-6" : "h-8 w-8"} text-white`} />
             </div>
           </div>
-          <div>
+          <div className="flex-1">
             <motion.h1 
               className="text-gradient text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight"
               initial={{ opacity: 0 }}
@@ -82,16 +86,87 @@ const Advisor = () => {
             >
               FounderPilot AI
             </motion.h1>
-            <motion.p 
-              className="text-xs sm:text-sm text-muted-foreground mt-0 sm:mt-1"
+            <motion.div 
+              className="flex items-center gap-2 mt-1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.8 }}
             >
-              {currentEmpresa?.nome ? `Seu copiloto estratégico para ${currentEmpresa.nome}` : 'Seu copiloto estratégico com acesso aos seus dados'}
-            </motion.p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {currentEmpresa?.nome ? `Copiloto estratégico para ${currentEmpresa.nome}` : 'Seu copiloto estratégico'}
+              </p>
+              {hasFinancialData ? (
+                <Badge variant="outline" className="text-xs">
+                  <Database className="h-3 w-3 mr-1" />
+                  Dados Reais
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  Demo
+                </Badge>
+              )}
+            </div>
           </div>
         </motion.div>
+
+        {/* Status dos dados financeiros */}
+        {!hasFinancialData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
+          >
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <span className="font-medium">Conecte suas contas bancárias</span> para receber insights baseados em dados reais. 
+                Atualmente usando dados demonstrativos para análises gerais.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+
+        {/* Métricas rápidas quando há dados reais */}
+        {hasFinancialData && financialMetrics && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-6"
+          >
+            <Card className="bg-gradient-to-r from-primary/5 to-blue-50 dark:from-primary/10 dark:to-blue-900/20 border-primary/20">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Runway</p>
+                    <p className={`font-bold ${financialMetrics.runwayMeses < 3 ? 'text-destructive' : financialMetrics.runwayMeses < 6 ? 'text-warning' : 'text-green-600'}`}>
+                      {financialMetrics.runwayMeses.toFixed(1)}m
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Caixa</p>
+                    <p className="font-bold">
+                      R$ {(financialMetrics.saldoTotal / 1000).toFixed(0)}k
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Burn Rate</p>
+                    <p className="font-bold">
+                      R$ {(financialMetrics.burnRate / 1000).toFixed(0)}k
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fluxo</p>
+                    <p className={`font-bold ${financialMetrics.fluxoCaixa >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      R$ {(financialMetrics.fluxoCaixa / 1000).toFixed(0)}k
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -152,6 +227,21 @@ const Advisor = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Status da sincronização */}
+        {hasFinancialData && financialMetrics?.ultimaAtualizacao && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-center"
+          >
+            <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              Dados sincronizados • {new Date(financialMetrics.ultimaAtualizacao).toLocaleString('pt-BR')}
+            </p>
+          </motion.div>
+        )}
       </div>
     </AppLayout>
   );
