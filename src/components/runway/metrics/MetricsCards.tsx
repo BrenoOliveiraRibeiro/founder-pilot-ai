@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, TrendingDown, AlertTriangle, DollarSign, Wallet } from "lucide-react";
+import { Calendar, TrendingDown, AlertTriangle, DollarSign, Wallet, Database } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -10,13 +10,15 @@ interface MetricsCardsProps {
   burnRate: number;
   runwayMonths: number;
   estimatedRunoutDate: Date;
+  isRealData?: boolean;
 }
 
 export const MetricsCards: React.FC<MetricsCardsProps> = ({ 
   cashReserve, 
   burnRate, 
   runwayMonths, 
-  estimatedRunoutDate 
+  estimatedRunoutDate,
+  isRealData = false
 }) => {
   // Função para determinar a cor do runway baseado no valor em meses
   const getRunwayStatusColor = (months: number) => {
@@ -53,9 +55,17 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle className="text-sm font-medium">Runway Atual</CardTitle>
-            <Badge variant={runwayMonths < 3 ? "destructive" : runwayMonths < 6 ? "warning" : "default"} className="ml-2">
-              {runwayStatusText}
-            </Badge>
+            <div className="flex gap-1">
+              {isRealData && (
+                <Badge variant="outline" className="text-xs">
+                  <Database className="h-3 w-3 mr-1" />
+                  Real
+                </Badge>
+              )}
+              <Badge variant={runwayMonths < 3 ? "destructive" : runwayMonths < 6 ? "warning" : "default"}>
+                {runwayStatusText}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -79,7 +89,15 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({
       {/* Card de Caixa Atual */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Caixa Atual</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-sm font-medium">Caixa Atual</CardTitle>
+            {isRealData && (
+              <Badge variant="outline" className="text-xs">
+                <Database className="h-3 w-3 mr-1" />
+                Real
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
@@ -92,7 +110,15 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({
       {/* Card de Burn Rate Mensal */}
       <Card className={`border-2 transition-all ${burnRateCardClass}`}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Burn Rate Mensal</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-sm font-medium">Burn Rate Mensal</CardTitle>
+            {isRealData && (
+              <Badge variant="outline" className="text-xs">
+                <Database className="h-3 w-3 mr-1" />
+                Real
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
@@ -110,7 +136,7 @@ export const MetricsCards: React.FC<MetricsCardsProps> = ({
             </div>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {(burnRate / cashReserve * 100).toFixed(1)}% do caixa por mês
+            {cashReserve > 0 ? (burnRate / cashReserve * 100).toFixed(1) : 0}% do caixa por mês
           </div>
         </CardContent>
       </Card>

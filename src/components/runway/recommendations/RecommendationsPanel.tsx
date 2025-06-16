@@ -1,17 +1,19 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingDown, TrendingUp, Calendar, AlertTriangle, DollarSign, BarChart, Users, ShieldCheck } from "lucide-react";
+import { TrendingDown, TrendingUp, Calendar, AlertTriangle, DollarSign, BarChart, Users, ShieldCheck, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface RecommendationsPanelProps {
   runwayMonths: number;
   burnRate: number;
+  hasRealData?: boolean;
 }
 
 export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ 
   runwayMonths,
-  burnRate
+  burnRate,
+  hasRealData = false
 }) => {
   // Define recomendações baseadas no estado do runway
   const getRecommendations = () => {
@@ -21,19 +23,23 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         {
           icon: <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />,
           title: "Situação crítica: Reduza despesas imediatamente",
-          description: "Corte 30-40% das despesas não essenciais para estender seu runway por pelo menos 2 meses.",
+          description: hasRealData 
+            ? "Com base nos seus dados reais, corte 30-40% das despesas não essenciais para estender seu runway por pelo menos 2 meses."
+            : "Corte 30-40% das despesas não essenciais para estender seu runway por pelo menos 2 meses.",
           priority: "high"
         },
         {
           icon: <DollarSign className="h-4 w-4 text-destructive shrink-0 mt-0.5" />,
           title: "Inicie captação de emergência",
-          description: `Busque captação bridge de R$ ${formatCurrency(burnRate * 6)} para garantir sobrevivência por 6 meses adicionais.`,
+          description: `Busque captação bridge de ${formatCurrency(burnRate * 6)} para garantir sobrevivência por 6 meses adicionais.`,
           priority: "high"
         },
         {
           icon: <Users className="h-4 w-4 text-destructive shrink-0 mt-0.5" />,
           title: "Revise estrutura da equipe",
-          description: "Considere reestruturação de time e possíveis reduções para preservar caixa.",
+          description: hasRealData
+            ? "Seus dados reais mostram necessidade urgente de reestruturação de time e possíveis reduções para preservar caixa."
+            : "Considere reestruturação de time e possíveis reduções para preservar caixa.",
           priority: "high"
         }
       ];
@@ -43,7 +49,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         {
           icon: <TrendingDown className="h-4 w-4 text-warning shrink-0 mt-0.5" />,
           title: "Reduza despesas não essenciais",
-          description: "Uma redução de 15-20% nas despesas de marketing e serviços externos pode estender seu runway em 1.5 meses.",
+          description: hasRealData
+            ? "Baseado no seu burn rate real, uma redução de 15-20% nas despesas de marketing e serviços externos pode estender seu runway em 1.5 meses."
+            : "Uma redução de 15-20% nas despesas de marketing e serviços externos pode estender seu runway em 1.5 meses.",
           priority: "medium"
         },
         {
@@ -55,7 +63,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         {
           icon: <BarChart className="h-4 w-4 text-warning shrink-0 mt-0.5" />,
           title: "Otimize fontes de receita",
-          description: "Foque em clientes com menor CAC e maior LTV para maximizar eficiência do capital.",
+          description: hasRealData
+            ? "Analisando seu fluxo de caixa real, foque em clientes com menor CAC e maior LTV para maximizar eficiência do capital."
+            : "Foque em clientes com menor CAC e maior LTV para maximizar eficiência do capital.",
           priority: "medium"
         }
       ];
@@ -65,7 +75,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         {
           icon: <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />,
           title: "Invista em crescimento sustentável",
-          description: "Com runway saudável, considere reinvestir 20-30% em canais de aquisição que provaram ROI positivo.",
+          description: hasRealData
+            ? "Com runway saudável confirmado pelos seus dados reais, considere reinvestir 20-30% em canais de aquisição que provaram ROI positivo."
+            : "Com runway saudável, considere reinvestir 20-30% em canais de aquisição que provaram ROI positivo.",
           priority: "low"
         },
         {
@@ -77,7 +89,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
         {
           icon: <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />,
           title: "Solidifique estrutura financeira",
-          description: "Desenvolva múltiplas fontes de receita e crie reservas para enfrentar possíveis cenários adversos.",
+          description: hasRealData
+            ? "Com base nos seus dados reais, desenvolva múltiplas fontes de receita e crie reservas para enfrentar possíveis cenários adversos."
+            : "Desenvolva múltiplas fontes de receita e crie reservas para enfrentar possíveis cenários adversos.",
           priority: "low"
         }
       ];
@@ -106,13 +120,24 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
     <Card className="md:col-span-1">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Recomendações do IA Advisor</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            IA Advisor
+            {hasRealData && (
+              <Badge variant="outline" className="text-xs">
+                <Database className="h-3 w-3 mr-1" />
+                Dados Reais
+              </Badge>
+            )}
+          </CardTitle>
           <Badge variant={runwayMonths < 3 ? "destructive" : runwayMonths < 6 ? "warning" : "default"}>
             {runwayMonths < 3 ? 'Ação Urgente' : runwayMonths < 6 ? 'Atenção' : 'Oportunidade'}
           </Badge>
         </div>
         <CardDescription>
-          Sugestões para otimizar seu runway e finanças
+          {hasRealData 
+            ? "Recomendações baseadas nos seus dados financeiros reais"
+            : "Sugestões para otimizar seu runway e finanças"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
