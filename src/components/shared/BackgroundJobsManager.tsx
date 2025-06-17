@@ -7,6 +7,15 @@ import { useBackgroundJobs } from '@/hooks/useBackgroundJobs';
 import { RefreshCw, Database, Calculator, Lightbulb, TrendingUp, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+interface JobConfig {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  action: () => Promise<any>;
+  color: string;
+}
+
 export const BackgroundJobsManager: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [lastResults, setLastResults] = useState<Record<string, any>>({});
@@ -43,7 +52,7 @@ export const BackgroundJobsManager: React.FC = () => {
     }
   };
 
-  const jobs = [
+  const jobs: JobConfig[] = [
     {
       id: 'sync',
       name: 'Sincronizar Transações',

@@ -1,21 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useRealtimeUpdates } from './useRealtimeUpdates';
-
-interface OpenFinanceMetrics {
-  saldoTotal: number;
-  receitaMensal: number;
-  despesasMensais: number;
-  fluxoCaixa: number;
-  runwayMeses: number;
-  burnRate: number;
-  ultimaAtualizacao: string | null;
-  integracoesAtivas: number;
-  alertaCritico: boolean;
-}
+import { OpenFinanceService, type OpenFinanceMetrics } from '@/services/openFinanceService';
 
 export const useOpenFinanceDashboard = () => {
   const [metrics, setMetrics] = useState<OpenFinanceMetrics | null>(null);
@@ -34,107 +22,8 @@ export const useOpenFinanceDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Buscar integrações ativas
-      const { data: integracoes, error: integracoesError } = await supabase
-        .from('integracoes_bancarias')
-        .select('*')
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('status', 'ativo')
-        .eq('tipo_conexao', 'Open Finance');
-
-      if (integracoesError) throw integracoesError;
-
-      const integracoesAtivas = integracoes?.length || 0;
-
-      if (integracoesAtivas === 0) {
-        setMetrics({
-          saldoTotal: 0,
-          receitaMensal: 0,
-          despesasMensais: 0,
-          fluxoCaixa: 0,
-          runwayMeses: 0,
-          burnRate: 0,
-          ultimaAtualizacao: null,
-          integracoesAtivas: 0,
-          alertaCritico: false
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Calcular saldo total das contas conectadas
-      let saldoTotal = 0;
-      let ultimaAtualizacao: string | null = null;
-
-      for (const integracao of integracoes || []) {
-        if (integracao.account_data && typeof integracao.account_data === 'object') {
-          const accountData = integracao.account_data as any;
-          if (accountData.results && Array.isArray(accountData.results)) {
-            saldoTotal += accountData.results.reduce((sum: number, account: any) => {
-              return sum + (account.balance || 0);
-            }, 0);
-          }
-        }
-        
-        if (integracao.ultimo_sincronismo) {
-          if (!ultimaAtualizacao || new Date(integracao.ultimo_sincronismo) > new Date(ultimaAtualizacao)) {
-            ultimaAtualizacao = integracao.ultimo_sincronismo;
-          }
-        }
-      }
-
-      // Buscar transações dos últimos 3 meses para calcular métricas
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-      const { data: transacoes, error: transacoesError } = await supabase
-        .from('transacoes')
-        .select('*')
-        .eq('empresa_id', currentEmpresa.id)
-        .gte('data_transacao', threeMonthsAgo.toISOString().split('T')[0]);
-
-      if (transacoesError) throw transacoesError;
-
-      // Calcular métricas baseadas nas transações
-      const hoje = new Date();
-      const mesAtual = hoje.getMonth();
-      const anoAtual = hoje.getFullYear();
-
-      const transacoesMesAtual = transacoes?.filter(tx => {
-        const dataTransacao = new Date(tx.data_transacao);
-        return dataTransacao.getMonth() === mesAtual && dataTransacao.getFullYear() === anoAtual;
-      }) || [];
-
-      const receitaMensal = transacoesMesAtual
-        .filter(tx => tx.tipo === 'receita')
-        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
-
-      const despesasMensais = transacoesMesAtual
-        .filter(tx => tx.tipo === 'despesa')
-        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
-
-      const fluxoCaixa = receitaMensal - despesasMensais;
-
-      // Calcular burn rate médio dos últimos 3 meses
-      const burnRate = Math.abs((transacoes || [])
-        .filter(tx => tx.tipo === 'despesa')
-        .reduce((sum, tx) => sum + tx.valor, 0)) / 3;
-
-      // Calcular runway
-      const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;
-      const alertaCritico = runwayMeses < 3;
-
-      setMetrics({
-        saldoTotal,
-        receitaMensal,
-        despesasMensais,
-        fluxoCaixa,
-        runwayMeses,
-        burnRate,
-        ultimaAtualizacao,
-        integracoesAtivas,
-        alertaCritico
-      });
+      const metricsData = await OpenFinanceService.getMetrics(currentEmpresa.id);
+      setMetrics(metricsData);
 
     } catch (error: any) {
       console.error('Erro ao buscar dados do Open Finance:', error);

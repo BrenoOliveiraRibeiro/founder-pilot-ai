@@ -1,67 +1,20 @@
 
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-
-export type JobType = 'sync_transactions' | 'calculate_metrics' | 'generate_insights' | 'update_runway';
-export type JobPriority = 'low' | 'medium' | 'high';
-
-interface JobRequest {
-  jobType: JobType;
-  priority?: JobPriority;
-  payload?: any;
-}
-
-interface JobResult {
-  success: boolean;
-  jobType: JobType;
-  result?: any;
-  error?: string;
-  timestamp: string;
-}
+import { BackgroundJobsService, type JobResult } from '@/services/backgroundJobsService';
 
 export const useBackgroundJobs = () => {
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
-  const executeJob = useCallback(async (jobRequest: JobRequest): Promise<JobResult> => {
+  const syncTransactions = useCallback(async (sandbox: boolean = true) => {
     if (!currentEmpresa?.id) {
       throw new Error('Empresa não encontrada');
     }
 
     try {
-      console.log(`Executando job em background: ${jobRequest.jobType}`);
-      
-      const { data, error } = await supabase.functions.invoke('background-jobs', {
-        body: {
-          ...jobRequest,
-          empresaId: currentEmpresa.id,
-          priority: jobRequest.priority || 'medium'
-        }
-      });
-
-      if (error) {
-        console.error('Erro no background job:', error);
-        throw new Error(error.message || 'Erro ao executar job');
-      }
-
-      console.log('Background job concluído:', data);
-      return data;
-
-    } catch (error: any) {
-      console.error('Erro inesperado no background job:', error);
-      throw error;
-    }
-  }, [currentEmpresa?.id]);
-
-  const syncTransactions = useCallback(async (sandbox: boolean = true) => {
-    try {
-      const result = await executeJob({
-        jobType: 'sync_transactions',
-        priority: 'high',
-        payload: { sandbox }
-      });
+      const result = await BackgroundJobsService.syncTransactions(currentEmpresa.id, sandbox);
 
       if (result.success) {
         toast({
@@ -79,14 +32,15 @@ export const useBackgroundJobs = () => {
       });
       throw error;
     }
-  }, [executeJob, toast]);
+  }, [currentEmpresa?.id, toast]);
 
   const calculateMetrics = useCallback(async () => {
+    if (!currentEmpresa?.id) {
+      throw new Error('Empresa não encontrada');
+    }
+
     try {
-      const result = await executeJob({
-        jobType: 'calculate_metrics',
-        priority: 'medium'
-      });
+      const result = await BackgroundJobsService.calculateMetrics(currentEmpresa.id);
 
       if (result.success) {
         toast({
@@ -104,14 +58,15 @@ export const useBackgroundJobs = () => {
       });
       throw error;
     }
-  }, [executeJob, toast]);
+  }, [currentEmpresa?.id, toast]);
 
   const generateInsights = useCallback(async () => {
+    if (!currentEmpresa?.id) {
+      throw new Error('Empresa não encontrada');
+    }
+
     try {
-      const result = await executeJob({
-        jobType: 'generate_insights',
-        priority: 'low'
-      });
+      const result = await BackgroundJobsService.generateInsights(currentEmpresa.id);
 
       if (result.success && result.result?.generatedInsights > 0) {
         toast({
@@ -129,14 +84,15 @@ export const useBackgroundJobs = () => {
       });
       throw error;
     }
-  }, [executeJob, toast]);
+  }, [currentEmpresa?.id, toast]);
 
   const updateRunway = useCallback(async () => {
+    if (!currentEmpresa?.id) {
+      throw new Error('Empresa não encontrada');
+    }
+
     try {
-      const result = await executeJob({
-        jobType: 'update_runway',
-        priority: 'medium'
-      });
+      const result = await BackgroundJobsService.updateRunway(currentEmpresa.id);
 
       if (result.success) {
         toast({
@@ -154,22 +110,20 @@ export const useBackgroundJobs = () => {
       });
       throw error;
     }
-  }, [executeJob, toast]);
+  }, [currentEmpresa?.id, toast]);
 
   const runFullUpdate = useCallback(async () => {
+    if (!currentEmpresa?.id) {
+      throw new Error('Empresa não encontrada');
+    }
+
     try {
       toast({
         title: "Processamento iniciado",
         description: "Executando atualização completa em background...",
       });
 
-      // Execute jobs in sequence with proper error handling
-      const results = await Promise.allSettled([
-        syncTransactions(),
-        calculateMetrics(),
-        generateInsights(),
-        updateRunway()
-      ]);
+      const results = await BackgroundJobsService.runFullUpdate(currentEmpresa.id);
 
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
@@ -198,10 +152,9 @@ export const useBackgroundJobs = () => {
       });
       throw error;
     }
-  }, [syncTransactions, calculateMetrics, generateInsights, updateRunway, toast]);
+  }, [currentEmpresa?.id, toast]);
 
   return {
-    executeJob,
     syncTransactions,
     calculateMetrics,
     generateInsights,
