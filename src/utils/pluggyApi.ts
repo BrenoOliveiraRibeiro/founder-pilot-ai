@@ -26,10 +26,10 @@ export const pluggyApi = {
     }
   },
 
-  async fetchTransactions(accountId: string) {
+  async fetchTransactions(accountId: string, page: number = 1, pageSize: number = 50) {
     try {
       const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
+        `https://api.pluggy.ai/transactions?accountId=${accountId}&page=${page}&pageSize=${pageSize}`,
         {
           method: 'GET',
           headers: { accept: 'application/json' }
@@ -42,7 +42,7 @@ export const pluggyApi = {
       }
       
       const data = await response.json();
-      console.log('Transações carregadas:', data);
+      console.log(`Transações carregadas (página ${page}):`, data);
       return data;
     } catch (error: any) {
       console.error('Erro ao buscar transações:', error);

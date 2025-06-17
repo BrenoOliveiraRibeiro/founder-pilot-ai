@@ -77,17 +77,17 @@ export const usePluggyConnectionPersistence = () => {
   }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, toast]);
 
   // Função para buscar transações via API e salvar automaticamente
-  const fetchTransactions = useCallback(async (accountId: string) => {
+  const fetchTransactions = useCallback(async (accountId: string, page: number = 1, pageSize: number = 50) => {
     if (!connectionData?.itemId) return null;
 
     try {
-      const transactionsData = await pluggyApi.fetchTransactions(accountId);
+      const transactionsData = await pluggyApi.fetchTransactions(accountId, page, pageSize);
       
       // Atualizar estado local
       updateConnectionData({ transactionsData });
       
-      // Processar e salvar automaticamente
-      if (transactionsData && transactionsData.results && transactionsData.results.length > 0) {
+      // Processar e salvar automaticamente apenas se for a primeira página
+      if (page === 1 && transactionsData && transactionsData.results && transactionsData.results.length > 0) {
         const result = await processAndSaveTransactions(connectionData.itemId, accountId, transactionsData);
         
         // Mostrar erro se o processamento falhou
