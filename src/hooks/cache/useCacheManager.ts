@@ -1,20 +1,10 @@
 
 import { useState, useCallback, useRef } from 'react';
-
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number; // Time to live in milliseconds
-}
-
-interface CacheConfig {
-  defaultTTL: number;
-  maxSize: number;
-}
+import type { CacheEntry, CacheConfig, CacheStats, CacheInfo } from '../types/cacheTypes';
 
 export const useCacheManager = <T>(config: CacheConfig = { defaultTTL: 300000, maxSize: 100 }) => {
   const cacheRef = useRef<Map<string, CacheEntry<T>>>(new Map());
-  const [cacheStats, setCacheStats] = useState({ hits: 0, misses: 0 });
+  const [cacheStats, setCacheStats] = useState<CacheStats>({ hits: 0, misses: 0 });
 
   const isExpired = useCallback((entry: CacheEntry<T>): boolean => {
     return Date.now() - entry.timestamp > entry.ttl;
@@ -44,7 +34,9 @@ export const useCacheManager = <T>(config: CacheConfig = { defaultTTL: 300000, m
     // Remove oldest entries if cache is full
     if (cacheRef.current.size >= config.maxSize) {
       const oldestKey = cacheRef.current.keys().next().value;
-      cacheRef.current.delete(oldestKey);
+      if (oldestKey) {
+        cacheRef.current.delete(oldestKey);
+      }
     }
 
     cacheRef.current.set(key, {
@@ -76,12 +68,13 @@ export const useCacheManager = <T>(config: CacheConfig = { defaultTTL: 300000, m
     }
   }, [isExpired]);
 
-  const getCacheInfo = useCallback(() => {
+  const getCacheInfo = useCallback((): CacheInfo => {
+    const totalRequests = cacheStats.hits + cacheStats.misses;
     return {
       size: cacheRef.current.size,
       maxSize: config.maxSize,
       stats: cacheStats,
-      hitRate: cacheStats.hits / (cacheStats.hits + cacheStats.misses) || 0
+      hitRate: totalRequests > 0 ? cacheStats.hits / totalRequests : 0
     };
   }, [config.maxSize, cacheStats]);
 

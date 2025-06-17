@@ -1,20 +1,13 @@
 
 import { useCallback, useEffect } from 'react';
 import { useCacheManager } from './useCacheManager';
-
-interface SmartCacheOptions {
-  ttl?: number;
-  staleWhileRevalidate?: boolean;
-  backgroundRefresh?: boolean;
-  retryOnError?: boolean;
-  maxRetries?: number;
-}
+import type { SmartCacheOptions, SmartCacheReturn } from '../types/cacheTypes';
 
 export const useSmartCache = <T>(
   cacheKey: string,
   fetchFn: () => Promise<T>,
   options: SmartCacheOptions = {}
-) => {
+): SmartCacheReturn<T> => {
   const {
     ttl = 300000, // 5 minutes default
     staleWhileRevalidate = true,
@@ -59,7 +52,7 @@ export const useSmartCache = <T>(
     return fetchWithRetry();
   }, [cache, cacheKey, staleWhileRevalidate, backgroundRefresh, fetchWithRetry]);
 
-  const invalidateCache = useCallback(() => {
+  const invalidateCache = useCallback((): void => {
     cache.invalidate(cacheKey);
   }, [cache, cacheKey]);
 
