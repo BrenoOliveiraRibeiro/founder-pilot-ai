@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
+import { usePluggyConnectionPersistence } from "@/hooks/usePluggyConnectionPersistence";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +14,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 
 declare global {
   interface Window {
