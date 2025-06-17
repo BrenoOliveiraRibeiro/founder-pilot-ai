@@ -1,29 +1,28 @@
+
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { pluggyApi } from '@/utils/pluggyApi';
-import { useFinancialDataCache } from './cache/useFinancialDataCache';
 
 export const usePluggyDataSync = () => {
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
-  const { createAccountDataCache, createTransactionsCache } = useFinancialDataCache();
 
   const syncAccountData = useCallback(async (itemId: string) => {
     if (!currentEmpresa?.id) return null;
 
     try {
-      console.log('Sincronizando dados da conta com cache inteligente...');
+      console.log('Sincronizando dados da conta...');
       
-      const accountCache = createAccountDataCache(itemId);
-      const accountData = await accountCache.getCachedData();
+      // Buscar dados diretamente da API sem usar cache por enquanto
+      const accountData = await pluggyApi.fetchAccountData(itemId);
       
       if (accountData) {
         const { error: updateError } = await supabase
           .from('integracoes_bancarias')
           .update({ 
-            account_data: accountData as any, // Cast to any to handle Json type compatibility
+            account_data: accountData as any,
             ultimo_sincronismo: new Date().toISOString()
           })
           .eq('empresa_id', currentEmpresa.id)
@@ -34,20 +33,10 @@ export const usePluggyDataSync = () => {
           throw new Error(`Erro ao atualizar dados: ${updateError.message}`);
         }
 
-        const cacheInfo = accountCache.getCacheInfo();
-        console.log('Cache stats:', cacheInfo);
-
-        if (cacheInfo.stats.hits > 0) {
-          toast({
-            title: "Dados carregados do cache",
-            description: "Dados bancários carregados rapidamente do cache local.",
-          });
-        } else {
-          toast({
-            title: "Dados sincronizados",
-            description: "Os dados bancários foram atualizados com sucesso.",
-          });
-        }
+        toast({
+          title: "Dados sincronizados",
+          description: "Os dados bancários foram atualizados com sucesso.",
+        });
 
         return accountData;
       }
@@ -61,12 +50,11 @@ export const usePluggyDataSync = () => {
       });
       throw error;
     }
-  }, [currentEmpresa?.id, toast, createAccountDataCache]);
+  }, [currentEmpresa?.id, toast]);
 
   const fetchAccountData = useCallback(async (itemId: string) => {
     try {
-      const accountCache = createAccountDataCache(itemId);
-      return await accountCache.getCachedData();
+      return await pluggyApi.fetchAccountData(itemId);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados da conta",
@@ -75,19 +63,18 @@ export const usePluggyDataSync = () => {
       });
       return null;
     }
-  }, [toast, createAccountDataCache]);
+  }, [toast]);
 
   const fetchTransactions = useCallback(async (accountId: string, itemId: string) => {
     if (!itemId) return null;
 
     try {
-      const transactionsCache = createTransactionsCache(accountId);
-      const transactionsData = await transactionsCache.getCachedData();
+      console.log('Buscando transações para accountId:', accountId);
       
-      const cacheInfo = transactionsCache.getCacheInfo();
-      if (cacheInfo.stats.hits > 0) {
-        console.log('Transações carregadas do cache - Cache hit rate:', cacheInfo.hitRate);
-      }
+      // Buscar transações diretamente da API
+      const transactionsData = await pluggyApi.fetchTransactions(accountId);
+      
+      console.log('Transações encontradas:', transactionsData?.results?.length || 0);
       
       return transactionsData;
     } catch (error: any) {
@@ -99,31 +86,17 @@ export const usePluggyDataSync = () => {
       });
       return null;
     }
-  }, [toast, createTransactionsCache]);
+  }, [toast]);
 
   const invalidateCache = useCallback((itemId?: string, accountId?: string) => {
-    if (itemId) {
-      const accountCache = createAccountDataCache(itemId);
-      accountCache.invalidateCache();
-    }
-    
-    if (accountId) {
-      const transactionsCache = createTransactionsCache(accountId);
-      transactionsCache.invalidateCache();
-    }
-  }, [createAccountDataCache, createTransactionsCache]);
+    // Implementação futura quando o cache for reintroduzido
+    console.log('Cache invalidation not implemented yet');
+  }, []);
 
   const refreshCache = useCallback(async (itemId?: string, accountId?: string) => {
     try {
-      if (itemId) {
-        const accountCache = createAccountDataCache(itemId);
-        await accountCache.refreshCache();
-      }
-      
-      if (accountId) {
-        const transactionsCache = createTransactionsCache(accountId);
-        await transactionsCache.refreshCache();
-      }
+      // Implementação futura quando o cache for reintroduzido
+      console.log('Cache refresh not implemented yet');
       
       toast({
         title: "Cache atualizado",
@@ -136,7 +109,7 @@ export const usePluggyDataSync = () => {
         variant: "destructive",
       });
     }
-  }, [createAccountDataCache, createTransactionsCache, toast]);
+  }, [toast]);
 
   return {
     syncAccountData,
