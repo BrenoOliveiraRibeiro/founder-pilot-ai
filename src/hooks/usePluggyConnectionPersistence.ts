@@ -25,6 +25,70 @@ export const usePluggyConnectionPersistence = () => {
     processAndSaveTransactions
   } = usePluggyTransactions();
 
+  // Função para processar automaticamente todas as contas de um item
+  const autoProcessAllAccounts = useCallback(async (itemId: string, showToasts: boolean = true) => {
+    if (!currentEmpresa?.id || !itemId) return;
+
+    try {
+      console.log(`Iniciando processamento automático para item ${itemId}`);
+      
+      // Buscar todas as contas do item
+      const accountData = await pluggyApi.fetchAccountData(itemId);
+      
+      if (!accountData?.results || accountData.results.length === 0) {
+        console.log('Nenhuma conta encontrada para processar');
+        return;
+      }
+
+      let totalNewTransactions = 0;
+      let totalProcessedAccounts = 0;
+
+      // Processar cada conta automaticamente
+      for (const account of accountData.results) {
+        try {
+          console.log(`Processando conta: ${account.name} (${account.id})`);
+          
+          // Buscar transações da conta (última página apenas para processamento inicial)
+          const transactionsData = await pluggyApi.fetchTransactions(account.id, 1, 50);
+          
+          if (transactionsData?.results && transactionsData.results.length > 0) {
+            const result = await processAndSaveTransactions(itemId, account.id, transactionsData);
+            
+            if (result.success) {
+              totalNewTransactions += result.newTransactions || 0;
+              totalProcessedAccounts++;
+              console.log(`Conta ${account.name}: ${result.newTransactions} novas transações`);
+            }
+          }
+        } catch (accountError) {
+          console.error(`Erro ao processar conta ${account.id}:`, accountError);
+        }
+      }
+
+      console.log(`Processamento automático concluído: ${totalNewTransactions} transações de ${totalProcessedAccounts} contas`);
+
+      // Mostrar toast apenas se solicitado e há transações novas
+      if (showToasts && totalNewTransactions > 0) {
+        toast({
+          title: "Transações salvas automaticamente!",
+          description: `${totalNewTransactions} transações foram processadas e salvas de ${totalProcessedAccounts} conta${totalProcessedAccounts !== 1 ? 's' : ''}.`,
+        });
+      }
+
+      return { totalNewTransactions, totalProcessedAccounts };
+    } catch (error: any) {
+      console.error('Erro no processamento automático:', error);
+      
+      if (showToasts) {
+        toast({
+          title: "Erro no processamento automático",
+          description: "Algumas transações podem não ter sido salvas. Você pode sincronizar manualmente.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [currentEmpresa?.id, processAndSaveTransactions, toast]);
+
   // Carregar conexão existente ao montar o componente
   useEffect(() => {
     const initializeConnection = async () => {
@@ -57,6 +121,9 @@ export const usePluggyConnectionPersistence = () => {
 
             // Atualizar estado local
             updateConnectionData({ accountData });
+
+            // Processar transações automaticamente para conexão existente
+            await autoProcessAllAccounts(existingConnection.itemId, false);
           }
         }
 
@@ -74,9 +141,9 @@ export const usePluggyConnectionPersistence = () => {
     };
 
     initializeConnection();
-  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, toast]);
+  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, autoProcessAllAccounts, toast]);
 
-  // Função para buscar transações via API e salvar automaticamente
+  // Função para buscar transações via API (mantém compatibilidade com a interface existente)
   const fetchTransactions = useCallback(async (accountId: string, page: number = 1, pageSize: number = 50) => {
     if (!connectionData?.itemId) return null;
 
@@ -85,20 +152,6 @@ export const usePluggyConnectionPersistence = () => {
       
       // Atualizar estado local
       updateConnectionData({ transactionsData });
-      
-      // Processar e salvar automaticamente apenas se for a primeira página
-      if (page === 1 && transactionsData && transactionsData.results && transactionsData.results.length > 0) {
-        const result = await processAndSaveTransactions(connectionData.itemId, accountId, transactionsData);
-        
-        // Mostrar erro se o processamento falhou
-        if (!result.success) {
-          toast({
-            title: "Erro ao salvar transações",
-            description: result.message,
-            variant: "destructive",
-          });
-        }
-      }
       
       return transactionsData;
     } catch (error: any) {
@@ -110,7 +163,7 @@ export const usePluggyConnectionPersistence = () => {
       });
       return null;
     }
-  }, [connectionData?.itemId, updateConnectionData, processAndSaveTransactions, toast]);
+  }, [connectionData?.itemId, updateConnectionData, toast]);
 
   // Função para buscar dados da conta
   const fetchAccountData = useCallback(async (itemId: string) => {
@@ -125,6 +178,30 @@ export const usePluggyConnectionPersistence = () => {
       return null;
     }
   }, [toast]);
+
+  // Função para salvar conexão com processamento automático
+  const saveConnectionWithAutoProcess = useCallback(async (
+    itemId: string,
+    accountData: any,
+    connectionToken?: string,
+    bankName?: string
+  ) => {
+    try {
+      // Salvar conexão primeiro
+      await saveConnection(itemId, accountData, connectionToken, bankName);
+      
+      // Processar todas as transações automaticamente
+      await autoProcessAllAccounts(itemId, true);
+      
+    } catch (error: any) {
+      console.error('Erro ao salvar conexão com processamento automático:', error);
+      toast({
+        title: "Erro ao salvar conexão",
+        description: error.message || "A conexão foi estabelecida, mas houve erro no processamento automático.",
+        variant: "destructive",
+      });
+    }
+  }, [saveConnection, autoProcessAllAccounts, toast]);
 
   // Sincronizar dados
   const syncData = useCallback(async () => {
@@ -148,6 +225,9 @@ export const usePluggyConnectionPersistence = () => {
           throw new Error(`Erro ao atualizar sincronização: ${error.message}`);
         }
 
+        // Processar automaticamente todas as contas na sincronização
+        await autoProcessAllAccounts(connectionData.itemId, true);
+
         toast({
           title: "Dados sincronizados",
           description: "Os dados bancários foram atualizados com sucesso.",
@@ -161,17 +241,18 @@ export const usePluggyConnectionPersistence = () => {
         variant: "destructive",
       });
     }
-  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, toast]);
+  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, autoProcessAllAccounts, toast]);
 
   return {
     connectionData,
     loading,
     processingTransactions,
-    saveConnection,
+    saveConnection: saveConnectionWithAutoProcess,
     clearConnection,
     syncData,
     fetchTransactions,
     fetchAccountData,
-    processAndSaveTransactions
+    processAndSaveTransactions,
+    autoProcessAllAccounts
   };
 };

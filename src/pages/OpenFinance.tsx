@@ -3,8 +3,6 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
-import { usePluggyConnectionPersistence } from "@/hooks/usePluggyConnectionPersistence";
-import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,20 +21,20 @@ declare global {
 }
 
 const OpenFinance = () => {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const [totalPages, setTotalPages] = useState(1);
-  const [autoSaveProcessed, setAutoSaveProcessed] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
   // Use ref to track the current instance
   const pluggyConnectInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
 
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [autoSaveProcessed, setAutoSaveProcessed] = useState<Record<string, boolean>>({});
   const pageSize = 20;
 
   const {
@@ -333,28 +331,38 @@ const OpenFinance = () => {
           
           const receivedItemId = itemData.item.id;
           
-          const accountData = await fetchAccountData(receivedItemId);
-          
-          if (accountData) {
-            await saveConnection(
-              receivedItemId, 
-              accountData, 
-              tokenData.accessToken,
-              itemData.item.connector?.name || 'Banco Conectado'
-            );
+          try {
+            const accountData = await fetchAccountData(receivedItemId);
+            
+            if (accountData) {
+              // saveConnection agora inclui processamento automático de transações
+              await saveConnection(
+                receivedItemId, 
+                accountData, 
+                tokenData.accessToken,
+                itemData.item.connector?.name || 'Banco Conectado'
+              );
 
-            if (accountData.results && accountData.results.length > 0) {
-              const firstAccountId = accountData.results[0].id;
-              setSelectedAccountId(firstAccountId);
-              
-              // Apenas buscar transações, salvamento será automático
-              await loadTransactions(firstAccountId, 1);
-              
-              toast({
-                title: "Conexão estabelecida!",
-                description: "Conexão realizada com sucesso.",
-              });
+              if (accountData.results && accountData.results.length > 0) {
+                const firstAccountId = accountData.results[0].id;
+                setSelectedAccountId(firstAccountId);
+                
+                // Apenas buscar transações para visualização (já foram salvas automaticamente)
+                await loadTransactions(firstAccountId, 1);
+                
+                toast({
+                  title: "Conexão estabelecida!",
+                  description: "Conexão realizada e transações salvas automaticamente.",
+                });
+              }
             }
+          } catch (error: any) {
+            console.error('Erro ao processar conexão:', error);
+            toast({
+              title: "Erro ao processar conexão",
+              description: error.message || "A conexão foi estabelecida, mas houve erro ao processar os dados.",
+              variant: "destructive",
+            });
           }
           
           setIsConnecting(false);

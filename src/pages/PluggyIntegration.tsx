@@ -33,11 +33,11 @@ const PluggyIntegration = () => {
         console.log('Item ID:', itemData.item.id);
         
         try {
-          // Armazenar o itemId e buscar dados da conta
+          // Buscar dados da conta
           const receivedItemId = itemData.item.id;
           const accountDataResponse = await fetchAccountData(receivedItemId);
           
-          // Salvar conexão
+          // saveConnection agora inclui processamento automático completo
           await saveConnection(
             receivedItemId,
             accountDataResponse,
@@ -47,7 +47,7 @@ const PluggyIntegration = () => {
           
           toast({
             title: "Conexão estabelecida!",
-            description: "Sua conta bancária foi conectada com sucesso. As transações serão carregadas automaticamente.",
+            description: "Sua conta bancária foi conectada e todas as transações foram salvas automaticamente.",
           });
         } catch (error: any) {
           console.error('Erro ao processar sucesso da conexão:', error);
@@ -86,9 +86,7 @@ const PluggyIntegration = () => {
     );
   }
 
-  // Check if connectionData exists and has required properties, and type-cast it properly
   if (isConnected && connectionData && connectionData.itemId && connectionData.accountData) {
-    // Create a properly typed connection object for the connected view
     const typedConnectionData = {
       itemId: connectionData.itemId,
       accountData: connectionData.accountData,
