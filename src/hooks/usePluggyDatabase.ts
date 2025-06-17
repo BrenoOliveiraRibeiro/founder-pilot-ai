@@ -147,12 +147,26 @@ export const usePluggyDatabase = () => {
     if (!currentEmpresa?.id || !connectionData?.itemId) return;
 
     try {
+      // Buscar a integração existente primeiro para obter o nome_banco
+      const { data: existingIntegration, error: fetchError } = await supabase
+        .from('integracoes_bancarias')
+        .select('nome_banco')
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('item_id', connectionData.itemId)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Erro ao buscar integração: ${fetchError.message}`);
+      }
+
       // Usar upsert para atualizar status de forma mais eficiente
       const { error } = await supabase
         .from('integracoes_bancarias')
         .upsert({
           empresa_id: currentEmpresa.id,
           item_id: connectionData.itemId,
+          nome_banco: existingIntegration?.nome_banco || 'Banco Desconectado',
+          tipo_conexao: 'Open Finance',
           status: 'inativo',
           ultimo_sincronismo: new Date().toISOString()
         }, {

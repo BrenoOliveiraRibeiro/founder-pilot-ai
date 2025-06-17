@@ -139,14 +139,28 @@ export const usePluggyTransactions = () => {
     if (!currentEmpresa?.id) return;
 
     try {
+      // Buscar a integração existente primeiro para obter campos obrigatórios
+      const { data: existingIntegration, error: fetchError } = await supabase
+        .from('integracoes_bancarias')
+        .select('nome_banco')
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('item_id', itemId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
+        console.error('Erro ao buscar integração existente:', fetchError);
+        return;
+      }
+
       const { error } = await supabase
         .from('integracoes_bancarias')
         .upsert({
           empresa_id: currentEmpresa.id,
           item_id: itemId,
+          nome_banco: existingIntegration?.nome_banco || 'Banco via Open Finance',
+          tipo_conexao: 'Open Finance',
           status: status,
-          ultimo_sincronismo: new Date().toISOString(),
-          tipo_conexao: 'Open Finance'
+          ultimo_sincronismo: new Date().toISOString()
         }, {
           onConflict: 'empresa_id,item_id'
         });
