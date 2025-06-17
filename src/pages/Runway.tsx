@@ -47,7 +47,7 @@ const RunwayPage = () => {
       // Usar dados de transações se disponíveis
       setCashReserve(saldoCaixa);
       setBurnRate(saidasMesAtual);
-      setRunwayMonths(saidaMensasl > 0 ? saldoCaixa / saidasMesAtual : 0);
+      setRunwayMonths(saidasMesAtual > 0 ? saldoCaixa / saidasMesAtual : 0);
       setHasConnectedData(true);
       
       generateProjectionData(saldoCaixa, saidasMesAtual);
