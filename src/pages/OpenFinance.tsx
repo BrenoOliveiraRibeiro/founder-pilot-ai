@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
@@ -12,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,11 +27,16 @@ const OpenFinance = () => {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [transactionsData, setTransactionsData] = useState<any>(null);
+  const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
   
   // Use ref to track the current instance
   const pluggyConnectInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+
+  const pageSize = 20;
 
   const {
     activeIntegrations,
@@ -112,6 +117,7 @@ const OpenFinance = () => {
     if (connectionData?.accountData?.results && connectionData.accountData.results.length > 0 && !selectedAccountId) {
       const firstAccountId = connectionData.accountData.results[0].id;
       setSelectedAccountId(firstAccountId);
+      handleAccountSelection(firstAccountId);
     }
   }, [connectionData?.accountData, selectedAccountId]);
 
@@ -131,18 +137,24 @@ const OpenFinance = () => {
     return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
   };
 
-  // Função melhorada para seleção de conta (sem salvamento automático)
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
+    setCurrentPage(1);
+    await loadTransactions(accountId, 1);
+  };
+
+  const loadTransactions = async (accountId: string, page: number) => {
     setIsLoadingTransactions(true);
     
     try {
-      if (connectionData?.itemId) {
-        const transactionsResponse = await fetchTransactions(accountId);
-        // Não salvar automaticamente - apenas buscar para visualização
-        console.log('Transações carregadas para visualização:', transactionsResponse?.results?.length || 0);
+      const data = await fetchTransactions(accountId, page, pageSize);
+      if (data) {
+        setTransactionsData(data);
+        // Calcular total de páginas baseado no total de resultados
+        const total = data.total || data.results?.length || 0;
+        setTotalPages(Math.ceil(total / pageSize));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching transactions for selected account:', error);
       toast({
         title: "Erro",
@@ -154,9 +166,16 @@ const OpenFinance = () => {
     }
   };
 
+  const handlePageChange = async (page: number) => {
+    if (page !== currentPage && selectedAccountId && page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+      await loadTransactions(selectedAccountId, page);
+    }
+  };
+
   // Nova função específica para salvar transações
   const handleSaveTransactions = async () => {
-    if (!connectionData?.itemId || !selectedAccountId || !connectionData?.transactionsData) {
+    if (!connectionData?.itemId || !selectedAccountId || !transactionsData) {
       toast({
         title: "Erro",
         description: "Dados insuficientes para salvar transações.",
@@ -169,7 +188,7 @@ const OpenFinance = () => {
       const result = await processAndSaveTransactions(
         connectionData.itemId,
         selectedAccountId,
-        connectionData.transactionsData
+        transactionsData
       );
 
       if (result.success) {
@@ -273,7 +292,7 @@ const OpenFinance = () => {
               setSelectedAccountId(firstAccountId);
               
               // Apenas buscar transações, não salvar automaticamente
-              await fetchTransactions(firstAccountId);
+              await loadTransactions(firstAccountId, 1);
               
               toast({
                 title: "Conexão estabelecida!",
@@ -403,14 +422,14 @@ const OpenFinance = () => {
             <div className="lg:col-span-2">
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold">Transações Recentes</h2>
+                  <h2 className="text-lg font-semibold">Transações</h2>
                   <div className="flex gap-2">
                     {(isLoadingTransactions || processingTransactions) && (
                       <span className="text-sm text-gray-500">
                         {processingTransactions ? 'Processando...' : 'Carregando...'}
                       </span>
                     )}
-                    {connectionData.transactionsData?.results && selectedAccountId && (
+                    {transactionsData?.results && selectedAccountId && (
                       <Button 
                         size="sm" 
                         onClick={handleSaveTransactions}
@@ -422,59 +441,96 @@ const OpenFinance = () => {
                   </div>
                 </div>
 
-                {connectionData.transactionsData?.results && connectionData.transactionsData.results.length > 0 ? (
-                  <div className="overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Descrição</TableHead>
-                          <TableHead>Categoria</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {connectionData.transactionsData.results.slice(0, 10).map((transaction: any, index: number) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">
-                              {formatDateTransaction(transaction.date)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {transaction.amount > 0 ? (
-                                  <ArrowUpCircle className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <ArrowDownCircle className="w-4 h-4 text-red-600" />
-                                )}
-                                <span className="truncate max-w-xs" title={transaction.description}>
-                                  {transaction.description || 'Transação'}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                {transaction.category || 'Outros'}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={`font-medium ${
-                                transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {formatCurrency(Math.abs(transaction.amount), transaction.currencyCode || 'BRL')}
-                              </span>
-                            </TableCell>
+                {transactionsData?.results && transactionsData.results.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead className="text-right">Valor</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {transactionsData.results.map((transaction: any, index: number) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {formatDateTransaction(transaction.date)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {transaction.amount > 0 ? (
+                                    <ArrowUpCircle className="w-4 h-4 text-green-600" />
+                                  ) : (
+                                    <ArrowDownCircle className="w-4 h-4 text-red-600" />
+                                  )}
+                                  <span className="truncate max-w-xs" title={transaction.description}>
+                                    {transaction.description || 'Transação'}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                  {transaction.category || 'Outros'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className={`font-medium ${
+                                  transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {formatCurrency(Math.abs(transaction.amount), transaction.currencyCode || 'BRL')}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                     
-                    {connectionData.transactionsData.results.length > 10 && (
-                      <div className="mt-4 text-center">
-                        <p className="text-sm text-gray-500">
-                          Mostrando 10 de {connectionData.transactionsData.results.length} transações
-                        </p>
+                    {/* Paginação */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center mt-6">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious 
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                            
+                            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                              const pageNum = i + 1;
+                              return (
+                                <PaginationItem key={pageNum}>
+                                  <PaginationLink
+                                    onClick={() => handlePageChange(pageNum)}
+                                    isActive={currentPage === pageNum}
+                                    className="cursor-pointer"
+                                  >
+                                    {pageNum}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            })}
+                            
+                            <PaginationItem>
+                              <PaginationNext 
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
                       </div>
                     )}
+                    
+                    <div className="text-center text-sm text-gray-500">
+                      Página {currentPage} de {totalPages} • 
+                      Mostrando {transactionsData.results.length} de {transactionsData.total || transactionsData.results.length} transações
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
