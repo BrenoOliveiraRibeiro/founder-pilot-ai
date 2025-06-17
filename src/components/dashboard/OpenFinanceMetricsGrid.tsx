@@ -74,7 +74,7 @@ export const OpenFinanceMetricsGrid = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Alerta de Runway Crítico!</AlertTitle>
             <AlertDescription>
-              Seu runway atual é de apenas {metrics.runwayMeses.toFixed(1)} meses baseado em dados reais. 
+              Seu runway atual é de apenas {metrics.runwayMeses.toFixed(1)} meses baseado nos dados conectados. 
               Recomendamos tomar ações imediatas para reduzir despesas ou buscar captação de recursos.
             </AlertDescription>
           </Alert>
@@ -91,7 +91,7 @@ export const OpenFinanceMetricsGrid = () => {
             <Zap className="h-4 w-4" />
             <AlertTitle>Conecte suas contas bancárias</AlertTitle>
             <AlertDescription>
-              Para ver dados reais e dinâmicos, conecte suas contas bancárias via Open Finance.
+              Para ver métricas dinâmicas e precisas, conecte suas contas bancárias via Open Finance.
             </AlertDescription>
           </Alert>
         </motion.div>
@@ -121,7 +121,7 @@ export const OpenFinanceMetricsGrid = () => {
             value={formatCurrency(metrics.receitaMensal)}
             description="mês atual"
             icon={<BanknoteIcon className="h-5 w-5 text-blue-500" />}
-            tooltip="Receita total do mês atual baseada em transações reais"
+            tooltip="Receita total do mês atual baseada em transações conectadas"
             loading={loading}
             className="border-blue-200 bg-blue-50 dark:border-blue-900/30 dark:bg-blue-900/10"
           />
@@ -130,10 +130,10 @@ export const OpenFinanceMetricsGrid = () => {
         <motion.div variants={itemVariants}>
           <MetricCard
             title="Despesas Mensais"
-            value={formatCurrency(metrics.despesasMensais)}
+            value={formatCurrency(metrics.despesaMensal)}
             description="mês atual"
             icon={<CreditCard className="h-5 w-5 text-red-500" />}
-            tooltip="Despesas totais do mês atual baseadas em transações reais"
+            tooltip="Despesas totais do mês atual baseadas em transações conectadas"
             loading={loading}
             className="border-red-200 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10"
           />
@@ -141,11 +141,11 @@ export const OpenFinanceMetricsGrid = () => {
         
         <motion.div variants={itemVariants}>
           <MetricCard
-            title="Runway Real"
+            title="Runway Atual"
             value={`${metrics.runwayMeses.toFixed(1)} meses`}
-            description="baseado em dados reais"
+            description="baseado em dados conectados"
             icon={<CalendarClock className="h-5 w-5 text-warning" />}
-            tooltip="Tempo que seu dinheiro durará na taxa atual de gastos, calculado com dados reais"
+            tooltip="Tempo que seu dinheiro durará na taxa atual de gastos, calculado com dados das contas conectadas"
             className={getRunwayColor(metrics.runwayMeses)}
             loading={loading}
           />

@@ -16,7 +16,7 @@ export const useDashboardEffects = () => {
       setTimeout(() => {
         toast({
           title: "Bem-vindo ao FounderPilot AI",
-          description: "Seu copiloto estratégico para tomada de decisões de negócios com dados reais.",
+          description: "Seu copiloto estratégico para tomada de decisões de negócios com dados financeiros conectados.",
           className: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
           duration: 5000,
         });
@@ -24,12 +24,12 @@ export const useDashboardEffects = () => {
       }, 2500);
     }
     
-    // Alerta de runway crítico baseado em dados reais
+    // Alerta de runway crítico baseado em dados conectados
     if (metrics?.alertaCritico) {
       setTimeout(() => {
         toast({
-          title: "ALERTA: Runway Crítico (Dados Reais)",
-          description: `Seu runway atual é de apenas ${metrics.runwayMeses.toFixed(1)} meses baseado em dados reais das suas contas. Acesse a seção de Finanças para mais detalhes.`,
+          title: "ALERTA: Runway Crítico",
+          description: `Seu runway atual é de apenas ${metrics.runwayMeses.toFixed(1)} meses baseado nos dados das suas contas conectadas. Acesse a seção de Finanças para mais detalhes.`,
           variant: "destructive",
           duration: 8000,
         });

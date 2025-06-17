@@ -81,11 +81,11 @@ export const DashboardHeader = () => {
 
   const getRecommendationText = () => {
     if (!metrics) {
-      return "Conecte suas contas bancárias para análises personalizadas com base em dados reais.";
+      return "Conecte suas contas bancárias para análises personalizadas baseadas nos seus dados financeiros.";
     }
 
     if (metrics.integracoesAtivas === 0) {
-      return "Conecte suas contas bancárias via Open Finance para obter insights precisos baseados em dados reais.";
+      return "Conecte suas contas bancárias via Open Finance para obter insights precisos dos seus dados financeiros.";
     }
 
     if (metrics.alertaCritico) {
@@ -96,7 +96,7 @@ export const DashboardHeader = () => {
       return `Seu fluxo de caixa está negativo este mês. Considere revisar suas despesas ou aumentar a receita.`;
     }
 
-    return `Baseado nos dados reais: ${metrics.runwayMeses.toFixed(1)} meses de runway. Continue monitorando suas métricas.`;
+    return `Baseado nos dados conectados: ${metrics.runwayMeses.toFixed(1)} meses de runway. Continue monitorando suas métricas.`;
   };
 
   return (
@@ -154,7 +154,7 @@ export const DashboardHeader = () => {
           <span>
             {metrics?.integracoesAtivas 
               ? `${metrics.integracoesAtivas} conta(s) conectada(s)` 
-              : "Dados simulados"}
+              : "Dados demonstrativos"}
           </span>
         </div>
       </motion.div>
@@ -188,7 +188,7 @@ export const DashboardHeader = () => {
               <span className="gradient-text">FounderPilot</span>
               {metrics?.integracoesAtivas > 0 && (
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                  Dados Reais
+                  Conectado
                 </span>
               )}
             </h3>
@@ -215,7 +215,7 @@ export const DashboardHeader = () => {
           variants={itemVariants}
         >
           <AlertCircle className="h-3.5 w-3.5" />
-          <span>Runway crítico detectado: {metrics.runwayMeses.toFixed(1)} meses restantes baseado em dados reais</span>
+          <span>Runway crítico detectado: {metrics.runwayMeses.toFixed(1)} meses restantes baseado nos dados conectados</span>
         </motion.div>
       )}
     </motion.div>

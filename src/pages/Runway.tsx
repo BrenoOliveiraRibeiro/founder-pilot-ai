@@ -16,12 +16,12 @@ const RunwayPage = () => {
   const { currentEmpresa } = useAuth();
   const { metrics, loading } = useOpenFinanceDashboard();
   
-  // Estados iniciais baseados em dados reais ou valores padrão
+  // Estados iniciais baseados em dados conectados ou valores padrão
   const [cashReserve, setCashReserve] = useState(0);
   const [burnRate, setBurnRate] = useState(0);
   const [runwayMonths, setRunwayMonths] = useState(0);
   const [projectionData, setProjectionData] = useState<any[]>([]);
-  const [hasRealData, setHasRealData] = useState(false);
+  const [hasConnectedData, setHasConnectedData] = useState(false);
   
   // Estado para controle do modal de simulação
   const [simulatorOpen, setSimulatorOpen] = useState(false);
@@ -32,16 +32,16 @@ const RunwayPage = () => {
       setCashReserve(metrics.saldoTotal);
       setBurnRate(metrics.burnRate);
       setRunwayMonths(metrics.runwayMeses);
-      setHasRealData(true);
+      setHasConnectedData(true);
       
-      // Gerar dados de projeção baseados nos dados reais
+      // Gerar dados de projeção baseados nos dados conectados
       generateProjectionData(metrics.saldoTotal, metrics.burnRate);
     } else if (metrics && metrics.integracoesAtivas === 0) {
       // Dados demo quando não há integrações
       setCashReserve(420000);
       setBurnRate(100000);
       setRunwayMonths(4.2);
-      setHasRealData(false);
+      setHasConnectedData(false);
       
       generateProjectionData(420000, 100000);
     }
@@ -90,7 +90,7 @@ const RunwayPage = () => {
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4"></div>
-          <p className="text-lg font-medium text-primary">Carregando dados financeiros reais...</p>
+          <p className="text-lg font-medium text-primary">Carregando dados financeiros...</p>
         </div>
       </AppLayout>
     );
@@ -100,11 +100,11 @@ const RunwayPage = () => {
     <AppLayout>
       <RunwayHeader onSimulatorOpen={() => setSimulatorOpen(true)} />
       
-      {!hasRealData && (
+      {!hasConnectedData && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-medium text-blue-900 mb-2">Conecte suas contas bancárias para dados reais</h3>
+          <h3 className="font-medium text-blue-900 mb-2">Conecte suas contas bancárias para dados precisos</h3>
           <p className="text-blue-700 text-sm">
-            Para ver projeções baseadas em dados reais, conecte suas contas bancárias via Open Finance na seção de Finanças.
+            Para ver projeções baseadas nos seus dados financeiros, conecte suas contas bancárias via Open Finance na seção de Finanças.
             Os dados exibidos atualmente são demonstrativos.
           </p>
         </div>
@@ -117,7 +117,7 @@ const RunwayPage = () => {
         burnRate={burnRate}
         runwayMonths={runwayMonths}
         estimatedRunoutDate={estimatedRunoutDate}
-        isRealData={hasRealData}
+        isRealData={hasConnectedData}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -125,15 +125,15 @@ const RunwayPage = () => {
         <RecommendationsPanel 
           runwayMonths={runwayMonths} 
           burnRate={burnRate}
-          hasRealData={hasRealData}
+          hasRealData={hasConnectedData}
         />
       </div>
 
-      {hasRealData && metrics?.ultimaAtualizacao && (
+      {hasConnectedData && metrics?.ultimaAtualizacao && (
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Dados baseados em informações reais das suas contas bancárias
+            Dados baseados nas suas contas bancárias conectadas
             <span className="mx-2">•</span>
             Última sincronização: {new Date(metrics.ultimaAtualizacao).toLocaleString('pt-BR')}
           </p>
