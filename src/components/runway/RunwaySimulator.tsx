@@ -6,9 +6,9 @@ import {
 } from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { runwaySimulationSchema, type RunwaySimulation } from "@/schemas/validationSchemas";
 
 // Importando os componentes refatorados
 import { SimulatorHeader } from "./simulator/SimulatorHeader";
@@ -31,14 +31,6 @@ interface RunwaySimulatorProps {
 
 export type { SimulationResultType };
 
-const formSchema = z.object({
-  cashReserve: z.number().min(0, "O valor deve ser positivo"),
-  burnRate: z.number().min(0, "O valor deve ser positivo"),
-  revenueIncrease: z.number(),
-  costReduction: z.number(),
-  addFunding: z.number().min(0, "O valor deve ser positivo"),
-});
-
 export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({ 
   open, 
   onOpenChange, 
@@ -48,8 +40,8 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
   const { toast } = useToast();
   const [simulationResult, setSimulationResult] = useState<SimulationResultType | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<RunwaySimulation>({
+    resolver: zodResolver(runwaySimulationSchema),
     defaultValues: {
       cashReserve: initialData.cashReserve,
       burnRate: initialData.burnRate,
@@ -59,23 +51,36 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Assegurando que todos os valores existam antes de calcular
-    const simulationInputs = {
-      cashReserve: values.cashReserve || 0,
-      burnRate: values.burnRate || 0,
-      revenueIncrease: values.revenueIncrease || 0,
-      costReduction: values.costReduction || 0,
-      addFunding: values.addFunding || 0,
-    };
-    
-    const result = calculateSimulation(simulationInputs);
-    setSimulationResult(result);
-    
-    toast({
-      title: "Simulação concluída",
-      description: `Runway estimado: ${result.runwayMonths.toFixed(1)} meses`,
-    });
+  const onSubmit = (values: RunwaySimulation) => {
+    try {
+      // Validar dados antes de calcular
+      const validatedValues = runwaySimulationSchema.parse(values);
+      
+      const result = calculateSimulation(validatedValues);
+      setSimulationResult(result);
+      
+      toast({
+        title: "Simulação concluída",
+        description: `Runway estimado: ${result.runwayMonths.toFixed(1)} meses`,
+      });
+    } catch (error: any) {
+      console.error("Erro na simulação:", error);
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados de simulação inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro na simulação",
+          description: "Não foi possível calcular a simulação. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const applySimulation = () => {

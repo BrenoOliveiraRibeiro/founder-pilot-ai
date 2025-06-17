@@ -7,8 +7,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnboardingUpload } from "./useOnboardingUpload";
-import { z } from "zod";
 import { empresaFormSchema } from "./EmpresaInfoForm";
+import { empresaSchema, type Empresa } from "@/schemas/validationSchemas";
+import { z } from "zod";
 
 type EmpresaFormValues = z.infer<typeof empresaFormSchema>;
 
@@ -83,18 +84,32 @@ export const useOnboardingForm = () => {
     try {
       console.log("Criando empresa para usuário:", user.id);
       
+      // Preparar dados da empresa para validação
+      const empresaData = {
+        id: crypto.randomUUID(), // Gerar UUID temporário para validação
+        nome: values.nome,
+        segmento: values.segmento || undefined,
+        estagio: values.estagio || undefined,
+        num_funcionarios: values.num_funcionarios || undefined,
+        data_fundacao: values.data_fundacao || undefined,
+        website: values.website || undefined,
+      };
+
+      // Validar dados da empresa antes de enviar
+      const validatedEmpresa = empresaSchema.omit({ id: true }).parse(empresaData);
+      
       // 1. Criar empresa vinculada ao usuário
       const { data: empresa, error } = await supabase
         .from('empresas')
         .insert([
           {
-            user_id: user.id, // Garantir vinculação ao usuário
-            nome: values.nome,
-            segmento: values.segmento || null,
-            estagio: values.estagio || null,
-            num_funcionarios: values.num_funcionarios || null,
-            data_fundacao: values.data_fundacao || null,
-            website: values.website || null,
+            user_id: user.id,
+            nome: validatedEmpresa.nome,
+            segmento: validatedEmpresa.segmento || null,
+            estagio: validatedEmpresa.estagio || null,
+            num_funcionarios: validatedEmpresa.num_funcionarios || null,
+            data_fundacao: validatedEmpresa.data_fundacao || null,
+            website: validatedEmpresa.website || null,
           }
         ])
         .select()
@@ -145,11 +160,21 @@ export const useOnboardingForm = () => {
       
     } catch (error: any) {
       console.error("Erro ao cadastrar empresa:", error);
-      toast({
-        title: "Erro ao cadastrar empresa",
-        description: error.message || "Não foi possível cadastrar a empresa. Tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados da empresa inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao cadastrar empresa",
+          description: error.message || "Não foi possível cadastrar a empresa. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

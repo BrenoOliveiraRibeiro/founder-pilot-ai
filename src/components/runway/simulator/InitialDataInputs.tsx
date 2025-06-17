@@ -1,6 +1,6 @@
 
 import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { Wallet, TrendingDown } from "lucide-react";
@@ -34,6 +34,7 @@ export const InitialDataInputs: React.FC<InitialDataInputsProps> = ({ form }) =>
             <FormDescription>
               Valor atual em caixa
             </FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -60,6 +61,7 @@ export const InitialDataInputs: React.FC<InitialDataInputsProps> = ({ form }) =>
             <FormDescription>
               Gasto mensal atual
             </FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />

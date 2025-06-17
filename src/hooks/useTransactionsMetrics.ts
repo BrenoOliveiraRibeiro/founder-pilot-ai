@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { financeDataSchema, type FinanceData } from '@/schemas/validationSchemas';
 
 export const useTransactionsMetrics = () => {
   const [saldoCaixa, setSaldoCaixa] = useState(0);
@@ -68,14 +69,30 @@ export const useTransactionsMetrics = () => {
 
         const fluxo = entradas - saidas;
 
-        setSaldoCaixa(saldoTotal);
-        setEntradasMesAtual(entradas);
-        setSaidasMesAtual(saidas);
-        setFluxoCaixaMesAtual(fluxo);
+        // Validar dados antes de definir estado
+        const metricsData: FinanceData = {
+          saldoCaixa: saldoTotal,
+          entradasMesAtual: entradas,
+          saidasMesAtual: saidas,
+          fluxoCaixaMesAtual: fluxo,
+        };
+
+        const validatedData = financeDataSchema.parse(metricsData);
+
+        setSaldoCaixa(validatedData.saldoCaixa);
+        setEntradasMesAtual(validatedData.entradasMesAtual);
+        setSaidasMesAtual(validatedData.saidasMesAtual);
+        setFluxoCaixaMesAtual(validatedData.fluxoCaixaMesAtual);
 
       } catch (error: any) {
         console.error('Erro ao carregar métricas de transações:', error);
-        setError(error.message || 'Erro ao carregar dados financeiros');
+        
+        // Se for erro de validação Zod, mostrar erro mais específico
+        if (error.name === 'ZodError') {
+          setError(`Dados inválidos: ${error.errors.map((e: any) => e.message).join(', ')}`);
+        } else {
+          setError(error.message || 'Erro ao carregar dados financeiros');
+        }
       } finally {
         setLoading(false);
       }

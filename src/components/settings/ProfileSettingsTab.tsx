@@ -1,32 +1,16 @@
-
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload } from "lucide-react";
-
-const profileFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Nome deve ter pelo menos 2 caracteres.",
-  }),
-  email: z.string().email({
-    message: "Email inválido.",
-  }),
-  bio: z.string().max(500).optional(), // Aumentado de 160 para 500 caracteres
-  role: z.string().min(2, {
-    message: "Cargo deve ter pelo menos 2 caracteres.",
-  }),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+import { profileSchema, type Profile } from "@/schemas/validationSchemas";
 
 export function ProfileSettingsTab() {
   const { toast } = useToast();
@@ -35,15 +19,15 @@ export function ProfileSettingsTab() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
-  const defaultValues: Partial<ProfileFormValues> = {
-    name: profile?.nome || "",
+  const defaultValues: Partial<Profile> = {
+    nome: profile?.nome || "",
     email: user?.email || "",
     bio: profile?.bio || "",
-    role: profile?.cargo || "",
+    cargo: profile?.cargo || "",
   };
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  const form = useForm<Profile>({
+    resolver: zodResolver(profileSchema),
     defaultValues,
   });
 
@@ -54,18 +38,21 @@ export function ProfileSettingsTab() {
     }
   }, [profile]);
 
-  async function onSubmit(data: ProfileFormValues) {
+  async function onSubmit(data: Profile) {
     try {
       if (!user?.id) {
         throw new Error("Usuário não encontrado");
       }
 
+      // Validar dados antes de enviar
+      const validatedData = profileSchema.parse(data);
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          nome: data.name,
-          bio: data.bio,
-          cargo: data.role,
+          nome: validatedData.nome,
+          bio: validatedData.bio,
+          cargo: validatedData.cargo,
         })
         .eq('id', user.id);
 
@@ -75,13 +62,23 @@ export function ProfileSettingsTab() {
         title: "Perfil atualizado",
         description: "Suas informações foram atualizadas com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao atualizar perfil:", error);
-      toast({
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar seu perfil. Tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao atualizar",
+          description: "Não foi possível atualizar seu perfil. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   }
 
@@ -201,7 +198,7 @@ export function ProfileSettingsTab() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="name"
+            name="nome"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nome</FormLabel>
@@ -235,7 +232,7 @@ export function ProfileSettingsTab() {
           
           <FormField
             control={form.control}
-            name="role"
+            name="cargo"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Cargo</FormLabel>

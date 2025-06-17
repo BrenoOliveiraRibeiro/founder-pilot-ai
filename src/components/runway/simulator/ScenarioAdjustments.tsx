@@ -1,6 +1,6 @@
 
 import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { TrendingUp, TrendingDown, CreditCard } from "lucide-react";
@@ -39,6 +39,7 @@ export const ScenarioAdjustments: React.FC<ScenarioAdjustmentsProps> = ({ form }
             <FormDescription>
               Quanto sua receita poderá aumentar (em %)
             </FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -67,6 +68,7 @@ export const ScenarioAdjustments: React.FC<ScenarioAdjustmentsProps> = ({ form }
             <FormDescription>
               Quanto você consegue reduzir de custos (em %)
             </FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -90,6 +92,7 @@ export const ScenarioAdjustments: React.FC<ScenarioAdjustmentsProps> = ({ form }
             <FormDescription>
               Valor de captação adicional
             </FormDescription>
+            <FormMessage />
           </FormItem>
         )}
       />

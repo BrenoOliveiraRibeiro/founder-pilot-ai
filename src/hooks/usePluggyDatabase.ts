@@ -1,19 +1,11 @@
-
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-
-interface PluggyConnectionData {
-  itemId: string;
-  accountData: any;
-  transactionsData: any;
-  isConnected: boolean;
-  connectionToken?: string;
-}
+import { pluggyConnectionSchema, type PluggyConnection } from '@/schemas/validationSchemas';
 
 export const usePluggyDatabase = () => {
-  const [connectionData, setConnectionData] = useState<PluggyConnectionData | null>(null);
+  const [connectionData, setConnectionData] = useState<PluggyConnection | null>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
@@ -44,7 +36,7 @@ export const usePluggyDatabase = () => {
         const integracao = integracoes[0];
         console.log('Conexão existente encontrada:', integracao.nome_banco);
         
-        const connectionData = {
+        const connectionData: PluggyConnection = {
           itemId: integracao.item_id!,
           accountData: integracao.account_data,
           transactionsData: null,
@@ -52,19 +44,31 @@ export const usePluggyDatabase = () => {
           connectionToken: integracao.connection_token || undefined
         };
 
-        setConnectionData(connectionData);
-        return connectionData;
+        // Validar dados antes de definir estado
+        const validatedConnection = pluggyConnectionSchema.parse(connectionData);
+        setConnectionData(validatedConnection);
+        return validatedConnection;
       }
 
       console.log('Nenhuma conexão Pluggy existente encontrada');
       return null;
     } catch (error: any) {
       console.error('Erro ao carregar conexão existente:', error);
-      toast({
-        title: "Erro ao carregar conexão",
-        description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
-        variant: "destructive",
-      });
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados de conexão inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao carregar conexão",
+          description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
+          variant: "destructive",
+        });
+      }
       return null;
     }
   }, [currentEmpresa?.id, toast]);
@@ -79,6 +83,17 @@ export const usePluggyDatabase = () => {
 
     try {
       console.log('Salvando nova conexão Pluggy:', { itemId, bankName });
+      
+      // Validar dados antes de salvar
+      const connectionData: PluggyConnection = {
+        itemId,
+        accountData,
+        transactionsData: null,
+        isConnected: true,
+        connectionToken
+      };
+
+      const validatedConnection = pluggyConnectionSchema.parse(connectionData);
       
       const { data: existing } = await supabase
         .from('integracoes_bancarias')
@@ -125,23 +140,25 @@ export const usePluggyDatabase = () => {
         }
       }
 
-      const newConnectionData = {
-        itemId,
-        accountData,
-        transactionsData: null,
-        isConnected: true,
-        connectionToken
-      };
-
-      setConnectionData(newConnectionData);
+      setConnectionData(validatedConnection);
       console.log('Conexão Pluggy salva com sucesso');
     } catch (error: any) {
       console.error('Erro ao salvar conexão:', error);
-      toast({
-        title: "Erro ao salvar conexão",
-        description: error.message || "Não foi possível salvar a conexão. Tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados de conexão inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao salvar conexão",
+          description: error.message || "Não foi possível salvar a conexão. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   }, [currentEmpresa?.id, toast]);
 
@@ -171,8 +188,19 @@ export const usePluggyDatabase = () => {
     }
   }, [currentEmpresa?.id, connectionData?.itemId, toast]);
 
-  const updateConnectionData = useCallback((updates: Partial<PluggyConnectionData>) => {
-    setConnectionData(prev => prev ? { ...prev, ...updates } : null);
+  const updateConnectionData = useCallback((updates: Partial<PluggyConnection>) => {
+    setConnectionData(prev => {
+      if (!prev) return null;
+      
+      try {
+        const updatedData = { ...prev, ...updates };
+        const validatedData = pluggyConnectionSchema.parse(updatedData);
+        return validatedData;
+      } catch (error: any) {
+        console.error('Erro ao validar atualização de conexão:', error);
+        return prev;
+      }
+    });
   }, []);
 
   return {
