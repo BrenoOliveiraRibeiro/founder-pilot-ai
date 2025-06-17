@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useRealtimeUpdates } from './useRealtimeUpdates';
 
 interface OpenFinanceMetrics {
   saldoTotal: number;
@@ -148,6 +149,13 @@ export const useOpenFinanceDashboard = () => {
       setLoading(false);
     }
   };
+
+  // Configurar atualizações em tempo real
+  useRealtimeUpdates({
+    onTransactionUpdate: fetchOpenFinanceData,
+    onMetricsUpdate: fetchOpenFinanceData,
+    onIntegrationUpdate: fetchOpenFinanceData
+  });
 
   useEffect(() => {
     fetchOpenFinanceData();
