@@ -130,7 +130,7 @@ export const OpenFinanceMetricsGrid = () => {
         <motion.div variants={itemVariants}>
           <MetricCard
             title="Despesas Mensais"
-            value={formatCurrency(metrics.despesasMensais)}
+            value={formatCurrency(metrics.despesaMensal)}
             description="mês atual"
             icon={<CreditCard className="h-5 w-5 text-red-500" />}
             tooltip="Despesas totais do mês atual baseadas em transações reais"

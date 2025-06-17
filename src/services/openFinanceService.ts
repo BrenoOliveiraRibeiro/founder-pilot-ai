@@ -10,6 +10,9 @@ export interface OpenFinanceMetrics {
   despesaMensal: number;
   transacoesRecentes: number;
   lastUpdate?: string;
+  ultimaAtualizacao?: string;
+  alertaCritico?: boolean;
+  fluxoCaixa: number;
 }
 
 export class OpenFinanceService {
@@ -59,15 +62,23 @@ export class OpenFinanceService {
       
       // Se temos métricas salvas, usar elas
       if (metricas) {
+        const runwayMeses = metricas.runway_meses || 0;
+        const receitaMensal = metricas.receita_mensal || 0;
+        const despesaMensal = Math.abs(metricas.burn_rate || 0);
+        const fluxoCaixa = receitaMensal - despesaMensal;
+        
         return {
           saldoTotal: metricas.caixa_atual || 0,
           burnRate: metricas.burn_rate || 0,
-          runwayMeses: metricas.runway_meses || 0,
+          runwayMeses,
           integracoesAtivas,
-          receitaMensal: metricas.receita_mensal || 0,
-          despesaMensal: Math.abs(metricas.burn_rate || 0),
+          receitaMensal,
+          despesaMensal,
           transacoesRecentes,
-          lastUpdate: metricas.updated_at
+          lastUpdate: metricas.updated_at,
+          ultimaAtualizacao: metricas.updated_at,
+          alertaCritico: runwayMeses < 3,
+          fluxoCaixa
         };
       }
 
@@ -78,15 +89,19 @@ export class OpenFinanceService {
       const receitaMensal = receitas.reduce((total, t) => total + Math.abs(t.valor), 0);
       const despesaMensal = despesas.reduce((total, t) => total + Math.abs(t.valor), 0);
       const burnRate = despesaMensal;
+      const fluxoCaixa = receitaMensal - despesaMensal;
 
       // Saldo total das integrações (se disponível)
       let saldoTotal = 0;
       if (integracoes) {
         for (const integracao of integracoes) {
-          if (integracao.account_data?.results) {
-            saldoTotal += integracao.account_data.results.reduce((sum: number, account: any) => {
-              return sum + (account.balance || 0);
-            }, 0);
+          if (integracao.account_data && typeof integracao.account_data === 'object' && integracao.account_data !== null) {
+            const accountData = integracao.account_data as any;
+            if (accountData.results && Array.isArray(accountData.results)) {
+              saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+                return sum + (account.balance || 0);
+              }, 0);
+            }
           }
         }
       }
@@ -100,7 +115,10 @@ export class OpenFinanceService {
         integracoesAtivas,
         receitaMensal,
         despesaMensal,
-        transacoesRecentes
+        transacoesRecentes,
+        ultimaAtualizacao: new Date().toISOString(),
+        alertaCritico: runwayMeses < 3,
+        fluxoCaixa
       };
 
     } catch (error) {

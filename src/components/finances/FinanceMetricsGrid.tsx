@@ -29,7 +29,7 @@ export const FinanceMetricsGrid: React.FC = () => {
   
   const saldoAtual = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
   const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
-  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtual;
+  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesaMensal : saidasMesAtual;
   const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtual;
 
   const error = transactionsError;
