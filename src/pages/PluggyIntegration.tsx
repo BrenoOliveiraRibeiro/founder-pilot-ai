@@ -86,7 +86,8 @@ const PluggyIntegration = () => {
     );
   }
 
-  if (isConnected && connectionData) {
+  // Check if connectionData exists and has required properties before passing to PluggyConnectedView
+  if (isConnected && connectionData && connectionData.itemId && connectionData.accountData) {
     return (
       <PluggyConnectedView
         connectionData={connectionData}

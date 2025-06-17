@@ -50,7 +50,7 @@ export const pluggyConnectionSchema = z.object({
   connectionToken: z.string().optional(),
 });
 
-// Schema para simulação de runway
+// Schema para simulação de runway - agora com campos obrigatórios
 export const runwaySimulationSchema = z.object({
   cashReserve: z.number().min(0, "Reserva de caixa deve ser positiva"),
   burnRate: z.number().min(0, "Burn rate deve ser positivo"),

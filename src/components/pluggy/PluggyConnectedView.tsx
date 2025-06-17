@@ -10,8 +10,9 @@ import { Link } from 'react-router-dom';
 interface ConnectionData {
   itemId: string;
   accountData: any;
-  transactionsData: any;
+  transactionsData?: any;
   isConnected: boolean;
+  connectionToken?: string;
 }
 
 interface PluggyConnectedViewProps {
