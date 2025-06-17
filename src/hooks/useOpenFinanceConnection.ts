@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/BankProviders';
-import { usePluggyConnect } from './usePluggyConnect';
+import { usePluggyWidget } from './usePluggyWidget';
 import { useOpenFinanceConnections } from './useOpenFinanceConnections';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,7 +17,7 @@ export const useOpenFinanceConnection = () => {
   const { currentEmpresa, refreshEmpresas } = useAuth();
   const { toast } = useToast();
   const connectContainerRef = useRef<HTMLDivElement>(null);
-  const { pluggyWidgetLoaded, initializePluggyConnect } = usePluggyConnect();
+  const { isScriptLoaded: pluggyWidgetLoaded, initializePluggyConnect } = usePluggyWidget();
   const { fetchIntegrations } = useOpenFinanceConnections();
   const navigate = useNavigate();
 
@@ -121,52 +121,25 @@ export const useOpenFinanceConnection = () => {
       setConnectionStatus("Autorizando com o banco...");
 
       // Inicializar e abrir o widget do Pluggy
-      const onSuccess = async (itemData: { id: string }) => {
-        console.log("Item criado com sucesso:", itemData.id);
-        setConnectionProgress(80);
-        setConnectionStatus("Conexão estabelecida, registrando...");
-        await handlePluggySuccess(itemData.id);
-      };
-
-      const onError = (error: any) => {
-        console.error("Erro no widget do Pluggy:", error);
-        setDebugInfo({ error, step: "pluggy_widget_error" });
-        setConnectionProgress(0);
-        toast({
-          title: "Erro de conexão",
-          description: "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"),
-          variant: "destructive"
-        });
-        setConnecting(false);
-      };
-
-      const onClose = () => {
-        console.log("Widget fechado pelo usuário");
-        setConnectionProgress(0);
-        setConnecting(false);
-      };
-
-      console.log("Inicializando Pluggy Connect com token:", data.connect_token.substring(0, 10) + "...");
-      console.log("Container ref:", connectContainerRef.current);
-
-      // Initialize Pluggy Connect
-      const pluggyConnect = await initializePluggyConnect(
-        data.connect_token,
-        {
-          onSuccess,
-          onError,
-          onClose,
-          connectorId: selectedProvider,
-          includeSandbox: useSandbox
+      await initializePluggyConnect(
+        async (itemData: { item: { id: string } }) => {
+          console.log("Item criado com sucesso:", itemData.item.id);
+          setConnectionProgress(80);
+          setConnectionStatus("Conexão estabelecida, registrando...");
+          await handlePluggySuccess(itemData.item.id);
         },
-        connectContainerRef.current
+        (error: any) => {
+          console.error("Erro no widget do Pluggy:", error);
+          setDebugInfo({ error, step: "pluggy_widget_error" });
+          setConnectionProgress(0);
+          toast({
+            title: "Erro de conexão",
+            description: "Não foi possível conectar ao banco. " + (error.message || "Erro desconhecido"),
+            variant: "destructive"
+          });
+          setConnecting(false);
+        }
       );
-
-      if (!pluggyConnect) {
-        console.error("Retorno nulo do inicializador Pluggy Connect");
-        setDebugInfo({ step: "initialize_pluggy_connect_null" });
-        throw new Error("Erro ao inicializar Pluggy Connect");
-      }
       
       console.log("Pluggy Connect inicializado com sucesso");
       
