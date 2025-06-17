@@ -93,7 +93,7 @@ export const usePluggyTransactions = () => {
         };
       }
 
-      // Atualizar cache de sincronização
+      // Atualizar cache de sincronização usando upsert
       setLastSyncTimestamps(prev => ({ ...prev, [cacheKey]: now }));
 
       console.log("Transações processadas automaticamente:", data);
@@ -135,9 +135,34 @@ export const usePluggyTransactions = () => {
     }
   }, [currentEmpresa?.id, processingTransactions, lastSyncTimestamps, toast]);
 
+  const upsertIntegrationStatus = useCallback(async (itemId: string, status: string) => {
+    if (!currentEmpresa?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('integracoes_bancarias')
+        .upsert({
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          status: status,
+          ultimo_sincronismo: new Date().toISOString(),
+          tipo_conexao: 'Open Finance'
+        }, {
+          onConflict: 'empresa_id,item_id'
+        });
+
+      if (error) {
+        console.error('Erro ao atualizar status da integração:', error);
+      }
+    } catch (error) {
+      console.error('Erro inesperado ao atualizar integração:', error);
+    }
+  }, [currentEmpresa?.id]);
+
   return {
     processingTransactions,
     processAndSaveTransactions,
+    upsertIntegrationStatus,
     lastSyncTimestamps,
     setLastSyncTimestamps
   };

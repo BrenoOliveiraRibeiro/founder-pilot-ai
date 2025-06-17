@@ -91,7 +91,7 @@ export async function processFinancialData(
       };
     }
     
-    // Preparar transações formatadas para inserção
+    // Preparar transações formatadas para upsert
     const transacoesFormatadas = allTransactions.map(tx => ({
       empresa_id: empresaId,
       descricao: tx.description || 'Transação',
@@ -104,78 +104,74 @@ export async function processFinancialData(
       // transaction_hash será gerado automaticamente pelo trigger
     }));
     
-    console.log(`Tentando inserir ${transacoesFormatadas.length} transações`);
+    console.log(`Tentando inserir ${transacoesFormatadas.length} transações usando upsert`);
     
-    // Inserir transações com tratamento adequado de duplicatas
+    // Usar upsert com conflict resolution baseado no hash da transação
     let insertedCount = 0;
     let duplicateCount = 0;
     
-    // Processar em lotes para melhor performance
-    const batchSize = 50;
+    // Processar em lotes otimizados para upsert
+    const batchSize = 100; // Aumentado para upsert
     for (let i = 0; i < transacoesFormatadas.length; i += batchSize) {
       const batch = transacoesFormatadas.slice(i, i + batchSize);
       
       try {
         console.log(`Processando lote ${Math.floor(i / batchSize) + 1} de ${Math.ceil(transacoesFormatadas.length / batchSize)}: ${batch.length} transações`);
         
+        // Usar upsert em vez de insert para otimizar
         const { data, error } = await supabaseClient
           .from("transacoes")
-          .insert(batch)
+          .upsert(batch, {
+            onConflict: 'transaction_hash',
+            ignoreDuplicates: false
+          })
           .select('id');
         
         if (error) {
-          // Se há erro de constraint (duplicata), processar individualmente para contar
-          if (error.code === '23505') {
-            console.log(`Lote com duplicatas detectadas, processando individualmente...`);
-            
-            for (const tx of batch) {
-              try {
-                const { error: singleError } = await supabaseClient
-                  .from("transacoes")
-                  .insert([tx])
-                  .select('id');
-                
-                if (singleError) {
-                  if (singleError.code === '23505') {
-                    duplicateCount++;
-                  } else {
-                    console.error('Erro inesperado ao inserir transação:', singleError);
-                  }
-                } else {
-                  insertedCount++;
-                }
-              } catch (singleTxError) {
-                console.error('Erro individual:', singleTxError);
+          console.error(`Erro no lote ${Math.floor(i / batchSize) + 1}:`, error);
+          // Fallback para processamento individual
+          for (const tx of batch) {
+            try {
+              const { data: singleData, error: singleError } = await supabaseClient
+                .from("transacoes")
+                .upsert([tx], {
+                  onConflict: 'transaction_hash',
+                  ignoreDuplicates: false
+                })
+                .select('id');
+              
+              if (!singleError) {
+                insertedCount++;
+              } else if (singleError.code === '23505') {
                 duplicateCount++;
               }
+            } catch (singleTxError) {
+              console.error('Erro individual:', singleTxError);
+              duplicateCount++;
             }
-          } else {
-            console.error(`Erro não relacionado a duplicatas no lote:`, error);
-            throw error;
           }
         } else {
           const batchInserted = data ? data.length : 0;
           insertedCount += batchInserted;
-          console.log(`Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações inseridas com sucesso`);
+          console.log(`Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações processadas com sucesso`);
         }
       } catch (batchError) {
         console.error(`Erro crítico no lote ${Math.floor(i / batchSize) + 1}:`, batchError);
-        // Em caso de erro crítico, tentar individualmente
+        // Fallback para processamento individual
         for (const tx of batch) {
           try {
-            const { error: singleError } = await supabaseClient
+            const { data: singleData, error: singleError } = await supabaseClient
               .from("transacoes")
-              .insert([tx])
+              .upsert([tx], {
+                onConflict: 'transaction_hash',
+                ignoreDuplicates: false
+              })
               .select('id');
             
-            if (singleError) {
-              if (singleError.code === '23505') {
-                duplicateCount++;
-              } else {
-                console.error('Erro ao inserir transação individual:', singleError);
-              }
-            } else {
+            if (!singleError) {
               insertedCount++;
+            } else {
+              duplicateCount++;
             }
           } catch (singleTxError) {
             console.error('Erro individual crítico:', singleTxError);
@@ -185,11 +181,11 @@ export async function processFinancialData(
       }
     }
     
-    console.log(`Resultado final: ${insertedCount} novas transações inseridas, ${duplicateCount} duplicatas ignoradas`);
+    console.log(`Resultado final: ${insertedCount} transações processadas, ${duplicateCount} duplicatas gerenciadas`);
     
-    // Calcular métricas apenas se houver transações novas
-    if (insertedCount > 0) {
-      console.log('Atualizando métricas devido a novas transações...');
+    // Calcular e atualizar métricas usando upsert
+    if (insertedCount > 0 || !accountData) {
+      console.log('Atualizando métricas devido a mudanças...');
       
       // Buscar dados da conta para calcular métricas se não tivermos
       if (!accountData && targetAccountId) {
@@ -216,10 +212,10 @@ export async function processFinancialData(
         const runwayMeses = burnRate > 0 ? caixaAtual / burnRate : 0;
         const cashFlow = receitaMensal - burnRate;
         
-        // Atualizar métricas
+        // Usar upsert para métricas - mais eficiente
         const { error: metricasError } = await supabaseClient
           .from("metricas")
-          .upsert([{
+          .upsert({
             empresa_id: empresaId,
             data_referencia: new Date().toISOString().split('T')[0],
             caixa_atual: caixaAtual,
@@ -228,14 +224,14 @@ export async function processFinancialData(
             runway_meses: runwayMeses,
             cash_flow: cashFlow,
             mrr_growth: 0
-          }], {
+          }, {
             onConflict: 'empresa_id,data_referencia'
           });
           
         if (metricasError) {
           console.error("Erro ao salvar métricas:", metricasError);
         } else {
-          console.log("Métricas atualizadas:", { receitaMensal, burnRate, runwayMeses });
+          console.log("Métricas atualizadas com upsert:", { receitaMensal, burnRate, runwayMeses });
         }
         
         // Gerar insights apenas se houve mudanças significativas
@@ -250,9 +246,9 @@ export async function processFinancialData(
     // Determinar mensagem de retorno
     let message = "";
     if (insertedCount > 0) {
-      message = `${insertedCount} novas transações processadas`;
+      message = `${insertedCount} transações processadas`;
       if (duplicateCount > 0) {
-        message += ` (${duplicateCount} duplicatas ignoradas)`;
+        message += ` (${duplicateCount} duplicatas gerenciadas)`;
       }
     } else if (duplicateCount > 0) {
       message = "Nenhuma transação nova - todas já estão salvas";

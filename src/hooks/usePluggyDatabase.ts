@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -95,49 +96,29 @@ export const usePluggyDatabase = () => {
 
       const validatedConnection = pluggyConnectionSchema.parse(connectionData);
       
-      const { data: existing } = await supabase
+      // Usar upsert para otimizar a operação
+      const { error } = await supabase
         .from('integracoes_bancarias')
-        .select('id')
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('item_id', itemId)
-        .single();
+        .upsert({
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          nome_banco: bankName || 'Banco Conectado via Pluggy',
+          tipo_conexao: 'Open Finance',
+          status: 'ativo',
+          account_data: accountData,
+          connection_token: connectionToken,
+          ultimo_sincronismo: new Date().toISOString(),
+          detalhes: {
+            platform: 'pluggy',
+            sandbox: true,
+            connected_at: new Date().toISOString()
+          }
+        }, {
+          onConflict: 'empresa_id,item_id'
+        });
 
-      if (existing) {
-        const { error } = await supabase
-          .from('integracoes_bancarias')
-          .update({
-            account_data: accountData,
-            connection_token: connectionToken,
-            ultimo_sincronismo: new Date().toISOString(),
-            status: 'ativo'
-          })
-          .eq('id', existing.id);
-
-        if (error) {
-          throw new Error(`Erro ao atualizar conexão: ${error.message}`);
-        }
-      } else {
-        const { error } = await supabase
-          .from('integracoes_bancarias')
-          .insert({
-            empresa_id: currentEmpresa.id,
-            item_id: itemId,
-            nome_banco: bankName || 'Banco Conectado via Pluggy',
-            tipo_conexao: 'Open Finance',
-            status: 'ativo',
-            account_data: accountData,
-            connection_token: connectionToken,
-            ultimo_sincronismo: new Date().toISOString(),
-            detalhes: {
-              platform: 'pluggy',
-              sandbox: true,
-              connected_at: new Date().toISOString()
-            }
-          });
-
-        if (error) {
-          throw new Error(`Erro ao criar conexão: ${error.message}`);
-        }
+      if (error) {
+        throw new Error(`Erro ao salvar conexão: ${error.message}`);
       }
 
       setConnectionData(validatedConnection);
@@ -166,11 +147,17 @@ export const usePluggyDatabase = () => {
     if (!currentEmpresa?.id || !connectionData?.itemId) return;
 
     try {
+      // Usar upsert para atualizar status de forma mais eficiente
       const { error } = await supabase
         .from('integracoes_bancarias')
-        .update({ status: 'inativo' })
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('item_id', connectionData.itemId);
+        .upsert({
+          empresa_id: currentEmpresa.id,
+          item_id: connectionData.itemId,
+          status: 'inativo',
+          ultimo_sincronismo: new Date().toISOString()
+        }, {
+          onConflict: 'empresa_id,item_id'
+        });
 
       if (error) {
         throw new Error(`Erro ao desativar conexão: ${error.message}`);
