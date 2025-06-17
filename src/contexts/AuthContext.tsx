@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthError } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
 import { Empresa, Profile } from '@/integrations/supabase/models';
 
@@ -277,6 +277,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, empresasLoaded]);
 
+  const getAuthErrorMessage = (error: AuthError): string => {
+    // Tratar erros específicos de autenticação
+    if (error.message.includes('Invalid login credentials')) {
+      return 'Email ou senha incorretos. Verifique se você confirmou seu email.';
+    }
+    
+    if (error.message.includes('Email not confirmed')) {
+      return 'Por favor, confirme seu email antes de fazer login.';
+    }
+    
+    if (error.message.includes('User already registered')) {
+      return 'Este email já está cadastrado. Use a opção de login.';
+    }
+    
+    if (error.message.includes('Signup requires email confirmation')) {
+      return 'Cadastro realizado! Verifique seu email para confirmar a conta.';
+    }
+    
+    // Retornar mensagem original se não for um erro conhecido
+    return error.message;
+  };
+
   const signIn = async (email: string, password: string) => {
     console.log("Tentando login para:", email);
     try {
@@ -286,11 +308,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentEmpresaState(null);
       
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.log("Resposta de login:", data ? "sucesso" : "falha", error);
-      return { error };
-    } catch (error) {
+      
+      if (error) {
+        // Retornar erro com mensagem amigável
+        return { error: { ...error, message: getAuthErrorMessage(error) } };
+      }
+      
+      console.log("Resposta de login:", data ? "sucesso" : "falha");
+      return { error: null };
+    } catch (error: any) {
       console.error("Erro ao fazer login:", error);
-      return { error };
+      return { error: { ...error, message: getAuthErrorMessage(error) } };
     }
   };
 
@@ -304,11 +332,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
-      console.log("Resposta de cadastro:", data ? "sucesso" : "falha", error);
-      return { error };
-    } catch (error) {
+      
+      if (error) {
+        return { error: { ...error, message: getAuthErrorMessage(error) } };
+      }
+      
+      console.log("Resposta de cadastro:", data ? "sucesso" : "falha");
+      return { error: null };
+    } catch (error: any) {
       console.error("Erro ao fazer cadastro:", error);
-      return { error };
+      return { error: { ...error, message: getAuthErrorMessage(error) } };
     }
   };
 

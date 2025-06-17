@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { FounderPilotLogo } from "@/components/shared/FounderPilotLogo";
+import { EmailConfirmation } from "@/components/auth/EmailConfirmation";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -21,6 +22,8 @@ const formSchema = z.object({
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +43,15 @@ const Auth = () => {
     try {
       if (isLogin) {
         const { error } = await signIn(values.email, values.password);
-        if (error) throw error;
+        if (error) {
+          // Verificar se é erro de email não confirmado
+          if (error.message.includes('confirmado') || error.message.includes('confirmed')) {
+            setRegisteredEmail(values.email);
+            setShowEmailConfirmation(true);
+            return;
+          }
+          throw error;
+        }
         
         toast({
           title: "Login realizado com sucesso",
@@ -51,15 +62,30 @@ const Auth = () => {
         navigate("/dashboard");
       } else {
         const { error } = await signUp(values.email, values.password);
-        if (error) throw error;
+        
+        if (error) {
+          // Se for erro de usuário já registrado, sugerir login
+          if (error.message.includes('already registered')) {
+            toast({
+              title: "Email já cadastrado",
+              description: "Este email já possui uma conta. Tente fazer login.",
+              variant: "destructive",
+            });
+            setIsLogin(true);
+            return;
+          }
+          throw error;
+        }
+        
+        // Sucesso no cadastro - mostrar confirmação de email
+        setRegisteredEmail(values.email);
+        setShowEmailConfirmation(true);
         
         toast({
-          title: "Conta criada com sucesso",
-          description: "Por favor, faça login com suas credenciais.",
+          title: "Conta criada com sucesso!",
+          description: "Verifique seu email para confirmar a conta.",
+          className: "bg-green-50 border-green-200",
         });
-
-        // Após criar a conta, mudar para o modo de login
-        setIsLogin(true);
       }
     } catch (error: any) {
       console.error("Erro de autenticação:", error);
@@ -72,6 +98,25 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  const handleBackToLogin = () => {
+    setShowEmailConfirmation(false);
+    setIsLogin(true);
+    setRegisteredEmail("");
+    form.reset();
+  };
+
+  // Se estiver mostrando confirmação de email
+  if (showEmailConfirmation && registeredEmail) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-background/95 p-4">
+        <EmailConfirmation 
+          email={registeredEmail}
+          onBackToLogin={handleBackToLogin}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-background/95 p-4">
@@ -145,7 +190,10 @@ const Auth = () => {
                   <div className="text-right">
                     <Button variant="link" className="p-0 h-auto text-sm" onClick={(e) => {
                       e.preventDefault();
-                      // Funcionalidade de redefinição de senha seria adicionada aqui
+                      toast({
+                        title: "Redefinição de senha",
+                        description: "Entre em contato conosco para redefinir sua senha.",
+                      });
                     }}>
                       Esqueceu a senha?
                     </Button>
