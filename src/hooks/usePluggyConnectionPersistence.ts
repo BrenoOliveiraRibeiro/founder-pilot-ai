@@ -19,7 +19,7 @@ export const usePluggyConnectionPersistence = () => {
     processAndSaveTransactions
   } = usePluggyTransactions();
 
-  const { fetchTransactions: fetchTransactionsFromAPI } = usePluggyDataSync();
+  const { fetchTransactions: fetchTransactionsFromAPI, syncAccountData } = usePluggyDataSync();
 
   // Função para buscar transações via API e salvar automaticamente
   const fetchTransactions = useCallback(async (accountId: string) => {
@@ -53,6 +53,21 @@ export const usePluggyConnectionPersistence = () => {
     return await fetchAccountDataFromSync(itemId);
   }, [fetchAccountDataFromSync]);
 
+  // Função para sincronização de dados (compatibilidade com OpenFinance.tsx)
+  const syncData = useCallback(async () => {
+    if (!connectionData?.itemId) return;
+
+    try {
+      const accountData = await syncAccountData(connectionData.itemId);
+      
+      if (accountData) {
+        updateConnectionData({ accountData });
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar dados:', error);
+    }
+  }, [connectionData?.itemId, syncAccountData, updateConnectionData]);
+
   return {
     connectionData,
     loading,
@@ -61,6 +76,7 @@ export const usePluggyConnectionPersistence = () => {
     clearConnection,
     fetchTransactions,
     fetchAccountData,
-    processAndSaveTransactions
+    processAndSaveTransactions,
+    syncData
   };
 };
