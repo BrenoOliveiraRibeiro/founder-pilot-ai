@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ConnectedViewHeader } from './connected/ConnectedViewHeader';
 import { AccountSelector } from './connected/AccountSelector';
 import { TransactionsTable } from './connected/TransactionsTable';
+import { CacheDebugPanel } from '../debug/CacheDebugPanel';
 
 interface ConnectionData {
   itemId: string;
@@ -79,6 +80,12 @@ export const PluggyConnectedView = ({
           </div>
         </div>
       </div>
+
+      {/* Cache Debug Panel - apenas em desenvolvimento ou quando solicitado */}
+      <CacheDebugPanel 
+        itemId={connectionData.itemId}
+        accountId={selectedAccountId}
+      />
     </div>
   );
 };
