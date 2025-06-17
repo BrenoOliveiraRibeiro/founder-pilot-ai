@@ -3,285 +3,92 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { pluggyAuth } from '@/utils/pluggyAuth';
-
-interface PluggyConnectionData {
-  itemId: string;
-  accountData: any;
-  transactionsData: any;
-  isConnected: boolean;
-  connectionToken?: string;
-}
-
-interface ProcessedTransactionsResult {
-  success: boolean;
-  message: string;
-  newTransactions?: number;
-  totalTransactions?: number;
-  skippedDuplicates?: number;
-  error?: string;
-}
+import { pluggyApi } from '@/utils/pluggyApi';
+import { usePluggyDatabase } from './usePluggyDatabase';
+import { usePluggyTransactions } from './usePluggyTransactions';
 
 export const usePluggyConnectionPersistence = () => {
-  const [connectionData, setConnectionData] = useState<PluggyConnectionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processingTransactions, setProcessingTransactions] = useState(false);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
-  // Cache para evitar re-processamento desnecessário
-  const [lastSyncTimestamps, setLastSyncTimestamps] = useState<Record<string, number>>({});
+  const {
+    connectionData,
+    loadExistingConnection,
+    saveConnection,
+    clearConnection,
+    updateConnectionData
+  } = usePluggyDatabase();
+
+  const {
+    processingTransactions,
+    processAndSaveTransactions
+  } = usePluggyTransactions();
 
   // Carregar conexão existente ao montar o componente
-  const loadExistingConnection = useCallback(async () => {
-    if (!currentEmpresa?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      console.log('Carregando conexão Pluggy existente para empresa:', currentEmpresa.id);
-      
-      const { data: integracoes, error } = await supabase
-        .from('integracoes_bancarias')
-        .select('*')
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('tipo_conexao', 'Open Finance')
-        .eq('status', 'ativo')
-        .not('item_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('Erro ao carregar integração bancária:', error);
-        throw new Error(`Falha ao carregar integração: ${error.message}`);
+  useEffect(() => {
+    const initializeConnection = async () => {
+      if (!currentEmpresa?.id) {
+        setLoading(false);
+        return;
       }
 
-      if (integracoes && integracoes.length > 0) {
-        const integracao = integracoes[0];
-        console.log('Conexão existente encontrada:', integracao.nome_banco);
+      try {
+        const existingConnection = await loadExistingConnection();
         
-        let accountData = integracao.account_data;
-
-        if (!accountData && integracao.item_id) {
+        if (existingConnection && !existingConnection.accountData && existingConnection.itemId) {
           console.log('Buscando dados da conta via API...');
-          accountData = await fetchAccountData(integracao.item_id);
+          const accountData = await pluggyApi.fetchAccountData(existingConnection.itemId);
           
           if (accountData) {
+            // Atualizar dados da conta no banco
             const { error: updateError } = await supabase
               .from('integracoes_bancarias')
               .update({ 
                 account_data: accountData,
                 ultimo_sincronismo: new Date().toISOString()
               })
-              .eq('id', integracao.id);
+              .eq('empresa_id', currentEmpresa.id)
+              .eq('item_id', existingConnection.itemId);
 
             if (updateError) {
               console.error('Erro ao atualizar dados da conta:', updateError);
             }
+
+            // Atualizar estado local
+            updateConnectionData({ accountData });
           }
         }
 
-        setConnectionData({
-          itemId: integracao.item_id!,
-          accountData,
-          transactionsData: null,
-          isConnected: true,
-          connectionToken: integracao.connection_token || undefined
-        });
-
-        console.log('Estado da conexão Pluggy restaurado com sucesso');
-      } else {
-        console.log('Nenhuma conexão Pluggy existente encontrada');
-      }
-    } catch (error: any) {
-      console.error('Erro ao carregar conexão existente:', error);
-      toast({
-        title: "Erro ao carregar conexão",
-        description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentEmpresa?.id, toast]);
-
-  // Função centralizada para processar e salvar transações automaticamente
-  const processAndSaveTransactions = async (
-    itemId: string, 
-    accountId: string, 
-    transactionsData: any
-  ): Promise<ProcessedTransactionsResult> => {
-    if (!currentEmpresa?.id || !transactionsData?.results || processingTransactions) {
-      return { 
-        success: false, 
-        message: 'Dados inválidos ou processamento já em andamento',
-        error: 'Invalid data or processing already in progress'
-      };
-    }
-
-    // Verificar se passou tempo suficiente desde a última sincronização
-    const cacheKey = `${itemId}_${accountId}`;
-    const lastSync = lastSyncTimestamps[cacheKey];
-    const now = Date.now();
-    const minIntervalMs = 30000; // 30 segundos
-
-    if (lastSync && (now - lastSync) < minIntervalMs) {
-      return {
-        success: true,
-        message: 'Dados sincronizados recentemente.',
-        newTransactions: 0,
-        totalTransactions: transactionsData.results.length,
-        skippedDuplicates: 0
-      };
-    }
-
-    setProcessingTransactions(true);
-
-    try {
-      console.log('Processando transações automaticamente...');
-      
-      const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: {
-          action: "process_financial_data",
-          empresa_id: currentEmpresa.id,
-          item_id: itemId,
-          account_id: accountId,
-          transactions_data: transactionsData,
-          sandbox: true
-        }
-      });
-
-      if (error) {
-        console.error("Erro na chamada da edge function:", error);
-        
-        // Extrair mensagem de erro mais detalhada
-        let errorMessage = 'Erro desconhecido ao processar transações';
-        
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        } else if (error.context && error.context.error) {
-          errorMessage = error.context.error;
-        }
-
-        return { 
-          success: false, 
-          message: errorMessage,
-          error: errorMessage
-        };
-      }
-
-      // Verificar se a resposta contém erro
-      if (data?.error) {
-        console.error("Erro retornado pela edge function:", data.error);
-        return { 
-          success: false, 
-          message: data.message || data.error,
-          error: data.error
-        };
-      }
-
-      // Atualizar cache de sincronização
-      setLastSyncTimestamps(prev => ({ ...prev, [cacheKey]: now }));
-
-      console.log("Transações processadas automaticamente:", data);
-      
-      // Mostrar toast apenas se houver transações novas
-      if (data?.newTransactions > 0) {
+        console.log('Estado da conexão Pluggy carregado com sucesso');
+      } catch (error: any) {
+        console.error('Erro ao carregar conexão existente:', error);
         toast({
-          title: "Transações salvas automaticamente",
-          description: `${data.newTransactions} novas transações foram processadas e salvas.`,
+          title: "Erro ao carregar conexão",
+          description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
+          variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
+    };
 
-      return { 
-        success: true, 
-        message: data?.message || 'Transações processadas com sucesso',
-        newTransactions: data?.newTransactions || 0,
-        totalTransactions: transactionsData.results.length,
-        skippedDuplicates: data?.duplicates || 0
-      };
-
-    } catch (error: any) {
-      console.error("Erro inesperado ao processar transações:", error);
-      
-      let errorMessage = 'Erro interno ao processar transações';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      return { 
-        success: false, 
-        message: errorMessage,
-        error: errorMessage
-      };
-    } finally {
-      setProcessingTransactions(false);
-    }
-  };
-
-  // Função para buscar dados da conta via API
-  const fetchAccountData = async (itemId: string) => {
-    try {
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/accounts?itemId=${itemId}`,
-        {
-          method: 'GET',
-          headers: { accept: 'application/json' }
-        }
-      );
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Dados da conta carregados via API:', data);
-      return data;
-    } catch (error: any) {
-      console.error('Erro ao buscar dados da conta:', error);
-      toast({
-        title: "Erro ao carregar dados da conta",
-        description: error.message || "Não foi possível carregar os dados da conta bancária.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
+    initializeConnection();
+  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, toast]);
 
   // Função para buscar transações via API e salvar automaticamente
-  const fetchTransactions = async (accountId: string) => {
+  const fetchTransactions = useCallback(async (accountId: string) => {
     if (!connectionData?.itemId) return null;
 
     try {
-      const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}`,
-        {
-          method: 'GET',
-          headers: { accept: 'application/json' }
-        }
-      );
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Transações carregadas:', data);
+      const transactionsData = await pluggyApi.fetchTransactions(accountId);
       
       // Atualizar estado local
-      setConnectionData(prev => prev ? { ...prev, transactionsData: data } : null);
+      updateConnectionData({ transactionsData });
       
       // Processar e salvar automaticamente
-      if (data && data.results && data.results.length > 0) {
-        const result = await processAndSaveTransactions(connectionData.itemId, accountId, data);
+      if (transactionsData && transactionsData.results && transactionsData.results.length > 0) {
+        const result = await processAndSaveTransactions(connectionData.itemId, accountId, transactionsData);
         
         // Mostrar erro se o processamento falhou
         if (!result.success) {
@@ -293,7 +100,7 @@ export const usePluggyConnectionPersistence = () => {
         }
       }
       
-      return data;
+      return transactionsData;
     } catch (error: any) {
       console.error('Erro ao buscar transações:', error);
       toast({
@@ -303,120 +110,30 @@ export const usePluggyConnectionPersistence = () => {
       });
       return null;
     }
-  };
+  }, [connectionData?.itemId, updateConnectionData, processAndSaveTransactions, toast]);
 
-  // Salvar nova conexão
-  const saveConnection = useCallback(async (
-    itemId: string, 
-    accountData: any, 
-    connectionToken?: string,
-    bankName?: string
-  ) => {
-    if (!currentEmpresa?.id) return;
-
+  // Função para buscar dados da conta
+  const fetchAccountData = useCallback(async (itemId: string) => {
     try {
-      console.log('Salvando nova conexão Pluggy:', { itemId, bankName });
-      
-      const { data: existing } = await supabase
-        .from('integracoes_bancarias')
-        .select('id')
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('item_id', itemId)
-        .single();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('integracoes_bancarias')
-          .update({
-            account_data: accountData,
-            connection_token: connectionToken,
-            ultimo_sincronismo: new Date().toISOString(),
-            status: 'ativo'
-          })
-          .eq('id', existing.id);
-
-        if (error) {
-          throw new Error(`Erro ao atualizar conexão: ${error.message}`);
-        }
-      } else {
-        const { error } = await supabase
-          .from('integracoes_bancarias')
-          .insert({
-            empresa_id: currentEmpresa.id,
-            item_id: itemId,
-            nome_banco: bankName || 'Banco Conectado via Pluggy',
-            tipo_conexao: 'Open Finance',
-            status: 'ativo',
-            account_data: accountData,
-            connection_token: connectionToken,
-            ultimo_sincronismo: new Date().toISOString(),
-            detalhes: {
-              platform: 'pluggy',
-              sandbox: true,
-              connected_at: new Date().toISOString()
-            }
-          });
-
-        if (error) {
-          throw new Error(`Erro ao criar conexão: ${error.message}`);
-        }
-      }
-
-      setConnectionData({
-        itemId,
-        accountData,
-        transactionsData: null,
-        isConnected: true,
-        connectionToken
-      });
-
-      console.log('Conexão Pluggy salva com sucesso');
+      return await pluggyApi.fetchAccountData(itemId);
     } catch (error: any) {
-      console.error('Erro ao salvar conexão:', error);
       toast({
-        title: "Erro ao salvar conexão",
-        description: error.message || "Não foi possível salvar a conexão. Tente novamente.",
+        title: "Erro ao carregar dados da conta",
+        description: error.message || "Não foi possível carregar os dados da conta bancária.",
         variant: "destructive",
       });
+      return null;
     }
-  }, [currentEmpresa?.id, toast]);
-
-  // Limpar conexão
-  const clearConnection = useCallback(async () => {
-    if (!currentEmpresa?.id || !connectionData?.itemId) return;
-
-    try {
-      const { error } = await supabase
-        .from('integracoes_bancarias')
-        .update({ status: 'inativo' })
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('item_id', connectionData.itemId);
-
-      if (error) {
-        throw new Error(`Erro ao desativar conexão: ${error.message}`);
-      }
-
-      setConnectionData(null);
-      setLastSyncTimestamps({});
-      console.log('Conexão Pluggy limpa');
-    } catch (error: any) {
-      console.error('Erro ao limpar conexão:', error);
-      toast({
-        title: "Erro ao limpar conexão",
-        description: error.message || "Não foi possível limpar a conexão.",
-        variant: "destructive",
-      });
-    }
-  }, [currentEmpresa?.id, connectionData?.itemId, toast]);
+  }, [toast]);
 
   // Sincronizar dados
   const syncData = useCallback(async () => {
-    if (!connectionData?.itemId) return;
+    if (!connectionData?.itemId || !currentEmpresa?.id) return;
 
     try {
-      const accountData = await fetchAccountData(connectionData.itemId);
+      const accountData = await pluggyApi.fetchAccountData(connectionData.itemId);
       if (accountData) {
-        setConnectionData(prev => prev ? { ...prev, accountData } : null);
+        updateConnectionData({ accountData });
         
         const { error } = await supabase
           .from('integracoes_bancarias')
@@ -424,7 +141,7 @@ export const usePluggyConnectionPersistence = () => {
             account_data: accountData,
             ultimo_sincronismo: new Date().toISOString()
           })
-          .eq('empresa_id', currentEmpresa!.id)
+          .eq('empresa_id', currentEmpresa.id)
           .eq('item_id', connectionData.itemId);
 
         if (error) {
@@ -444,11 +161,7 @@ export const usePluggyConnectionPersistence = () => {
         variant: "destructive",
       });
     }
-  }, [connectionData?.itemId, currentEmpresa?.id, toast]);
-
-  useEffect(() => {
-    loadExistingConnection();
-  }, [loadExistingConnection]);
+  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, toast]);
 
   return {
     connectionData,
@@ -458,7 +171,7 @@ export const usePluggyConnectionPersistence = () => {
     clearConnection,
     syncData,
     fetchTransactions,
-    fetchAccountData: (itemId: string) => fetchAccountData(itemId),
+    fetchAccountData,
     processAndSaveTransactions
   };
 };
