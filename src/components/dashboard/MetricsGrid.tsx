@@ -1,3 +1,4 @@
+
 import React from "react";
 import { MetricCard } from "./MetricCard";
 import { 
@@ -29,16 +30,18 @@ export const MetricsGrid = () => {
 
   const loading = financeLoading || transactionsLoading;
 
-  // Usar dados das transações quando disponíveis, caso contrário usar dados de métricas ou fallback
-  const cashBalance = saldoCaixa || metrics?.caixa_atual || 124500;
-  const monthlyRevenue = entradasMesAtual || metrics?.receita_mensal || 45800;
-  const monthlyBurn = saidasMesAtual || metrics?.burn_rate || 38200;
-  const runway = metrics?.runway_meses || 3.5;
-  const mrrGrowth = metrics?.mrr_growth || 12.5;
-  const burnRate = monthlyBurn / 4; // Semanal (ou do banco de dados se disponível)
-  const cashFlow = fluxoCaixaMesAtual || metrics?.cash_flow || 7600;
+  // Só usar dados reais se existirem transações conectadas
+  const hasRealData = saldoCaixa > 0 || entradasMesAtual > 0 || saidasMesAtual > 0;
+  
+  // Se não há dados reais, mostrar zeros
+  const cashBalance = hasRealData ? saldoCaixa : 0;
+  const monthlyRevenue = hasRealData ? entradasMesAtual : 0;
+  const monthlyBurn = hasRealData ? saidasMesAtual : 0;
+  const runway = hasRealData ? (metrics?.runway_meses || 0) : 0;
+  const mrrGrowth = hasRealData ? (metrics?.mrr_growth || 0) : 0;
+  const burnRate = hasRealData ? (monthlyBurn / 4) : 0;
+  const cashFlow = hasRealData ? fluxoCaixaMesAtual : 0;
 
-  // ... keep existing code (containerVariants, itemVariants, etc)
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -61,6 +64,118 @@ export const MetricsGrid = () => {
       }
     }
   };
+
+  // Se não há dados reais, mostrar alerta para conectar contas
+  if (!hasRealData) {
+    return (
+      <>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Alert className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Conecte suas contas bancárias</AlertTitle>
+            <AlertDescription>
+              Para visualizar suas métricas financeiras, conecte suas contas bancárias via Open Finance na seção de Finanças.
+            </AlertDescription>
+          </Alert>
+        </motion.div>
+        
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8"
+        >
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Saldo em Caixa"
+              value="R$ 0"
+              description="Conecte suas contas para ver dados reais"
+              icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas bancárias para ver o saldo real"
+              loading={loading}
+              className="border-muted bg-muted/5"
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Receita Mensal"
+              value="R$ 0"
+              description="Aguardando dados"
+              icon={<BanknoteIcon className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para ver a receita real"
+              loading={loading}
+              className="border-muted bg-muted/5"
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Gastos Mensais"
+              value="R$ 0"
+              description="Aguardando dados"
+              icon={<CreditCard className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para ver os gastos reais"
+              loading={loading}
+              className="border-muted bg-muted/5"
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Runway"
+              value="0 meses"
+              description="Aguardando dados"
+              icon={<CalendarClock className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para calcular o runway"
+              className="border-muted bg-muted/5"
+              loading={loading}
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Crescimento MRR"
+              value="0%"
+              description="Aguardando dados"
+              icon={<LineChart className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para ver o crescimento"
+              className="border-muted bg-muted/5"
+              loading={loading}
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Taxa de Queima"
+              value="R$ 0"
+              description="Aguardando dados"
+              icon={<TrendingDown className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para ver a taxa de queima"
+              className="border-muted bg-muted/5"
+              loading={loading}
+            />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              title="Fluxo de Caixa"
+              value="R$ 0"
+              description="Aguardando dados"
+              icon={<Wallet className="h-5 w-5 text-muted-foreground" />}
+              tooltip="Conecte suas contas para ver o fluxo de caixa"
+              loading={loading}
+              className="border-muted bg-muted/5"
+            />
+          </motion.div>
+        </motion.div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -91,7 +206,7 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Saldo em Caixa"
             value={`R$${cashBalance.toLocaleString('pt-BR')}`}
-            description={saldoCaixa ? "Baseado em transações conectadas" : "Total disponível"}
+            description="Baseado em transações conectadas"
             icon={<DollarSign className="h-5 w-5 text-primary" />}
             tooltip="Seu saldo total em caixa baseado nas transações das contas conectadas"
             loading={loading}
@@ -103,8 +218,7 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Receita Mensal"
             value={`R$${monthlyRevenue.toLocaleString('pt-BR')}`}
-            change={12}
-            description={entradasMesAtual ? "mês atual" : "vs. mês anterior"}
+            description="mês atual"
             icon={<BanknoteIcon className="h-5 w-5 text-blue-500" />}
             tooltip="Sua receita total para o mês atual baseada nas transações"
             loading={loading}
@@ -116,8 +230,7 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Gastos Mensais"
             value={`R$${monthlyBurn.toLocaleString('pt-BR')}`}
-            change={-8}
-            description={saidasMesAtual ? "mês atual" : "vs. mês anterior"}
+            description="mês atual"
             icon={<CreditCard className="h-5 w-5 text-red-500" />}
             tooltip="Suas despesas totais para o mês atual baseadas nas transações"
             loading={loading}
@@ -129,7 +242,6 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Runway"
             value={`${runway.toLocaleString('pt-BR')} meses`}
-            change={-15}
             description="na taxa atual de queima"
             icon={<CalendarClock className="h-5 w-5 text-warning" />}
             tooltip="Quanto tempo seu caixa durará na taxa atual de queima"
@@ -147,7 +259,6 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Crescimento MRR"
             value={`${mrrGrowth}%`}
-            change={3.2}
             description="vs. mês anterior"
             icon={<LineChart className="h-5 w-5 text-green-500" />}
             tooltip="Crescimento mês a mês em receita recorrente"
@@ -172,8 +283,7 @@ export const MetricsGrid = () => {
           <MetricCard
             title="Fluxo de Caixa"
             value={`R$${cashFlow.toLocaleString('pt-BR')}`}
-            change={-22}
-            description={fluxoCaixaMesAtual ? "mês atual" : "vs. mês anterior"}
+            description="mês atual"
             icon={<Wallet className="h-5 w-5 text-amber-500" />}
             tooltip="Fluxo de caixa líquido (receita menos despesas) do mês atual"
             loading={loading}

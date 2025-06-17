@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 export const FinanceMetricsGrid: React.FC = () => {
   const { 
@@ -26,6 +28,9 @@ export const FinanceMetricsGrid: React.FC = () => {
   // Usar dados do Open Finance se disponíveis, caso contrário usar dados de transações
   const loading = transactionsLoading || openFinanceLoading;
   const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
+  
+  // Verificar se existe algum dado real (transações ou Open Finance)
+  const hasAnyRealData = hasOpenFinanceData || saldoCaixa > 0 || entradasMesAtual > 0 || saidasMesAtual > 0;
   
   const saldoAtual = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
   const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
@@ -61,6 +66,72 @@ export const FinanceMetricsGrid: React.FC = () => {
         <Card className="col-span-full">
           <CardContent className="pt-6">
             <p className="text-red-500 text-center">Erro ao carregar métricas: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se não há dados reais, mostrar estado vazio
+  if (!hasAnyRealData) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="col-span-full">
+          <Alert className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Nenhum dado financeiro encontrado</AlertTitle>
+            <AlertDescription>
+              Conecte suas contas bancárias via Open Finance para visualizar suas métricas financeiras em tempo real.
+            </AlertDescription>
+          </Alert>
+        </div>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Saldo em Caixa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <DollarSign className="h-4 w-4 text-muted-foreground mr-2" />
+              <div className="text-2xl font-bold text-muted-foreground">{formatCurrency(0)}</div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Conecte suas contas para ver dados reais
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Entradas (Mês Atual)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <TrendingUp className="h-4 w-4 text-muted-foreground mr-2" />
+              <div className="text-2xl font-bold text-muted-foreground">{formatCurrency(0)}</div>
+            </div>
+            <div className="flex items-center mt-1">
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(), "MMMM yyyy")}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Saídas (Mês Atual)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <TrendingDown className="h-4 w-4 text-muted-foreground mr-2" />
+              <div className="text-2xl font-bold text-muted-foreground">{formatCurrency(0)}</div>
+            </div>
+            <div className="flex items-center mt-1">
+              <span className="text-xs text-muted-foreground">
+                Fluxo líquido: {formatCurrency(0)}
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>

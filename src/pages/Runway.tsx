@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { RunwaySimulator, SimulationResultType } from "@/components/runway/RunwaySimulator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
+import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 
 // Importando os componentes refatorados
 import { RunwayHeader } from "@/components/runway/header/RunwayHeader";
@@ -15,8 +16,9 @@ import { RecommendationsPanel } from "@/components/runway/recommendations/Recomm
 const RunwayPage = () => {
   const { currentEmpresa } = useAuth();
   const { metrics, loading } = useOpenFinanceDashboard();
+  const { saldoCaixa, entradasMesAtual, saidasMesAtual } = useTransactionsMetrics();
   
-  // Estados iniciais baseados em dados conectados ou valores padrão
+  // Estados iniciais baseados em dados conectados ou valores zerados
   const [cashReserve, setCashReserve] = useState(0);
   const [burnRate, setBurnRate] = useState(0);
   const [runwayMonths, setRunwayMonths] = useState(0);
@@ -26,9 +28,14 @@ const RunwayPage = () => {
   // Estado para controle do modal de simulação
   const [simulatorOpen, setSimulatorOpen] = useState(false);
 
-  // Atualizar valores quando os dados do Open Finance estiverem disponíveis
+  // Verificar se há dados reais conectados
+  const hasOpenFinanceData = metrics && metrics.integracoesAtivas > 0;
+  const hasTransactionData = saldoCaixa > 0 || entradasMesAtual > 0 || saidasMesAtual > 0;
+  const hasAnyRealData = hasOpenFinanceData || hasTransactionData;
+
+  // Atualizar valores quando os dados estiverem disponíveis
   useEffect(() => {
-    if (metrics && metrics.integracoesAtivas > 0) {
+    if (hasOpenFinanceData) {
       setCashReserve(metrics.saldoTotal);
       setBurnRate(metrics.burnRate);
       setRunwayMonths(metrics.runwayMeses);
@@ -36,16 +43,24 @@ const RunwayPage = () => {
       
       // Gerar dados de projeção baseados nos dados conectados
       generateProjectionData(metrics.saldoTotal, metrics.burnRate);
-    } else if (metrics && metrics.integracoesAtivas === 0) {
-      // Dados demo quando não há integrações
-      setCashReserve(420000);
-      setBurnRate(100000);
-      setRunwayMonths(4.2);
+    } else if (hasTransactionData) {
+      // Usar dados de transações se disponíveis
+      setCashReserve(saldoCaixa);
+      setBurnRate(saidasMesAtual);
+      setRunwayMonths(saidaMensasl > 0 ? saldoCaixa / saidasMesAtual : 0);
+      setHasConnectedData(true);
+      
+      generateProjectionData(saldoCaixa, saidasMesAtual);
+    } else {
+      // Não há dados - manter tudo zerado
+      setCashReserve(0);
+      setBurnRate(0);
+      setRunwayMonths(0);
       setHasConnectedData(false);
       
-      generateProjectionData(420000, 100000);
+      generateProjectionData(0, 0);
     }
-  }, [metrics]);
+  }, [metrics, saldoCaixa, entradasMesAtual, saidasMesAtual, hasOpenFinanceData, hasTransactionData]);
 
   // Função para gerar dados de projeção
   const generateProjectionData = (currentCash: number, monthlyBurn: number) => {
@@ -100,12 +115,12 @@ const RunwayPage = () => {
     <AppLayout>
       <RunwayHeader onSimulatorOpen={() => setSimulatorOpen(true)} />
       
-      {!hasConnectedData && (
+      {!hasAnyRealData && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">Conecte suas contas bancárias para dados precisos</h3>
           <p className="text-blue-700 text-sm">
-            Para ver projeções baseadas nos seus dados financeiros, conecte suas contas bancárias via Open Finance na seção de Finanças.
-            Os dados exibidos atualmente são demonstrativos.
+            Para ver projeções baseadas nos seus dados financeiros reais, conecte suas contas bancárias via Open Finance na seção de Finanças.
+            {!hasConnectedData && " Todos os valores exibidos são zero até você conectar uma conta."}
           </p>
         </div>
       )}
@@ -129,7 +144,7 @@ const RunwayPage = () => {
         />
       </div>
 
-      {hasConnectedData && metrics?.ultimaAtualizacao && (
+      {hasConnectedData && hasOpenFinanceData && metrics?.ultimaAtualizacao && (
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
