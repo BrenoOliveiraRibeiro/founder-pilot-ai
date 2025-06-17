@@ -150,9 +150,36 @@ const OpenFinance = () => {
       const data = await fetchTransactions(accountId, page, pageSize);
       if (data) {
         setTransactionsData(data);
+        
         // Calcular total de páginas baseado no total de resultados
         const total = data.total || data.results?.length || 0;
         setTotalPages(Math.ceil(total / pageSize));
+        
+        // Salvamento automático apenas para a primeira página e se há transações
+        if (page === 1 && data.results && data.results.length > 0 && connectionData?.itemId) {
+          try {
+            const result = await processAndSaveTransactions(
+              connectionData.itemId,
+              accountId,
+              data
+            );
+
+            if (result.success) {
+              let message = result.message;
+              if (result.newTransactions && result.skippedDuplicates) {
+                message += ` (${result.skippedDuplicates} duplicatas ignoradas)`;
+              }
+              
+              toast({
+                title: "Transações processadas automaticamente!",
+                description: message,
+              });
+            }
+          } catch (error) {
+            console.error('Error auto-saving transactions:', error);
+            // Não mostrar erro para salvamento automático, apenas log
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error fetching transactions for selected account:', error);
@@ -501,20 +528,27 @@ const OpenFinance = () => {
                               />
                             </PaginationItem>
                             
-                            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-                              const pageNum = i + 1;
-                              return (
-                                <PaginationItem key={pageNum}>
-                                  <PaginationLink
-                                    onClick={() => handlePageChange(pageNum)}
-                                    isActive={currentPage === pageNum}
-                                    className="cursor-pointer"
-                                  >
-                                    {pageNum}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              );
-                            })}
+                            {(() => {
+                              const startPage = Math.max(1, currentPage - 2);
+                              const endPage = Math.min(totalPages, startPage + 4);
+                              const pages = [];
+                              
+                              for (let i = startPage; i <= endPage; i++) {
+                                pages.push(
+                                  <PaginationItem key={i}>
+                                    <PaginationLink
+                                      onClick={() => handlePageChange(i)}
+                                      isActive={currentPage === i}
+                                      className="cursor-pointer"
+                                    >
+                                      {i}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                );
+                              }
+                              
+                              return pages;
+                            })()}
                             
                             <PaginationItem>
                               <PaginationNext 
