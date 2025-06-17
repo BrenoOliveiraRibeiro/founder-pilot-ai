@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 import { corsHeaders } from "./utils.ts";
@@ -5,6 +6,7 @@ import { testPluggyConnection } from "./test-connection.ts";
 import { authorizeConnection } from "./authorize.ts";
 import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
+import { processFinancialData } from "./financial-data.ts";
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -30,7 +32,10 @@ serve(async (req) => {
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
-        JSON.stringify({ error: "Empresa ID é obrigatório" }),
+        JSON.stringify({ 
+          error: "Empresa ID é obrigatório",
+          message: "O ID da empresa deve ser fornecido para esta operação"
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -73,8 +78,7 @@ serve(async (req) => {
         );
 
       case "process_financial_data":
-        // Use processFinancialData directly para consistência
-        console.log(`Processando dados financeiros diretamente - Empresa: ${empresa_id}, Item: ${requestData.item_id}, Account: ${requestData.account_id}`);
+        console.log(`Processando dados financeiros - Empresa: ${empresa_id}, Item: ${requestData.item_id}, Account: ${requestData.account_id}`);
         
         try {
           // 1. Validar se a empresa existe primeiro
@@ -99,7 +103,7 @@ serve(async (req) => {
 
           console.log(`Empresa encontrada: ${empresa.nome} (ID: ${empresa.id})`);
 
-          // 2. Usar processFinancialData para consistência
+          // 2. Usar processFinancialData
           const result = await processFinancialData(
             empresa_id,
             requestData.item_id,
@@ -122,17 +126,20 @@ serve(async (req) => {
                 newTransactions: result.newTransactions,
                 duplicates: result.duplicates,
                 total: result.total
-              }
+              },
+              newTransactions: result.newTransactions,
+              duplicates: result.duplicates
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
           );
 
-        } catch (error) {
+        } catch (error: any) {
           console.error("Erro ao processar dados financeiros:", error);
           return new Response(
             JSON.stringify({ 
               error: "Falha ao processar dados financeiros", 
-              message: error.message 
+              message: error.message || "Erro interno do servidor",
+              stack: error.stack
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
           );
@@ -140,22 +147,22 @@ serve(async (req) => {
       
       default:
         return new Response(
-          JSON.stringify({ error: "Ação não suportada" }),
+          JSON.stringify({ 
+            error: "Ação não suportada",
+            message: `A ação "${action}" não é reconhecida pelo sistema`
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro na função de Open Finance:", error);
     return new Response(
       JSON.stringify({ 
         error: "Erro interno do servidor", 
-        message: error.message,
+        message: error.message || "Erro desconhecido",
         stack: error.stack 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
-
-// Remove the old processFinancialDataDirectly function as it's no longer needed
-// All processing now uses the unified processFinancialData function

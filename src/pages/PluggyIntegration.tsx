@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
@@ -61,8 +62,8 @@ const PluggyIntegration = () => {
       script.onerror = () => {
         console.error('Failed to load Pluggy Connect script');
         toast({
-          title: "Erro",
-          description: "Falha ao carregar o widget da Pluggy. Tente novamente.",
+          title: "Erro ao carregar widget",
+          description: "Falha ao carregar o widget da Pluggy. Verifique sua conexão e tente novamente.",
           variant: "destructive",
         });
       };
@@ -100,8 +101,13 @@ const PluggyIntegration = () => {
     try {
       // Buscar transações - elas serão automaticamente salvas pelo hook
       await fetchTransactions(accountId);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching transactions for selected account:', error);
+      toast({
+        title: "Erro ao carregar transações",
+        description: error.message || "Não foi possível carregar as transações desta conta.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingTransactions(false);
     }
@@ -110,8 +116,8 @@ const PluggyIntegration = () => {
   const handlePluggyConnect = async () => {
     if (!isScriptLoaded || !window.PluggyConnect) {
       toast({
-        title: "Erro",
-        description: "Widget da Pluggy ainda não foi carregado. Aguarde um momento.",
+        title: "Widget não carregado",
+        description: "Widget da Pluggy ainda não foi carregado. Aguarde um momento e tente novamente.",
         variant: "destructive",
       });
       return;
@@ -150,14 +156,15 @@ const PluggyIntegration = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
       }
 
       const tokenData = await response.json();
       console.log('Connect token response:', tokenData);
 
       if (!tokenData.accessToken) {
-        throw new Error('No access token received');
+        throw new Error('Token de acesso não recebido da API Pluggy');
       }
 
       // Create new instance
@@ -168,42 +175,67 @@ const PluggyIntegration = () => {
           console.log('Pluggy connect success!', itemData);
           console.log('Item ID:', itemData.item.id);
           
-          // Armazenar o itemId e buscar dados da conta
-          const receivedItemId = itemData.item.id;
-          const accountDataResponse = await fetchAccountData(receivedItemId);
-          
-          // Salvar conexão
-          await saveConnection(
-            receivedItemId,
-            accountDataResponse,
-            undefined,
-            'Banco via Pluggy'
-          );
-          
-          setIsConnecting(false);
-          toast({
-            title: "Conexão estabelecida!",
-            description: "Sua conta bancária foi conectada com sucesso. As transações serão carregadas automaticamente.",
-          });
+          try {
+            // Armazenar o itemId e buscar dados da conta
+            const receivedItemId = itemData.item.id;
+            const accountDataResponse = await fetchAccountData(receivedItemId);
+            
+            // Salvar conexão
+            await saveConnection(
+              receivedItemId,
+              accountDataResponse,
+              undefined,
+              'Banco via Pluggy'
+            );
+            
+            setIsConnecting(false);
+            toast({
+              title: "Conexão estabelecida!",
+              description: "Sua conta bancária foi conectada com sucesso. As transações serão carregadas automaticamente.",
+            });
+          } catch (error: any) {
+            console.error('Erro ao processar sucesso da conexão:', error);
+            setIsConnecting(false);
+            toast({
+              title: "Erro ao salvar conexão",
+              description: error.message || "A conexão foi estabelecida, mas houve erro ao salvar os dados.",
+              variant: "destructive",
+            });
+          }
         },
         onError: (error: any) => {
           console.error('Pluggy Connect error:', error);
           setIsConnecting(false);
+          
+          let errorMessage = "Ocorreu um erro ao conectar com o banco.";
+          if (error && error.message) {
+            errorMessage = error.message;
+          } else if (typeof error === 'string') {
+            errorMessage = error;
+          }
+          
           toast({
             title: "Erro na conexão",
-            description: "Ocorreu um erro ao conectar com o banco. Tente novamente.",
+            description: errorMessage,
+            variant: "destructive",
           });
         },
       });
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching connect token or initializing Pluggy Connect:', error);
       setIsConnecting(false);
+      
+      let errorMessage = "Falha ao obter token de conexão.";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Erro",
-        description: `Falha ao obter token de conexão: ${error.message || 'Erro desconhecido'}`,
+        title: "Erro de inicialização",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -271,7 +303,7 @@ const PluggyIntegration = () => {
               <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
                 
-                {accountData?.results && accountData.results.length > 0 && (
+                {accountData?.results && accountData.results.length > 0 ? (
                   <div className="mb-6">
                     <Select value={selectedAccountId} onValueChange={handleAccountSelection}>
                       <SelectTrigger className="w-full">
@@ -285,6 +317,11 @@ const PluggyIntegration = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-4 bg-yellow-50 rounded-lg mb-4">
+                    <AlertCircle className="w-4 h-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-700">Nenhuma conta encontrada</span>
                   </div>
                 )}
 

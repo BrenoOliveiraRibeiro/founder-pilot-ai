@@ -19,6 +19,7 @@ interface ProcessedTransactionsResult {
   newTransactions?: number;
   totalTransactions?: number;
   skippedDuplicates?: number;
+  error?: string;
 }
 
 export const usePluggyConnectionPersistence = () => {
@@ -51,7 +52,10 @@ export const usePluggyConnectionPersistence = () => {
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar integração bancária:', error);
+        throw new Error(`Falha ao carregar integração: ${error.message}`);
+      }
 
       if (integracoes && integracoes.length > 0) {
         const integracao = integracoes[0];
@@ -64,13 +68,17 @@ export const usePluggyConnectionPersistence = () => {
           accountData = await fetchAccountData(integracao.item_id);
           
           if (accountData) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('integracoes_bancarias')
               .update({ 
                 account_data: accountData,
                 ultimo_sincronismo: new Date().toISOString()
               })
               .eq('id', integracao.id);
+
+            if (updateError) {
+              console.error('Erro ao atualizar dados da conta:', updateError);
+            }
           }
         }
 
@@ -86,12 +94,12 @@ export const usePluggyConnectionPersistence = () => {
       } else {
         console.log('Nenhuma conexão Pluggy existente encontrada');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar conexão existente:', error);
       toast({
-        title: "Aviso",
-        description: "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
-        variant: "default",
+        title: "Erro ao carregar conexão",
+        description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -107,7 +115,8 @@ export const usePluggyConnectionPersistence = () => {
     if (!currentEmpresa?.id || !transactionsData?.results || processingTransactions) {
       return { 
         success: false, 
-        message: 'Dados inválidos ou processamento já em andamento' 
+        message: 'Dados inválidos ou processamento já em andamento',
+        error: 'Invalid data or processing already in progress'
       };
     }
 
@@ -132,7 +141,6 @@ export const usePluggyConnectionPersistence = () => {
     try {
       console.log('Processando transações automaticamente...');
       
-      // Salvar transações usando a edge function
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
           action: "process_financial_data",
@@ -145,10 +153,33 @@ export const usePluggyConnectionPersistence = () => {
       });
 
       if (error) {
-        console.error("Erro ao salvar transações:", error);
+        console.error("Erro na chamada da edge function:", error);
+        
+        // Extrair mensagem de erro mais detalhada
+        let errorMessage = 'Erro desconhecido ao processar transações';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error.context && error.context.error) {
+          errorMessage = error.context.error;
+        }
+
         return { 
           success: false, 
-          message: 'Transações já foram salvas' 
+          message: errorMessage,
+          error: errorMessage
+        };
+      }
+
+      // Verificar se a resposta contém erro
+      if (data?.error) {
+        console.error("Erro retornado pela edge function:", data.error);
+        return { 
+          success: false, 
+          message: data.message || data.error,
+          error: data.error
         };
       }
 
@@ -173,11 +204,21 @@ export const usePluggyConnectionPersistence = () => {
         skippedDuplicates: data?.duplicates || 0
       };
 
-    } catch (error) {
-      console.error("Erro ao processar transações:", error);
+    } catch (error: any) {
+      console.error("Erro inesperado ao processar transações:", error);
+      
+      let errorMessage = 'Erro interno ao processar transações';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
       return { 
         success: false, 
-        message: 'Erro interno ao processar transações' 
+        message: errorMessage,
+        error: errorMessage
       };
     } finally {
       setProcessingTransactions(false);
@@ -196,14 +237,20 @@ export const usePluggyConnectionPersistence = () => {
       );
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
       console.log('Dados da conta carregados via API:', data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar dados da conta:', error);
+      toast({
+        title: "Erro ao carregar dados da conta",
+        description: error.message || "Não foi possível carregar os dados da conta bancária.",
+        variant: "destructive",
+      });
       return null;
     }
   };
@@ -222,7 +269,8 @@ export const usePluggyConnectionPersistence = () => {
       );
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
@@ -233,12 +281,26 @@ export const usePluggyConnectionPersistence = () => {
       
       // Processar e salvar automaticamente
       if (data && data.results && data.results.length > 0) {
-        await processAndSaveTransactions(connectionData.itemId, accountId, data);
+        const result = await processAndSaveTransactions(connectionData.itemId, accountId, data);
+        
+        // Mostrar erro se o processamento falhou
+        if (!result.success) {
+          toast({
+            title: "Erro ao salvar transações",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
       }
       
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar transações:', error);
+      toast({
+        title: "Erro ao carregar transações",
+        description: error.message || "Não foi possível carregar as transações.",
+        variant: "destructive",
+      });
       return null;
     }
   };
@@ -263,7 +325,7 @@ export const usePluggyConnectionPersistence = () => {
         .single();
 
       if (existing) {
-        await supabase
+        const { error } = await supabase
           .from('integracoes_bancarias')
           .update({
             account_data: accountData,
@@ -272,8 +334,12 @@ export const usePluggyConnectionPersistence = () => {
             status: 'ativo'
           })
           .eq('id', existing.id);
+
+        if (error) {
+          throw new Error(`Erro ao atualizar conexão: ${error.message}`);
+        }
       } else {
-        await supabase
+        const { error } = await supabase
           .from('integracoes_bancarias')
           .insert({
             empresa_id: currentEmpresa.id,
@@ -290,6 +356,10 @@ export const usePluggyConnectionPersistence = () => {
               connected_at: new Date().toISOString()
             }
           });
+
+        if (error) {
+          throw new Error(`Erro ao criar conexão: ${error.message}`);
+        }
       }
 
       setConnectionData({
@@ -301,11 +371,11 @@ export const usePluggyConnectionPersistence = () => {
       });
 
       console.log('Conexão Pluggy salva com sucesso');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar conexão:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar a conexão. Tente novamente.",
+        title: "Erro ao salvar conexão",
+        description: error.message || "Não foi possível salvar a conexão. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -316,19 +386,28 @@ export const usePluggyConnectionPersistence = () => {
     if (!currentEmpresa?.id || !connectionData?.itemId) return;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('integracoes_bancarias')
         .update({ status: 'inativo' })
         .eq('empresa_id', currentEmpresa.id)
         .eq('item_id', connectionData.itemId);
 
+      if (error) {
+        throw new Error(`Erro ao desativar conexão: ${error.message}`);
+      }
+
       setConnectionData(null);
       setLastSyncTimestamps({});
       console.log('Conexão Pluggy limpa');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao limpar conexão:', error);
+      toast({
+        title: "Erro ao limpar conexão",
+        description: error.message || "Não foi possível limpar a conexão.",
+        variant: "destructive",
+      });
     }
-  }, [currentEmpresa?.id, connectionData?.itemId]);
+  }, [currentEmpresa?.id, connectionData?.itemId, toast]);
 
   // Sincronizar dados
   const syncData = useCallback(async () => {
@@ -339,7 +418,7 @@ export const usePluggyConnectionPersistence = () => {
       if (accountData) {
         setConnectionData(prev => prev ? { ...prev, accountData } : null);
         
-        await supabase
+        const { error } = await supabase
           .from('integracoes_bancarias')
           .update({ 
             account_data: accountData,
@@ -348,16 +427,20 @@ export const usePluggyConnectionPersistence = () => {
           .eq('empresa_id', currentEmpresa!.id)
           .eq('item_id', connectionData.itemId);
 
+        if (error) {
+          throw new Error(`Erro ao atualizar sincronização: ${error.message}`);
+        }
+
         toast({
           title: "Dados sincronizados",
           description: "Os dados bancários foram atualizados com sucesso.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao sincronizar dados:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível sincronizar os dados.",
+        title: "Erro na sincronização",
+        description: error.message || "Não foi possível sincronizar os dados.",
         variant: "destructive",
       });
     }

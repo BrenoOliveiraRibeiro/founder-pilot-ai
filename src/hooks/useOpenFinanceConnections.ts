@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,13 +27,17 @@ export const useOpenFinanceConnections = () => {
         .eq("empresa_id", currentEmpresa?.id)
         .eq("tipo_conexao", "Open Finance");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar integrações:", error);
+        throw new Error(`Falha ao carregar integrações: ${error.message}`);
+      }
+      
       setActiveIntegrations(data as IntegracaoBancaria[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar integrações:", error);
       toast({
         title: "Erro ao carregar integrações",
-        description: "Não foi possível carregar suas integrações bancárias. Tente novamente.",
+        description: error.message || "Não foi possível carregar suas integrações bancárias. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -57,7 +62,25 @@ export const useOpenFinanceConnections = () => {
 
       if (error) {
         console.error("Erro na chamada da função:", error);
-        throw error;
+        
+        // Extrair mensagem de erro mais detalhada
+        let errorMessage = 'Erro desconhecido na sincronização';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error.context && error.context.error) {
+          errorMessage = error.context.error;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Verificar se a resposta contém erro
+      if (data?.error) {
+        console.error("Erro retornado pela edge function:", data.error);
+        throw new Error(data.message || data.error);
       }
 
       console.log("Resultado da sincronização:", data);
@@ -97,13 +120,16 @@ export const useOpenFinanceConnections = () => {
     } catch (error: any) {
       console.error("Erro ao sincronizar dados:", error);
       
-      let errorMessage = "Não foi possível sincronizar os dados financeiros. Tente novamente.";
+      let errorMessage = "Não foi possível sincronizar os dados financeiros.";
+      
       if (error.message) {
         errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
       
       toast({
-        title: "Erro ao sincronizar dados",
+        title: "Erro na sincronização",
         description: errorMessage,
         variant: "destructive"
       });
