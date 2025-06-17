@@ -86,11 +86,20 @@ const PluggyIntegration = () => {
     );
   }
 
-  // Check if connectionData exists and has required properties before passing to PluggyConnectedView
+  // Check if connectionData exists and has required properties, and type-cast it properly
   if (isConnected && connectionData && connectionData.itemId && connectionData.accountData) {
+    // Create a properly typed connection object for the connected view
+    const typedConnectionData = {
+      itemId: connectionData.itemId,
+      accountData: connectionData.accountData,
+      transactionsData: connectionData.transactionsData,
+      isConnected: connectionData.isConnected,
+      connectionToken: connectionData.connectionToken,
+    };
+
     return (
       <PluggyConnectedView
-        connectionData={connectionData}
+        connectionData={typedConnectionData}
         processingTransactions={processingTransactions}
         fetchTransactions={fetchTransactions}
       />

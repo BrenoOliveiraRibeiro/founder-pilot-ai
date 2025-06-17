@@ -56,7 +56,16 @@ export const RunwaySimulator: React.FC<RunwaySimulatorProps> = ({
       // Validar dados antes de calcular
       const validatedValues = runwaySimulationSchema.parse(values);
       
-      const result = calculateSimulation(validatedValues);
+      // Ensure all values are numbers (the schema guarantees this)
+      const calculationInputs = {
+        cashReserve: validatedValues.cashReserve,
+        burnRate: validatedValues.burnRate,
+        revenueIncrease: validatedValues.revenueIncrease,
+        costReduction: validatedValues.costReduction,
+        addFunding: validatedValues.addFunding,
+      };
+      
+      const result = calculateSimulation(calculationInputs);
       setSimulationResult(result);
       
       toast({
