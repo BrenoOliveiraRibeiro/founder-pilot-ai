@@ -25,7 +25,111 @@ export const usePluggyConnectionPersistence = () => {
     processAndSaveTransactions
   } = usePluggyTransactions();
 
-  // Função para processar automaticamente todas as contas de um item
+  // Função para processar automaticamente todas as transações de todas as páginas
+  const autoProcessAllAccountsAllPages = useCallback(async (itemId: string, showToasts: boolean = true) => {
+    if (!currentEmpresa?.id || !itemId) return;
+
+    try {
+      console.log(`Iniciando processamento completo de todas as transações para item ${itemId}`);
+      
+      // Buscar todas as contas do item
+      const accountData = await pluggyApi.fetchAccountData(itemId);
+      
+      if (!accountData?.results || accountData.results.length === 0) {
+        console.log('Nenhuma conta encontrada para processar');
+        return;
+      }
+
+      let totalNewTransactions = 0;
+      let totalProcessedAccounts = 0;
+
+      // Processar cada conta com todas as suas transações
+      for (const account of accountData.results) {
+        try {
+          console.log(`Processando todas as transações da conta: ${account.name} (${account.id})`);
+          
+          let allAccountTransactions = [];
+          let currentPage = 1;
+          let hasMorePages = true;
+          const pageSize = 100; // Usar páginas maiores para eficiência
+
+          // Buscar todas as páginas de transações da conta
+          while (hasMorePages) {
+            try {
+              const transactionsData = await pluggyApi.fetchTransactions(account.id, currentPage, pageSize);
+              
+              if (transactionsData?.results && transactionsData.results.length > 0) {
+                allAccountTransactions = [...allAccountTransactions, ...transactionsData.results];
+                
+                // Verificar se há mais páginas
+                const totalPages = Math.ceil((transactionsData.total || transactionsData.results.length) / pageSize);
+                hasMorePages = currentPage < totalPages && transactionsData.results.length === pageSize;
+                currentPage++;
+                
+                console.log(`Página ${currentPage - 1} da conta ${account.name}: ${transactionsData.results.length} transações`);
+              } else {
+                hasMorePages = false;
+              }
+            } catch (pageError) {
+              console.error(`Erro ao buscar página ${currentPage} da conta ${account.id}:`, pageError);
+              hasMorePages = false;
+            }
+          }
+
+          // Processar todas as transações coletadas da conta
+          if (allAccountTransactions.length > 0) {
+            console.log(`Total de transações coletadas da conta ${account.name}: ${allAccountTransactions.length}`);
+            
+            const result = await processAndSaveTransactions(itemId, account.id, {
+              results: allAccountTransactions,
+              total: allAccountTransactions.length
+            });
+            
+            if (result.success) {
+              totalNewTransactions += result.newTransactions || 0;
+              totalProcessedAccounts++;
+              console.log(`Conta ${account.name}: ${result.newTransactions} novas transações de ${allAccountTransactions.length} totais`);
+            }
+          } else {
+            console.log(`Nenhuma transação encontrada para a conta ${account.name}`);
+          }
+        } catch (accountError) {
+          console.error(`Erro ao processar conta ${account.id}:`, accountError);
+        }
+      }
+
+      console.log(`Processamento completo concluído: ${totalNewTransactions} novas transações de ${totalProcessedAccounts} contas`);
+
+      // Mostrar toast apenas se solicitado
+      if (showToasts) {
+        if (totalNewTransactions > 0) {
+          toast({
+            title: "Todas as transações salvas!",
+            description: `${totalNewTransactions} novas transações foram processadas de ${totalProcessedAccounts} conta${totalProcessedAccounts !== 1 ? 's' : ''}.`,
+          });
+        } else {
+          toast({
+            title: "Transações verificadas",
+            description: `Todas as transações de ${totalProcessedAccounts} conta${totalProcessedAccounts !== 1 ? 's' : ''} já estão salvas no sistema.`,
+          });
+        }
+      }
+
+      return { totalNewTransactions, totalProcessedAccounts };
+    } catch (error: any) {
+      console.error('Erro no processamento completo:', error);
+      
+      if (showToasts) {
+        toast({
+          title: "Erro no processamento automático",
+          description: "Algumas transações podem não ter sido salvas. Você pode sincronizar manualmente.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [currentEmpresa?.id, processAndSaveTransactions, toast]);
+
+  // Função para processar automaticamente todas as contas de um item (compatibilidade)
   const autoProcessAllAccounts = useCallback(async (itemId: string, showToasts: boolean = true) => {
     if (!currentEmpresa?.id || !itemId) return;
 
@@ -122,9 +226,12 @@ export const usePluggyConnectionPersistence = () => {
             // Atualizar estado local
             updateConnectionData({ accountData });
 
-            // Processar transações automaticamente para conexão existente
-            await autoProcessAllAccounts(existingConnection.itemId, false);
+            // Processar TODAS as transações automaticamente quando a página carregar
+            await autoProcessAllAccountsAllPages(existingConnection.itemId, true);
           }
+        } else if (existingConnection && existingConnection.itemId) {
+          // Se já temos dados da conta, ainda assim processar todas as transações
+          await autoProcessAllAccountsAllPages(existingConnection.itemId, true);
         }
 
         console.log('Estado da conexão Pluggy carregado com sucesso');
@@ -141,7 +248,7 @@ export const usePluggyConnectionPersistence = () => {
     };
 
     initializeConnection();
-  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, autoProcessAllAccounts, toast]);
+  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, autoProcessAllAccountsAllPages, toast]);
 
   // Função para buscar transações via API (mantém compatibilidade com a interface existente)
   const fetchTransactions = useCallback(async (accountId: string, page: number = 1, pageSize: number = 50) => {
@@ -179,7 +286,7 @@ export const usePluggyConnectionPersistence = () => {
     }
   }, [toast]);
 
-  // Função para salvar conexão com processamento automático
+  // Função para salvar conexão com processamento automático completo
   const saveConnectionWithAutoProcess = useCallback(async (
     itemId: string,
     accountData: any,
@@ -190,8 +297,8 @@ export const usePluggyConnectionPersistence = () => {
       // Salvar conexão primeiro
       await saveConnection(itemId, accountData, connectionToken, bankName);
       
-      // Processar todas as transações automaticamente
-      await autoProcessAllAccounts(itemId, true);
+      // Processar TODAS as transações automaticamente
+      await autoProcessAllAccountsAllPages(itemId, true);
       
     } catch (error: any) {
       console.error('Erro ao salvar conexão com processamento automático:', error);
@@ -201,7 +308,7 @@ export const usePluggyConnectionPersistence = () => {
         variant: "destructive",
       });
     }
-  }, [saveConnection, autoProcessAllAccounts, toast]);
+  }, [saveConnection, autoProcessAllAccountsAllPages, toast]);
 
   // Sincronizar dados
   const syncData = useCallback(async () => {
@@ -225,8 +332,8 @@ export const usePluggyConnectionPersistence = () => {
           throw new Error(`Erro ao atualizar sincronização: ${error.message}`);
         }
 
-        // Processar automaticamente todas as contas na sincronização
-        await autoProcessAllAccounts(connectionData.itemId, true);
+        // Processar automaticamente TODAS as transações na sincronização
+        await autoProcessAllAccountsAllPages(connectionData.itemId, true);
 
         toast({
           title: "Dados sincronizados",
@@ -241,7 +348,7 @@ export const usePluggyConnectionPersistence = () => {
         variant: "destructive",
       });
     }
-  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, autoProcessAllAccounts, toast]);
+  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, autoProcessAllAccountsAllPages, toast]);
 
   return {
     connectionData,
@@ -253,6 +360,7 @@ export const usePluggyConnectionPersistence = () => {
     fetchTransactions,
     fetchAccountData,
     processAndSaveTransactions,
-    autoProcessAllAccounts
+    autoProcessAllAccounts,
+    autoProcessAllAccountsAllPages
   };
 };

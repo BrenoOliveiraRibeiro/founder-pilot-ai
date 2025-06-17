@@ -36,7 +36,6 @@ const OpenFinance = () => {
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [autoSaveProcessed, setAutoSaveProcessed] = useState<Record<string, boolean>>({});
   const pageSize = 20;
 
   const {
@@ -63,7 +62,8 @@ const OpenFinance = () => {
     syncData,
     fetchTransactions,
     fetchAccountData,
-    processAndSaveTransactions
+    processAndSaveTransactions,
+    autoProcessAllAccountsAllPages
   } = usePluggyConnectionPersistence();
 
   useEffect(() => {
@@ -141,7 +141,6 @@ const OpenFinance = () => {
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setCurrentPage(1);
-    setAutoSaveProcessed({}); // Reset auto-save tracking
     await loadTransactions(accountId, 1);
   };
 
@@ -156,53 +155,6 @@ const OpenFinance = () => {
         // Calcular total de páginas baseado no total de resultados
         const total = data.total || data.results?.length || 0;
         setTotalPages(Math.ceil(total / pageSize));
-        
-        // Salvamento automático apenas para a primeira página, se há transações e ainda não foi processado
-        const autoSaveKey = `${connectionData?.itemId}_${accountId}`;
-        if (page === 1 && data.results && data.results.length > 0 && connectionData?.itemId && !autoSaveProcessed[autoSaveKey]) {
-          console.log('Iniciando salvamento automático de transações...');
-          
-          try {
-            const result = await processAndSaveTransactions(
-              connectionData.itemId,
-              accountId,
-              data
-            );
-
-            console.log('Resultado do salvamento automático:', result);
-
-            // Marcar como processado independentemente do resultado
-            setAutoSaveProcessed(prev => ({ ...prev, [autoSaveKey]: true }));
-
-            if (result.success) {
-              if (result.newTransactions && result.newTransactions > 0) {
-                toast({
-                  title: "Transações salvas automaticamente!",
-                  description: `${result.newTransactions} novas transações foram processadas.`,
-                });
-              } else {
-                toast({
-                  title: "Transações verificadas",
-                  description: "Todas as transações já estão salvas no sistema.",
-                });
-              }
-            } else {
-              console.error('Erro no salvamento automático:', result.message);
-              toast({
-                title: "Erro no salvamento automático",
-                description: result.message || "Erro ao salvar transações automaticamente.",
-                variant: "destructive",
-              });
-            }
-          } catch (error) {
-            console.error('Error auto-saving transactions:', error);
-            toast({
-              title: "Erro",
-              description: "Erro ao salvar transações automaticamente.",
-              variant: "destructive",
-            });
-          }
-        }
       }
     } catch (error: any) {
       console.error('Error fetching transactions for selected account:', error);
@@ -223,8 +175,45 @@ const OpenFinance = () => {
     }
   };
 
-  // Nova função específica para salvar transações manualmente
-  const handleSaveTransactions = async () => {
+  // Nova função para salvar TODAS as transações de TODAS as páginas
+  const handleSaveAllTransactions = async () => {
+    if (!connectionData?.itemId) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma conexão bancária encontrada.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('Iniciando salvamento completo de todas as transações...');
+
+    try {
+      const result = await autoProcessAllAccountsAllPages(connectionData.itemId, false);
+
+      if (result && result.totalNewTransactions > 0) {
+        toast({
+          title: "Todas as transações processadas!",
+          description: `${result.totalNewTransactions} novas transações foram salvas de ${result.totalProcessedAccounts} conta${result.totalProcessedAccounts !== 1 ? 's' : ''}.`,
+        });
+      } else {
+        toast({
+          title: "Verificação completa realizada",
+          description: "Todas as transações já estão salvas no sistema.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving all transactions:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar todas as transações.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Nova função específica para salvar transações da página atual
+  const handleSaveCurrentPageTransactions = async () => {
     if (!connectionData?.itemId || !selectedAccountId || !transactionsData) {
       toast({
         title: "Erro",
@@ -234,7 +223,7 @@ const OpenFinance = () => {
       return;
     }
 
-    console.log('Iniciando salvamento manual de transações...');
+    console.log('Iniciando salvamento de transações da página atual...');
 
     try {
       const result = await processAndSaveTransactions(
@@ -243,7 +232,7 @@ const OpenFinance = () => {
         transactionsData
       );
 
-      console.log('Resultado do salvamento manual:', result);
+      console.log('Resultado do salvamento da página atual:', result);
 
       if (result.success) {
         if (result.newTransactions && result.newTransactions > 0) {
@@ -265,10 +254,10 @@ const OpenFinance = () => {
         });
       }
     } catch (error) {
-      console.error('Error saving transactions:', error);
+      console.error('Error saving current page transactions:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar transações.",
+        description: "Erro ao salvar transações da página atual.",
         variant: "destructive",
       });
     }
@@ -337,7 +326,7 @@ const OpenFinance = () => {
             const accountData = await fetchAccountData(receivedItemId);
             
             if (accountData) {
-              // saveConnection agora inclui processamento automático de transações
+              // saveConnection agora inclui processamento automático completo de transações
               await saveConnection(
                 receivedItemId, 
                 accountData, 
@@ -354,7 +343,7 @@ const OpenFinance = () => {
                 
                 toast({
                   title: "Conexão estabelecida!",
-                  description: "Conexão realizada e transações salvas automaticamente.",
+                  description: "Conexão realizada e todas as transações foram salvas automaticamente.",
                 });
               }
             }
@@ -479,6 +468,21 @@ const OpenFinance = () => {
                         <p className="text-sm text-gray-500">Saldo atual</p>
                       </div>
                     </div>
+
+                    {/* Botão para salvar todas as transações */}
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleSaveAllTransactions}
+                        className="w-full"
+                        disabled={processingTransactions}
+                        variant="default"
+                      >
+                        {processingTransactions ? 'Processando...' : 'Salvar Todas as Transações'}
+                      </Button>
+                      <p className="text-xs text-gray-500 text-center">
+                        Salva todas as transações de todas as contas e páginas
+                      </p>
+                    </div>
                   </div>
                 )}
               </Card>
@@ -498,10 +502,11 @@ const OpenFinance = () => {
                     {transactionsData?.results && selectedAccountId && (
                       <Button 
                         size="sm" 
-                        onClick={handleSaveTransactions}
+                        onClick={handleSaveCurrentPageTransactions}
                         disabled={processingTransactions}
+                        variant="outline"
                       >
-                        {processingTransactions ? 'Salvando...' : 'Salvar Transações'}
+                        {processingTransactions ? 'Salvando...' : 'Salvar Página Atual'}
                       </Button>
                     )}
                   </div>
