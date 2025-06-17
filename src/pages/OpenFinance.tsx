@@ -30,6 +30,7 @@ const OpenFinance = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const [totalPages, setTotalPages] = useState(1);
+  const [autoSaveProcessed, setAutoSaveProcessed] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -140,6 +141,7 @@ const OpenFinance = () => {
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setCurrentPage(1);
+    setAutoSaveProcessed({}); // Reset auto-save tracking
     await loadTransactions(accountId, 1);
   };
 
@@ -155,8 +157,11 @@ const OpenFinance = () => {
         const total = data.total || data.results?.length || 0;
         setTotalPages(Math.ceil(total / pageSize));
         
-        // Salvamento automático apenas para a primeira página e se há transações
-        if (page === 1 && data.results && data.results.length > 0 && connectionData?.itemId) {
+        // Salvamento automático apenas para a primeira página, se há transações e ainda não foi processado
+        const autoSaveKey = `${connectionData?.itemId}_${accountId}`;
+        if (page === 1 && data.results && data.results.length > 0 && connectionData?.itemId && !autoSaveProcessed[autoSaveKey]) {
+          console.log('Iniciando salvamento automático de transações...');
+          
           try {
             const result = await processAndSaveTransactions(
               connectionData.itemId,
@@ -164,20 +169,38 @@ const OpenFinance = () => {
               data
             );
 
+            console.log('Resultado do salvamento automático:', result);
+
+            // Marcar como processado independentemente do resultado
+            setAutoSaveProcessed(prev => ({ ...prev, [autoSaveKey]: true }));
+
             if (result.success) {
-              let message = result.message;
-              if (result.newTransactions && result.skippedDuplicates) {
-                message += ` (${result.skippedDuplicates} duplicatas ignoradas)`;
+              if (result.newTransactions && result.newTransactions > 0) {
+                toast({
+                  title: "Transações salvas automaticamente!",
+                  description: `${result.newTransactions} novas transações foram processadas.`,
+                });
+              } else {
+                toast({
+                  title: "Transações verificadas",
+                  description: "Todas as transações já estão salvas no sistema.",
+                });
               }
-              
+            } else {
+              console.error('Erro no salvamento automático:', result.message);
               toast({
-                title: "Transações processadas automaticamente!",
-                description: message,
+                title: "Erro no salvamento automático",
+                description: result.message || "Erro ao salvar transações automaticamente.",
+                variant: "destructive",
               });
             }
           } catch (error) {
             console.error('Error auto-saving transactions:', error);
-            // Não mostrar erro para salvamento automático, apenas log
+            toast({
+              title: "Erro",
+              description: "Erro ao salvar transações automaticamente.",
+              variant: "destructive",
+            });
           }
         }
       }
@@ -200,7 +223,7 @@ const OpenFinance = () => {
     }
   };
 
-  // Nova função específica para salvar transações
+  // Nova função específica para salvar transações manualmente
   const handleSaveTransactions = async () => {
     if (!connectionData?.itemId || !selectedAccountId || !transactionsData) {
       toast({
@@ -211,6 +234,8 @@ const OpenFinance = () => {
       return;
     }
 
+    console.log('Iniciando salvamento manual de transações...');
+
     try {
       const result = await processAndSaveTransactions(
         connectionData.itemId,
@@ -218,21 +243,25 @@ const OpenFinance = () => {
         transactionsData
       );
 
+      console.log('Resultado do salvamento manual:', result);
+
       if (result.success) {
-        let message = result.message;
-        if (result.newTransactions && result.skippedDuplicates) {
-          message += ` (${result.skippedDuplicates} duplicatas ignoradas)`;
+        if (result.newTransactions && result.newTransactions > 0) {
+          toast({
+            title: "Transações processadas!",
+            description: `${result.newTransactions} novas transações foram salvas.`,
+          });
+        } else {
+          toast({
+            title: "Nenhuma transação nova",
+            description: "Todas as transações já estão salvas no sistema.",
+          });
         }
-        
-        toast({
-          title: "Transações processadas!",
-          description: message,
-        });
       } else {
         toast({
-          title: "Aviso",
-          description: result.message,
-          variant: "default",
+          title: "Erro",
+          description: result.message || "Erro ao salvar transações.",
+          variant: "destructive",
         });
       }
     } catch (error) {
@@ -318,12 +347,12 @@ const OpenFinance = () => {
               const firstAccountId = accountData.results[0].id;
               setSelectedAccountId(firstAccountId);
               
-              // Apenas buscar transações, não salvar automaticamente
+              // Apenas buscar transações, salvamento será automático
               await loadTransactions(firstAccountId, 1);
               
               toast({
                 title: "Conexão estabelecida!",
-                description: "Conexão realizada com sucesso. Use o botão 'Salvar Transações' para processar os dados.",
+                description: "Conexão realizada com sucesso.",
               });
             }
           }
