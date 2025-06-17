@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +23,7 @@ export const usePluggyDataSync = () => {
         const { error: updateError } = await supabase
           .from('integracoes_bancarias')
           .update({ 
-            account_data: accountData,
+            account_data: accountData as any, // Cast to any to handle Json type compatibility
             ultimo_sincronismo: new Date().toISOString()
           })
           .eq('empresa_id', currentEmpresa.id)
