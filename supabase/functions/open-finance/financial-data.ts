@@ -1,9 +1,5 @@
 
-import { getPluggyToken } from "./utils.ts";
-import { getAccountData } from "./account-service.ts";
-import { getTransactionsData, formatTransactions } from "./transactions-service.ts";
-import { saveTransactionsBatch } from "./database-service.ts";
-import { updateMetrics } from "./metrics-service.ts";
+import { getPluggyToken, callPluggyAPI, gerarInsights } from "./utils.ts";
 
 export async function processFinancialData(
   empresaId: string, 
@@ -29,21 +25,58 @@ export async function processFinancialData(
     }
     
     // Get account data to determine which account to use
-    const accountResult = await getAccountData(itemId, accountId, apiKey);
-    if (!accountResult.success) {
-      return {
-        success: true,
-        message: accountResult.message,
-        newTransactions: 0,
-        duplicates: 0,
-        total: 0
-      };
+    let targetAccountId = accountId;
+    let accountData = null;
+    
+    if (!targetAccountId) {
+      console.log(`Buscando contas para item ${itemId}`);
+      const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
+      if (accountsResult.success && accountsResult.data.results && accountsResult.data.results.length > 0) {
+        // Use the first account by default
+        targetAccountId = accountsResult.data.results[0].id;
+        accountData = accountsResult.data.results[0];
+        console.log(`Usando conta padrão: ${targetAccountId} (${accountData.name})`);
+      } else {
+        console.warn("Nenhuma conta encontrada para o item:", itemId);
+        return {
+          success: true,
+          message: "Nenhuma conta encontrada",
+          newTransactions: 0,
+          duplicates: 0,
+          total: 0
+        };
+      }
     }
     
-    const { accountId: targetAccountId, accountData } = accountResult;
+    // Use provided transactions data or fetch from API
+    let allTransactions = [];
     
-    // Get transactions data
-    const allTransactions = await getTransactionsData(targetAccountId!, transactionsData, apiKey);
+    if (transactionsData && transactionsData.results) {
+      console.log(`Usando transações fornecidas: ${transactionsData.results.length}`);
+      allTransactions = transactionsData.results;
+    } else {
+      // Fetch from API
+      console.log(`Buscando transações da API para conta ${targetAccountId}`);
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      const fromDate = threeMonthsAgo.toISOString().split('T')[0];
+      const toDate = new Date().toISOString().split('T')[0];
+      
+      const transactionsResult = await callPluggyAPI(
+        `/transactions?accountId=${targetAccountId}&from=${fromDate}&to=${toDate}`, 
+        'GET',
+        apiKey
+      );
+      
+      if (transactionsResult.success && transactionsResult.data.results) {
+        allTransactions = transactionsResult.data.results;
+        console.log(`Transações obtidas da API: ${allTransactions.length}`);
+      } else {
+        console.warn(`Erro ao buscar transações para a conta ${targetAccountId}:`, transactionsResult.error);
+        allTransactions = [];
+      }
+    }
     
     console.log(`Processando ${allTransactions.length} transações`);
     
@@ -58,36 +91,168 @@ export async function processFinancialData(
       };
     }
     
-    // Format transactions for database
-    const transacoesFormatadas = formatTransactions(allTransactions, empresaId);
+    // Preparar transações formatadas para inserção
+    const transacoesFormatadas = allTransactions.map(tx => ({
+      empresa_id: empresaId,
+      descricao: tx.description || 'Transação',
+      valor: tx.amount,
+      data_transacao: tx.date,
+      categoria: tx.category || 'Outros',
+      tipo: tx.amount > 0 ? 'receita' : 'despesa',
+      metodo_pagamento: tx.type || 'Transferência',
+      recorrente: false
+      // transaction_hash será gerado automaticamente pelo trigger
+    }));
     
-    // Save transactions in batches
-    const { insertedCount, duplicateCount } = await saveTransactionsBatch(
-      transacoesFormatadas, 
-      supabaseClient
-    );
+    console.log(`Tentando inserir ${transacoesFormatadas.length} transações`);
     
-    console.log(`Resultado final: ${insertedCount} transações processadas, ${duplicateCount} duplicatas gerenciadas`);
+    // Inserir transações com tratamento adequado de duplicatas
+    let insertedCount = 0;
+    let duplicateCount = 0;
     
-    // Update metrics if there were changes
-    await updateMetrics(
-      empresaId, 
-      insertedCount, 
-      accountData, 
-      itemId, 
-      targetAccountId!, 
-      apiKey, 
-      supabaseClient
-    );
+    // Processar em lotes para melhor performance
+    const batchSize = 50;
+    for (let i = 0; i < transacoesFormatadas.length; i += batchSize) {
+      const batch = transacoesFormatadas.slice(i, i + batchSize);
+      
+      try {
+        console.log(`Processando lote ${Math.floor(i / batchSize) + 1} de ${Math.ceil(transacoesFormatadas.length / batchSize)}: ${batch.length} transações`);
+        
+        const { data, error } = await supabaseClient
+          .from("transacoes")
+          .insert(batch)
+          .select('id');
+        
+        if (error) {
+          // Se há erro de constraint (duplicata), processar individualmente para contar
+          if (error.code === '23505') {
+            console.log(`Lote com duplicatas detectadas, processando individualmente...`);
+            
+            for (const tx of batch) {
+              try {
+                const { error: singleError } = await supabaseClient
+                  .from("transacoes")
+                  .insert([tx])
+                  .select('id');
+                
+                if (singleError) {
+                  if (singleError.code === '23505') {
+                    duplicateCount++;
+                  } else {
+                    console.error('Erro inesperado ao inserir transação:', singleError);
+                  }
+                } else {
+                  insertedCount++;
+                }
+              } catch (singleTxError) {
+                console.error('Erro individual:', singleTxError);
+                duplicateCount++;
+              }
+            }
+          } else {
+            console.error(`Erro não relacionado a duplicatas no lote:`, error);
+            throw error;
+          }
+        } else {
+          const batchInserted = data ? data.length : 0;
+          insertedCount += batchInserted;
+          console.log(`Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações inseridas com sucesso`);
+        }
+      } catch (batchError) {
+        console.error(`Erro crítico no lote ${Math.floor(i / batchSize) + 1}:`, batchError);
+        // Em caso de erro crítico, tentar individualmente
+        for (const tx of batch) {
+          try {
+            const { error: singleError } = await supabaseClient
+              .from("transacoes")
+              .insert([tx])
+              .select('id');
+            
+            if (singleError) {
+              if (singleError.code === '23505') {
+                duplicateCount++;
+              } else {
+                console.error('Erro ao inserir transação individual:', singleError);
+              }
+            } else {
+              insertedCount++;
+            }
+          } catch (singleTxError) {
+            console.error('Erro individual crítico:', singleTxError);
+            duplicateCount++;
+          }
+        }
+      }
+    }
+    
+    console.log(`Resultado final: ${insertedCount} novas transações inseridas, ${duplicateCount} duplicatas ignoradas`);
+    
+    // Calcular métricas apenas se houver transações novas
+    if (insertedCount > 0) {
+      console.log('Atualizando métricas devido a novas transações...');
+      
+      // Buscar dados da conta para calcular métricas se não tivermos
+      if (!accountData && targetAccountId) {
+        const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
+        if (accountsResult.success && accountsResult.data.results) {
+          accountData = accountsResult.data.results.find((acc: any) => acc.id === targetAccountId);
+        }
+      }
+      
+      // Buscar todas as transações da empresa para calcular métricas
+      const { data: todasTransacoes, error: txError } = await supabaseClient
+        .from("transacoes")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .gte("data_transacao", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+      
+      if (!txError && todasTransacoes) {
+        const receitas = todasTransacoes.filter(tx => tx.valor > 0);
+        const despesas = todasTransacoes.filter(tx => tx.valor < 0);
+        
+        const receitaMensal = receitas.reduce((total, tx) => total + Math.abs(tx.valor), 0) / 3;
+        const burnRate = Math.abs(despesas.reduce((total, tx) => total + tx.valor, 0)) / 3;
+        const caixaAtual = accountData ? accountData.balance : 0;
+        const runwayMeses = burnRate > 0 ? caixaAtual / burnRate : 0;
+        const cashFlow = receitaMensal - burnRate;
+        
+        // Atualizar métricas
+        const { error: metricasError } = await supabaseClient
+          .from("metricas")
+          .upsert([{
+            empresa_id: empresaId,
+            data_referencia: new Date().toISOString().split('T')[0],
+            caixa_atual: caixaAtual,
+            receita_mensal: receitaMensal,
+            burn_rate: burnRate,
+            runway_meses: runwayMeses,
+            cash_flow: cashFlow,
+            mrr_growth: 0
+          }], {
+            onConflict: 'empresa_id,data_referencia'
+          });
+          
+        if (metricasError) {
+          console.error("Erro ao salvar métricas:", metricasError);
+        } else {
+          console.log("Métricas atualizadas:", { receitaMensal, burnRate, runwayMeses });
+        }
+        
+        // Gerar insights apenas se houve mudanças significativas
+        await gerarInsights(empresaId, runwayMeses, burnRate, receitaMensal, caixaAtual, supabaseClient);
+      }
+    } else {
+      console.log('Nenhuma transação nova - métricas não atualizadas');
+    }
     
     console.log("Processamento de dados financeiros concluído com sucesso");
     
-    // Determine return message
+    // Determinar mensagem de retorno
     let message = "";
     if (insertedCount > 0) {
-      message = `${insertedCount} transações processadas`;
+      message = `${insertedCount} novas transações processadas`;
       if (duplicateCount > 0) {
-        message += ` (${duplicateCount} duplicatas gerenciadas)`;
+        message += ` (${duplicateCount} duplicatas ignoradas)`;
       }
     } else if (duplicateCount > 0) {
       message = "Nenhuma transação nova - todas já estão salvas";

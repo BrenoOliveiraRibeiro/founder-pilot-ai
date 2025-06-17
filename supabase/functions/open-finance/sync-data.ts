@@ -52,16 +52,11 @@ export async function syncData(
         supabase
       );
       
-      // Update sync timestamp using upsert
+      // Update sync timestamp
       await supabase
         .from("integracoes_bancarias")
-        .upsert({
-          id: integracao.id,
-          empresa_id: empresaId,
-          ultimo_sincronismo: new Date().toISOString()
-        }, {
-          onConflict: 'id'
-        });
+        .update({ ultimo_sincronismo: new Date().toISOString() })
+        .eq("id", integracao.id);
         
       console.log(`Resultado da sincronização: ${result.message}, novas: ${result.newTransactions}, duplicatas: ${result.duplicates}`);
         
@@ -128,25 +123,19 @@ export async function syncData(
         }
       }
       
-      // Update sync timestamp for all integrations using upsert (batch)
-      const integracaoUpdates = integracoes.map(integracao => ({
-        id: integracao.id,
-        empresa_id: empresaId,
-        ultimo_sincronismo: new Date().toISOString()
-      }));
-      
+      // Update sync timestamp for all integrations
       await supabase
         .from("integracoes_bancarias")
-        .upsert(integracaoUpdates, {
-          onConflict: 'id'
-        });
+        .update({ ultimo_sincronismo: new Date().toISOString() })
+        .eq("empresa_id", empresaId)
+        .eq("tipo_conexao", "Open Finance");
       
       // Determinar mensagem baseada no resultado
       let message = "";
       if (totalNewTransactions > 0) {
         message = `${totalNewTransactions} novas transações sincronizadas`;
         if (totalDuplicates > 0) {
-          message += ` (${totalDuplicates} duplicatas gerenciadas)`;
+          message += ` (${totalDuplicates} duplicatas ignoradas)`;
         }
       } else if (totalDuplicates > 0) {
         message = "Nenhuma transação nova encontrada - todas já estão salvas";

@@ -1,11 +1,20 @@
 
-import type { RunwaySimulationInputs, RunwayMetrics } from '@/hooks/types/runwayTypes';
+export interface SimulationInputs {
+  cashReserve: number;
+  burnRate: number;
+  revenueIncrease: number;
+  costReduction: number;
+  addFunding: number;
+}
 
-export interface SimulationResult extends RunwayMetrics {}
+export interface SimulationResult {
+  cashReserve: number;
+  burnRate: number;
+  runwayMonths: number;
+  estimatedRunoutDate: Date;
+}
 
-export type SimulationResultType = SimulationResult;
-
-export const calculateSimulation = (values: RunwaySimulationInputs): SimulationResult => {
+export const calculateSimulation = (values: SimulationInputs): SimulationResult => {
   // Calcular o novo burn rate após as alterações
   const costReductionAmount = (values.costReduction / 100) * values.burnRate;
   const revenueIncreaseAmount = (values.revenueIncrease / 100) * values.burnRate;

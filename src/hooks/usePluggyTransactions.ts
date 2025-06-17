@@ -2,8 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useTransactionProcessor } from './pluggy/useTransactionProcessor';
-import { useTransactionCache } from './pluggy/useTransactionCache';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ProcessedTransactionsResult {
   success: boolean;
@@ -16,15 +15,9 @@ interface ProcessedTransactionsResult {
 
 export const usePluggyTransactions = () => {
   const [processingTransactions, setProcessingTransactions] = useState(false);
+  const [lastSyncTimestamps, setLastSyncTimestamps] = useState<Record<string, number>>({});
   const { currentEmpresa } = useAuth();
-  
-  const { processTransactions } = useTransactionProcessor();
-  const { 
-    lastSyncTimestamps, 
-    setLastSyncTimestamps,
-    checkCacheValidity,
-    updateCache
-  } = useTransactionCache();
+  const { toast } = useToast();
 
   const processAndSaveTransactions = useCallback(async (
     itemId: string, 
@@ -39,8 +32,13 @@ export const usePluggyTransactions = () => {
       };
     }
 
-    // Verificar cache
-    if (checkCacheValidity(itemId, accountId)) {
+    // Verificar se passou tempo suficiente desde a última sincronização
+    const cacheKey = `${itemId}_${accountId}`;
+    const lastSync = lastSyncTimestamps[cacheKey];
+    const now = Date.now();
+    const minIntervalMs = 30000; // 30 segundos
+
+    if (lastSync && (now - lastSync) < minIntervalMs) {
       return {
         success: true,
         message: 'Dados sincronizados recentemente.',
@@ -53,60 +51,93 @@ export const usePluggyTransactions = () => {
     setProcessingTransactions(true);
 
     try {
-      const result = await processTransactions(itemId, accountId, transactionsData);
+      console.log('Processando transações automaticamente...');
       
-      if (result.success) {
-        updateCache(itemId, accountId);
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: {
+          action: "process_financial_data",
+          empresa_id: currentEmpresa.id,
+          item_id: itemId,
+          account_id: accountId,
+          transactions_data: transactionsData,
+          sandbox: true
+        }
+      });
+
+      if (error) {
+        console.error("Erro na chamada da edge function:", error);
+        
+        let errorMessage = 'Erro desconhecido ao processar transações';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error.context && error.context.error) {
+          errorMessage = error.context.error;
+        }
+
+        return { 
+          success: false, 
+          message: errorMessage,
+          error: errorMessage
+        };
       }
+
+      if (data?.error) {
+        console.error("Erro retornado pela edge function:", data.error);
+        return { 
+          success: false, 
+          message: data.message || data.error,
+          error: data.error
+        };
+      }
+
+      // Atualizar cache de sincronização
+      setLastSyncTimestamps(prev => ({ ...prev, [cacheKey]: now }));
+
+      console.log("Transações processadas automaticamente:", data);
       
-      return result;
+      // Mostrar toast apenas se houver transações novas
+      if (data?.newTransactions > 0) {
+        toast({
+          title: "Transações salvas automaticamente",
+          description: `${data.newTransactions} novas transações foram processadas e salvas.`,
+        });
+      }
+
+      return { 
+        success: true, 
+        message: data?.message || 'Transações processadas com sucesso',
+        newTransactions: data?.newTransactions || 0,
+        totalTransactions: transactionsData.results.length,
+        skippedDuplicates: data?.duplicates || 0
+      };
+
+    } catch (error: any) {
+      console.error("Erro inesperado ao processar transações:", error);
+      
+      let errorMessage = 'Erro interno ao processar transações';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      return { 
+        success: false, 
+        message: errorMessage,
+        error: errorMessage
+      };
     } finally {
       setProcessingTransactions(false);
     }
-  }, [currentEmpresa?.id, processingTransactions, processTransactions, checkCacheValidity, updateCache]);
-
-  const upsertIntegrationStatus = useCallback(async (itemId: string, status: string) => {
-    if (!currentEmpresa?.id) return;
-
-    try {
-      // Buscar a integração existente primeiro para obter campos obrigatórios
-      const { data: existingIntegration, error: fetchError } = await supabase
-        .from('integracoes_bancarias')
-        .select('nome_banco')
-        .eq('empresa_id', currentEmpresa.id)
-        .eq('item_id', itemId)
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
-        console.error('Erro ao buscar integração existente:', fetchError);
-        return;
-      }
-
-      const { error } = await supabase
-        .from('integracoes_bancarias')
-        .upsert({
-          empresa_id: currentEmpresa.id,
-          item_id: itemId,
-          nome_banco: existingIntegration?.nome_banco || 'Banco via Open Finance',
-          tipo_conexao: 'Open Finance',
-          status: status,
-          ultimo_sincronismo: new Date().toISOString()
-        }, {
-          onConflict: 'empresa_id,item_id'
-        });
-
-      if (error) {
-        console.error('Erro ao atualizar status da integração:', error);
-      }
-    } catch (error) {
-      console.error('Erro inesperado ao atualizar integração:', error);
-    }
-  }, [currentEmpresa?.id]);
+  }, [currentEmpresa?.id, processingTransactions, lastSyncTimestamps, toast]);
 
   return {
     processingTransactions,
     processAndSaveTransactions,
-    upsertIntegrationStatus,
     lastSyncTimestamps,
     setLastSyncTimestamps
   };

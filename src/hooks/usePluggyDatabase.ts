@@ -1,39 +1,77 @@
-
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { usePluggyDatabaseOperations } from './usePluggyDatabaseOperations';
-import { usePluggyConnectionState } from './usePluggyConnectionState';
+import { pluggyConnectionSchema, type PluggyConnection } from '@/schemas/validationSchemas';
 
 export const usePluggyDatabase = () => {
+  const [connectionData, setConnectionData] = useState<PluggyConnection | null>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
-  
-  const {
-    loadExistingConnection: loadFromDatabase,
-    saveConnection: saveToDatabase,
-    clearConnection: clearFromDatabase
-  } = usePluggyDatabaseOperations();
-
-  const {
-    connectionData,
-    setConnectionData,
-    updateConnectionData,
-    clearConnectionData
-  } = usePluggyConnectionState();
 
   const loadExistingConnection = useCallback(async () => {
-    try {
-      const connection = await loadFromDatabase();
-      if (connection) {
-        setConnectionData(connection);
-      }
-      return connection;
-    } catch (error: any) {
-      console.error('Erro ao carregar conexão:', error);
+    if (!currentEmpresa?.id) {
       return null;
     }
-  }, [loadFromDatabase, setConnectionData]);
+
+    try {
+      console.log('Carregando conexão Pluggy existente para empresa:', currentEmpresa.id);
+      
+      const { data: integracoes, error } = await supabase
+        .from('integracoes_bancarias')
+        .select('*')
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('tipo_conexao', 'Open Finance')
+        .eq('status', 'ativo')
+        .not('item_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Erro ao carregar integração bancária:', error);
+        throw new Error(`Falha ao carregar integração: ${error.message}`);
+      }
+
+      if (integracoes && integracoes.length > 0) {
+        const integracao = integracoes[0];
+        console.log('Conexão existente encontrada:', integracao.nome_banco);
+        
+        const connectionData: PluggyConnection = {
+          itemId: integracao.item_id!,
+          accountData: integracao.account_data,
+          transactionsData: null,
+          isConnected: true,
+          connectionToken: integracao.connection_token || undefined
+        };
+
+        // Validar dados antes de definir estado
+        const validatedConnection = pluggyConnectionSchema.parse(connectionData);
+        setConnectionData(validatedConnection);
+        return validatedConnection;
+      }
+
+      console.log('Nenhuma conexão Pluggy existente encontrada');
+      return null;
+    } catch (error: any) {
+      console.error('Erro ao carregar conexão existente:', error);
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados de conexão inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao carregar conexão",
+          description: error.message || "Não foi possível restaurar a conexão anterior. Você pode conectar novamente.",
+          variant: "destructive",
+        });
+      }
+      return null;
+    }
+  }, [currentEmpresa?.id, toast]);
 
   const saveConnection = useCallback(async (
     itemId: string, 
@@ -41,26 +79,129 @@ export const usePluggyDatabase = () => {
     connectionToken?: string,
     bankName?: string
   ) => {
+    if (!currentEmpresa?.id) return;
+
     try {
-      const validatedConnection = await saveToDatabase(itemId, accountData, connectionToken, bankName);
+      console.log('Salvando nova conexão Pluggy:', { itemId, bankName });
+      
+      // Validar dados antes de salvar
+      const connectionData: PluggyConnection = {
+        itemId,
+        accountData,
+        transactionsData: null,
+        isConnected: true,
+        connectionToken
+      };
+
+      const validatedConnection = pluggyConnectionSchema.parse(connectionData);
+      
+      const { data: existing } = await supabase
+        .from('integracoes_bancarias')
+        .select('id')
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('item_id', itemId)
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('integracoes_bancarias')
+          .update({
+            account_data: accountData,
+            connection_token: connectionToken,
+            ultimo_sincronismo: new Date().toISOString(),
+            status: 'ativo'
+          })
+          .eq('id', existing.id);
+
+        if (error) {
+          throw new Error(`Erro ao atualizar conexão: ${error.message}`);
+        }
+      } else {
+        const { error } = await supabase
+          .from('integracoes_bancarias')
+          .insert({
+            empresa_id: currentEmpresa.id,
+            item_id: itemId,
+            nome_banco: bankName || 'Banco Conectado via Pluggy',
+            tipo_conexao: 'Open Finance',
+            status: 'ativo',
+            account_data: accountData,
+            connection_token: connectionToken,
+            ultimo_sincronismo: new Date().toISOString(),
+            detalhes: {
+              platform: 'pluggy',
+              sandbox: true,
+              connected_at: new Date().toISOString()
+            }
+          });
+
+        if (error) {
+          throw new Error(`Erro ao criar conexão: ${error.message}`);
+        }
+      }
+
       setConnectionData(validatedConnection);
+      console.log('Conexão Pluggy salva com sucesso');
     } catch (error: any) {
       console.error('Erro ao salvar conexão:', error);
-      // Error handling is done in the database operations hook
+      
+      // Se for erro de validação Zod, mostrar erro mais específico
+      if (error.name === 'ZodError') {
+        toast({
+          title: "Dados de conexão inválidos",
+          description: `Erro de validação: ${error.errors.map((e: any) => e.message).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao salvar conexão",
+          description: error.message || "Não foi possível salvar a conexão. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
-  }, [saveToDatabase, setConnectionData]);
+  }, [currentEmpresa?.id, toast]);
 
   const clearConnection = useCallback(async () => {
-    if (!connectionData?.itemId) return;
+    if (!currentEmpresa?.id || !connectionData?.itemId) return;
 
     try {
-      await clearFromDatabase(connectionData.itemId);
-      clearConnectionData();
+      const { error } = await supabase
+        .from('integracoes_bancarias')
+        .update({ status: 'inativo' })
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('item_id', connectionData.itemId);
+
+      if (error) {
+        throw new Error(`Erro ao desativar conexão: ${error.message}`);
+      }
+
+      setConnectionData(null);
+      console.log('Conexão Pluggy limpa');
     } catch (error: any) {
       console.error('Erro ao limpar conexão:', error);
-      // Error handling is done in the database operations hook
+      toast({
+        title: "Erro ao limpar conexão",
+        description: error.message || "Não foi possível limpar a conexão.",
+        variant: "destructive",
+      });
     }
-  }, [connectionData?.itemId, clearFromDatabase, clearConnectionData]);
+  }, [currentEmpresa?.id, connectionData?.itemId, toast]);
+
+  const updateConnectionData = useCallback((updates: Partial<PluggyConnection>) => {
+    setConnectionData(prev => {
+      if (!prev) return null;
+      
+      try {
+        const updatedData = { ...prev, ...updates };
+        const validatedData = pluggyConnectionSchema.parse(updatedData);
+        return validatedData;
+      } catch (error: any) {
+        console.error('Erro ao validar atualização de conexão:', error);
+        return prev;
+      }
+    });
+  }, []);
 
   return {
     connectionData,
