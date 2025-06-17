@@ -1,113 +1,95 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
-interface TransactionsMetrics {
-  saldoCaixa: number;
-  entradasMesAtual: number;
-  saidasMesAtual: number;
-  fluxoCaixaMesAtual: number;
-  loading: boolean;
-  error: string | null;
-}
-
-export const useTransactionsMetrics = (): TransactionsMetrics => {
-  const [metrics, setMetrics] = useState<TransactionsMetrics>({
-    saldoCaixa: 0,
-    entradasMesAtual: 0,
-    saidasMesAtual: 0,
-    fluxoCaixaMesAtual: 0,
-    loading: true,
-    error: null,
-  });
-
-  const { currentEmpresa, user } = useAuth();
+export const useTransactionsMetrics = () => {
+  const [saldoCaixa, setSaldoCaixa] = useState(0);
+  const [entradasMesAtual, setEntradasMesAtual] = useState(0);
+  const [saidasMesAtual, setSaidasMesAtual] = useState(0);
+  const [fluxoCaixaMesAtual, setFluxoCaixaMesAtual] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { currentEmpresa } = useAuth();
 
   useEffect(() => {
-    const fetchTransactionsMetrics = async () => {
-      if (!currentEmpresa?.id || !user?.id) {
-        setMetrics(prev => ({ ...prev, loading: false }));
+    const fetchMetrics = async () => {
+      if (!currentEmpresa?.id) {
+        setLoading(false);
         return;
       }
 
       try {
-        setMetrics(prev => ({ ...prev, loading: true, error: null }));
+        setLoading(true);
+        setError(null);
 
-        console.log("Buscando transações para empresa:", currentEmpresa.id);
-
-        // Buscar todas as transações da empresa do usuário atual
-        const { data: transacoes, error } = await supabase
+        // Buscar todas as transações
+        const { data: transacoes, error: transacoesError } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id);
 
-        if (error) {
-          console.error("Erro ao buscar transações:", error);
-          throw error;
-        }
-
-        console.log("Transações encontradas:", transacoes?.length || 0);
+        if (transacoesError) throw transacoesError;
 
         if (!transacoes || transacoes.length === 0) {
-          setMetrics(prev => ({ ...prev, loading: false }));
+          // Não há transações, manter valores em zero
+          setLoading(false);
           return;
         }
 
         // Calcular saldo total (soma de todas as transações)
-        const saldoCaixa = transacoes.reduce((total, tx) => total + Number(tx.valor), 0);
+        const saldoTotal = transacoes.reduce((acc, tx) => {
+          return acc + Number(tx.valor);
+        }, 0);
 
         // Filtrar transações do mês atual
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-        const currentYear = currentDate.getFullYear();
+        const hoje = new Date();
+        const anoAtual = hoje.getFullYear();
+        const mesAtual = hoje.getMonth();
 
         const transacoesMesAtual = transacoes.filter(tx => {
-          const txDate = new Date(tx.data_transacao);
-          return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+          const dataTransacao = new Date(tx.data_transacao);
+          return dataTransacao.getFullYear() === anoAtual && 
+                 dataTransacao.getMonth() === mesAtual;
         });
 
-        console.log("Transações do mês atual:", transacoesMesAtual.length);
+        // Calcular métricas do mês atual
+        let entradas = 0;
+        let saidas = 0;
 
-        // Calcular entradas e saídas do mês atual
-        const entradasMesAtual = transacoesMesAtual
-          .filter(tx => tx.tipo === 'receita')
-          .reduce((total, tx) => total + Number(tx.valor), 0);
-
-        const saidasMesAtual = Math.abs(transacoesMesAtual
-          .filter(tx => tx.tipo === 'despesa')
-          .reduce((total, tx) => total + Math.abs(Number(tx.valor)), 0));
-
-        const fluxoCaixaMesAtual = entradasMesAtual - saidasMesAtual;
-
-        console.log("Métricas calculadas:", {
-          saldoCaixa,
-          entradasMesAtual,
-          saidasMesAtual,
-          fluxoCaixaMesAtual
+        transacoesMesAtual.forEach(tx => {
+          const valor = Number(tx.valor);
+          if (valor > 0) {
+            entradas += valor;
+          } else {
+            saidas += Math.abs(valor);
+          }
         });
 
-        setMetrics({
-          saldoCaixa,
-          entradasMesAtual,
-          saidasMesAtual,
-          fluxoCaixaMesAtual,
-          loading: false,
-          error: null,
-        });
+        const fluxo = entradas - saidas;
+
+        setSaldoCaixa(saldoTotal);
+        setEntradasMesAtual(entradas);
+        setSaidasMesAtual(saidas);
+        setFluxoCaixaMesAtual(fluxo);
 
       } catch (error: any) {
-        console.error('Erro ao buscar métricas de transações:', error);
-        setMetrics(prev => ({
-          ...prev,
-          loading: false,
-          error: error.message || 'Erro ao carregar dados',
-        }));
+        console.error('Erro ao carregar métricas de transações:', error);
+        setError(error.message || 'Erro ao carregar dados financeiros');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchTransactionsMetrics();
-  }, [currentEmpresa?.id, user?.id]);
+    fetchMetrics();
+  }, [currentEmpresa?.id]);
 
-  return metrics;
+  return {
+    saldoCaixa,
+    entradasMesAtual,
+    saidasMesAtual,
+    fluxoCaixaMesAtual,
+    loading,
+    error
+  };
 };

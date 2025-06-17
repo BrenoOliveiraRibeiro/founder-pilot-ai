@@ -5,6 +5,7 @@ import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
+import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const FinanceMetricsGrid: React.FC = () => {
@@ -13,9 +14,25 @@ export const FinanceMetricsGrid: React.FC = () => {
     entradasMesAtual, 
     saidasMesAtual, 
     fluxoCaixaMesAtual,
-    loading, 
-    error 
+    loading: transactionsLoading, 
+    error: transactionsError 
   } = useTransactionsMetrics();
+
+  const { 
+    metrics: openFinanceMetrics, 
+    loading: openFinanceLoading 
+  } = useOpenFinanceDashboard();
+
+  // Usar dados do Open Finance se disponíveis, caso contrário usar dados de transações
+  const loading = transactionsLoading || openFinanceLoading;
+  const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
+  
+  const saldoAtual = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
+  const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
+  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtual;
+  const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtual;
+
+  const error = transactionsError;
 
   if (loading) {
     return (
@@ -59,10 +76,10 @@ export const FinanceMetricsGrid: React.FC = () => {
         <CardContent>
           <div className="flex items-center">
             <DollarSign className="h-4 w-4 text-muted-foreground mr-2" />
-            <div className="text-2xl font-bold">{formatCurrency(saldoCaixa)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(saldoAtual)}</div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Baseado em todas as transações conectadas
+            {hasOpenFinanceData ? "Dados reais do Open Finance" : "Baseado em transações conectadas"}
           </p>
         </CardContent>
       </Card>
@@ -74,7 +91,7 @@ export const FinanceMetricsGrid: React.FC = () => {
         <CardContent>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500 mr-2" />
-            <div className="text-2xl font-bold">{formatCurrency(entradasMesAtual)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(entradas)}</div>
           </div>
           <div className="flex items-center mt-1">
             <span className="text-xs text-muted-foreground">
@@ -91,11 +108,11 @@ export const FinanceMetricsGrid: React.FC = () => {
         <CardContent>
           <div className="flex items-center">
             <TrendingDown className="h-4 w-4 text-red-500 mr-2" />
-            <div className="text-2xl font-bold">{formatCurrency(saidasMesAtual)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(saidas)}</div>
           </div>
           <div className="flex items-center mt-1">
             <span className="text-xs text-muted-foreground">
-              Fluxo líquido: {formatCurrency(fluxoCaixaMesAtual)}
+              Fluxo líquido: {formatCurrency(fluxo)}
             </span>
           </div>
         </CardContent>

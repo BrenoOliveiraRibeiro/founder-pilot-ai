@@ -7,7 +7,6 @@ import {
   CalendarClock, 
   CreditCard, 
   DollarSign, 
-  LineChart, 
   TrendingDown, 
   Wallet,
   Zap
