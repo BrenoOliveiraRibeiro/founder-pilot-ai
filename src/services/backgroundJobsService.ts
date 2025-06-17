@@ -10,7 +10,7 @@ interface JobRequest {
   payload?: any;
 }
 
-interface JobResult {
+export interface JobResult {
   success: boolean;
   jobType: JobType;
   result?: any;
