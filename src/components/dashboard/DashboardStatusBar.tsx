@@ -16,9 +16,7 @@ export const DashboardStatusBar = () => {
     >
       <div className="bg-gradient-to-r from-primary/80 to-primary/90 text-white px-4 py-2 rounded-full shadow-premium text-sm flex items-center gap-2 hover:shadow-premium-hover transition-all duration-300 cursor-pointer">
         <span className="animate-pulse-subtle">●</span>
-        {metrics?.integracoesAtivas ? 
-          `Analisando dados de ${metrics.integracoesAtivas} conta(s) conectada(s) de ${currentEmpresa?.nome}...` : 
-          "Conecte suas contas para análises com dados financeiros"}
+        Dashboard sincronizado
       </div>
     </motion.div>
   );
