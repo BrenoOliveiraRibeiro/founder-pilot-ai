@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import { DashboardStatusBar } from "@/components/dashboard/DashboardStatusBar";
 import { useDashboardEffects } from "@/hooks/useDashboardEffects";
 
 const Dashboard = () => {
@@ -32,7 +31,6 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <DashboardContent />
-      <DashboardStatusBar />
     </AppLayout>
   );
 };
