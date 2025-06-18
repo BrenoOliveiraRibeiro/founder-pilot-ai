@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 import { CompanyInfo } from "./CompanyInfo";
 import { ConnectFinanceCard } from "./ConnectFinanceCard";
-import { NavGroups } from "./NavGroups";
-import { NavGroups as NavGroupsType } from "./types";
+import { NavGroupsList } from "./NavGroups";
+import { NavGroups } from "./types";
 
 interface DesktopSidebarProps {
-  groupedNavItems: NavGroupsType;
+  groupedNavItems: NavGroups;
   onSignOut: () => void;
 }
 
@@ -43,7 +43,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       <CompanyInfo />
 
       <nav className="flex-1 px-3 py-2 overflow-y-auto scrollbar-none">
-        <NavGroups />
+        <NavGroupsList groupedItems={groupedNavItems} />
       </nav>
 
       <div className="p-4 border-t border-border">

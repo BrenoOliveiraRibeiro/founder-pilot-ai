@@ -1,84 +1,124 @@
 
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Building2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, ChevronRight, ExternalLink, LockIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ProvidersList } from "./ProvidersList";
+import { ConnectionProgress } from "./ConnectionProgress";
+import { SecurityInfoItems } from "./SecurityInfoItems";
 
-interface BankConnectionCardProps {
-  onConnectClick: () => void;
-  isLoading?: boolean;
+interface Provider {
+  id: string;
+  name: string;
+  logo: string;
+  popular: boolean;
 }
 
-export const BankConnectionCard: React.FC<BankConnectionCardProps> = ({
-  onConnectClick,
-  isLoading = false
-}) => {
+interface BankConnectionCardProps {
+  providers: Provider[];
+  selectedProvider: string | null;
+  setSelectedProvider: (provider: string) => void;
+  connecting: boolean;
+  connectionProgress: number;
+  connectionStatus: string;
+  pluggyWidgetLoaded: boolean;
+  useSandbox: boolean;
+  handleConnect: () => Promise<void>;
+  connectContainerRef: React.RefObject<HTMLDivElement>;
+}
+
+export const BankConnectionCard = ({
+  providers,
+  selectedProvider,
+  setSelectedProvider,
+  connecting,
+  connectionProgress,
+  connectionStatus,
+  pluggyWidgetLoaded,
+  useSandbox,
+  handleConnect,
+  connectContainerRef
+}: BankConnectionCardProps) => {
   return (
-    <Card className="relative overflow-hidden border-2 hover:border-primary/50 transition-all duration-300">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-50/30 to-blue-50/30" />
-      
-      <CardHeader className="relative">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
-              <img 
-                src="https://media.licdn.com/dms/image/v2/C560BAQGbP3joPjasLw/company-logo_200_200/company-logo_200_200/0/1630665861354/pluggyai_logo?e=2147483647&v=beta&t=k1PIBzxSkL0wxz2q1R4RcjhiZ3JQhnyQQom2NQtfk1Y"
-                alt="Pluggy OpenFinance"
-                className="w-8 h-8 object-contain filter brightness-0 invert"
-                onError={(e) => {
-                  // Fallback para ícone se a imagem não carregar
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const iconElement = document.createElement('div');
-                  iconElement.innerHTML = '<svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
-                  target.parentNode?.appendChild(iconElement);
-                }}
-              />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Pluggy OpenFinance</CardTitle>
-              <CardDescription>
-                Conexão segura e certificada pelo Banco Central
-              </CardDescription>
-            </div>
+    <Card className="border-none shadow-md">
+      <CardHeader className="border-b border-border pb-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-xl">Conectar Nova Conta</CardTitle>
+            <CardDescription>
+              Conecte suas contas bancárias via Open Finance para análise automática
+            </CardDescription>
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-            Certificado
-          </Badge>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${useSandbox ? "text-primary" : "text-muted-foreground"}`}>Sandbox</span>
+            <button 
+              onClick={() => {/* This is handled in the parent component */}}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${useSandbox ? 'bg-primary' : 'bg-input'}`}
+            >
+              <span className={`inline-block h-5 w-5 rounded-full bg-background transition-transform ${useSandbox ? 'translate-x-6' : 'translate-x-1'}`}></span>
+            </button>
+            <span className={`text-xs ${!useSandbox ? "text-primary" : "text-muted-foreground"}`}>Produção</span>
+          </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="relative space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-muted-foreground">Criptografia bancária</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-blue-600" />
-            <span className="text-sm text-muted-foreground">Sincronização automática</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-purple-600" />
-            <span className="text-sm text-muted-foreground">+300 instituições</span>
-          </div>
+      <CardContent className="pt-4">
+        {useSandbox && (
+          <Alert variant="info" className="mb-4 border-none bg-primary/5 text-primary">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Modo Sandbox Ativado</AlertTitle>
+            <AlertDescription className="text-primary/80">
+              No modo sandbox, utilize as credenciais de teste disponibilizadas pelo Pluggy
+              <a 
+                href="https://docs.pluggy.ai/docs/sandbox-test-flow" 
+                target="_blank" 
+                rel="noreferrer"
+                className="flex items-center text-primary mt-1 text-sm"
+              >
+                Ver documentação <ExternalLink className="h-3 w-3 ml-1" />
+              </a>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
+          <LockIcon className="h-4 w-4" />
+          <p>Utilizamos criptografia e tecnologia de ponta para manter seus dados seguros</p>
         </div>
         
-        <div className="pt-2">
+        <ConnectionProgress 
+          connectionProgress={connectionProgress}
+          connectionStatus={connectionStatus}
+          isVisible={connecting && connectionProgress > 0}
+        />
+        
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-sm font-medium mb-3">Selecione seu banco:</h3>
+            <ProvidersList 
+              providers={providers}
+              selectedProvider={selectedProvider}
+              setSelectedProvider={setSelectedProvider}
+            />
+          </div>
+          
+          <SecurityInfoItems />
+          
+          {/* Container para o widget do Pluggy */}
+          <div id="pluggy-container" ref={connectContainerRef} className="pluggy-connect-container min-h-20"></div>
+          
           <Button 
-            onClick={onConnectClick}
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium"
+            className="w-full group transition-all duration-200 relative overflow-hidden"
+            disabled={!selectedProvider || connecting || !pluggyWidgetLoaded}
+            onClick={handleConnect}
           >
-            {isLoading ? "Conectando..." : "Conectar Conta Bancária"}
+            <span className="relative z-10 flex items-center">
+              {connecting ? "Conectando..." : "Conectar Conta Bancária"}
+              <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+            </span>
+            <span className="absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
           </Button>
         </div>
-        
-        <p className="text-xs text-center text-muted-foreground">
-          Seus dados são protegidos com o mesmo nível de segurança usado pelos bancos
-        </p>
       </CardContent>
     </Card>
   );
