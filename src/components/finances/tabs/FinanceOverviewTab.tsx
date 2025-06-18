@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -6,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 
 interface MetricasData {
   caixa_atual: number;
@@ -16,11 +16,29 @@ interface MetricasData {
   mrr_growth: number;
 }
 
-export const FinanceOverviewTab: React.FC = () => {
+interface FinanceOverviewTabProps {
+  selectedDate?: Date;
+}
+
+export const FinanceOverviewTab: React.FC<FinanceOverviewTabProps> = ({ selectedDate }) => {
   const { currentEmpresa } = useAuth();
   const [metricas, setMetricas] = useState<MetricasData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Usar o hook de métricas de transações para o resumo financeiro
+  const {
+    saldoCaixa,
+    entradasMesAtual,
+    saidasMesAtual,
+    fluxoCaixaMesAtual,
+    loading: transactionsLoading
+  } = useTransactionsMetrics({ selectedDate });
+
+  // Gerar string do mês/ano baseado na data selecionada
+  const mesAno = selectedDate ? 
+    selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) :
+    new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   useEffect(() => {
     const fetchMetricas = async () => {
@@ -194,20 +212,19 @@ export const FinanceOverviewTab: React.FC = () => {
     ];
   };
 
-  if (loading) {
+  if (loading || transactionsLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Runway</CardTitle>
-            <CardDescription>Com base no burn rate atual, seu dinheiro dura:</CardDescription>
+            <CardTitle>Resumo Financeiro</CardTitle>
+            <CardDescription>Visão geral das finanças da empresa para o período selecionado</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center py-6">
-              <Skeleton className="h-16 w-32 mb-4" />
-              <Skeleton className="h-4 w-48 mb-4" />
-              <Skeleton className="h-2 w-full mb-4" />
-              <Skeleton className="h-4 w-36" />
+            <div className="space-y-4">
+              <div className="animate-pulse h-4 bg-muted rounded w-3/4"></div>
+              <div className="animate-pulse h-4 bg-muted rounded w-1/2"></div>
+              <div className="animate-pulse h-4 bg-muted rounded w-2/3"></div>
             </div>
           </CardContent>
         </Card>
@@ -281,52 +298,47 @@ export const FinanceOverviewTab: React.FC = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Runway</CardTitle>
+          <CardTitle>Resumo Financeiro - {mesAno}</CardTitle>
           <CardDescription>
-            Com base no burn rate atual, seu dinheiro dura:
+            Visão geral das finanças da empresa para o período selecionado
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className={`text-5xl font-bold mb-2 ${getRunwayColor(metricas.runway_meses)}`}>
-              {metricas.runway_meses.toFixed(1)} meses
+          {transactionsLoading ? (
+            <div className="space-y-4">
+              <div className="animate-pulse h-4 bg-muted rounded w-3/4"></div>
+              <div className="animate-pulse h-4 bg-muted rounded w-1/2"></div>
+              <div className="animate-pulse h-4 bg-muted rounded w-2/3"></div>
             </div>
-            <div className="text-sm text-muted-foreground mb-4">
-              Burn rate mensal médio: {formatCurrency(metricas.burn_rate)}
-            </div>
-            <div className="w-full bg-muted rounded-full h-2.5 mb-4">
-              <div 
-                className={`h-2.5 rounded-full ${getRunwayBgColor(metricas.runway_meses)}`}
-                style={{ width: `${Math.min(metricas.runway_meses / 12 * 100, 100)}%` }}
-              ></div>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Meta recomendada: 12+ meses
-            </div>
-            
-            {/* Métricas adicionais */}
-            <div className="mt-4 pt-4 border-t w-full">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <div className="text-sm text-muted-foreground">Caixa Atual</div>
-                  <div className="font-bold">{formatCurrency(metricas.caixa_atual)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Cash Flow</div>
-                  <div className={`font-bold flex items-center justify-center ${
-                    metricas.cash_flow >= 0 ? 'text-green-500' : 'text-red-500'
-                  }`}>
-                    {metricas.cash_flow >= 0 ? (
-                      <TrendingUp className="h-4 w-4 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 mr-1" />
-                    )}
-                    {formatCurrency(Math.abs(metricas.cash_flow))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold mb-2">Posição Financeira</h3>
+                <p className="text-sm text-muted-foreground mb-1">Saldo em Caixa</p>
+                <p className="text-2xl font-bold">{formatCurrency(saldoCaixa)}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Movimento do Mês</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Entradas:</span>
+                    <span className="text-green-600 font-medium">{formatCurrency(entradasMesAtual)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Saídas:</span>
+                    <span className="text-red-600 font-medium">{formatCurrency(saidasMesAtual)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Resultado:</span>
+                    <span className={`font-bold ${fluxoCaixaMesAtual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(fluxoCaixaMesAtual)}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

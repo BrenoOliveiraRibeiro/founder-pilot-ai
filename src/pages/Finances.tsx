@@ -29,15 +29,15 @@ const FinancesPage = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <FinanceOverviewTab />
+          <FinanceOverviewTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="cashflow">
-          <CashFlowTab />
+          <CashFlowTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="expenses">
-          <ExpensesTab />
+          <ExpensesTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="accounts">
