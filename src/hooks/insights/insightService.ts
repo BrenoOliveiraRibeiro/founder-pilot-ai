@@ -9,6 +9,7 @@ import {
   generateGrowthInsights, 
   generateDefaultInsight 
 } from "./insightGenerators";
+import { InsightInsert } from "./types";
 
 export const fetchInsightsFromDB = async (empresaId: string): Promise<Insight[]> => {
   const { data, error } = await supabase
@@ -69,7 +70,7 @@ export const generateAndSaveInsights = async (empresaId: string): Promise<void> 
   });
 
   // Gerar insights baseados nas métricas
-  const newInsights = [
+  const newInsights: InsightInsert[] = [
     ...generateRunwayInsights(empresaId, metrics),
     ...generateBurnRateInsights(empresaId, metrics),
     ...generateCashInsights(empresaId, metrics),

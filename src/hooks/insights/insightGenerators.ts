@@ -1,12 +1,11 @@
 
-import { Insight } from "@/integrations/supabase/models";
-import { FinancialMetrics } from "./types";
+import { FinancialMetrics, InsightInsert } from "./types";
 
 export const generateRunwayInsights = (
   empresaId: string, 
   { runwayMeses }: FinancialMetrics
-): Partial<Insight>[] => {
-  const insights: Partial<Insight>[] = [];
+): InsightInsert[] => {
+  const insights: InsightInsert[] = [];
 
   if (runwayMeses > 0) {
     if (runwayMeses < 1) {
@@ -45,8 +44,8 @@ export const generateRunwayInsights = (
 export const generateBurnRateInsights = (
   empresaId: string,
   { burnRate, receitaMensal }: FinancialMetrics
-): Partial<Insight>[] => {
-  const insights: Partial<Insight>[] = [];
+): InsightInsert[] => {
+  const insights: InsightInsert[] = [];
 
   if (burnRate > 0 && receitaMensal > 0) {
     if (burnRate > receitaMensal * 1.5) {
@@ -76,8 +75,8 @@ export const generateBurnRateInsights = (
 export const generateCashInsights = (
   empresaId: string,
   { caixaAtual }: FinancialMetrics
-): Partial<Insight>[] => {
-  const insights: Partial<Insight>[] = [];
+): InsightInsert[] => {
+  const insights: InsightInsert[] = [];
 
   if (caixaAtual > 0) {
     if (caixaAtual < 1000) {
@@ -107,8 +106,8 @@ export const generateCashInsights = (
 export const generateGrowthInsights = (
   empresaId: string,
   metricas: any
-): Partial<Insight>[] => {
-  const insights: Partial<Insight>[] = [];
+): InsightInsert[] => {
+  const insights: InsightInsert[] = [];
 
   if (metricas && metricas.mrr_growth && Number(metricas.mrr_growth) > 0) {
     const crescimento = Number(metricas.mrr_growth) * 100;
@@ -127,7 +126,7 @@ export const generateGrowthInsights = (
   return insights;
 };
 
-export const generateDefaultInsight = (empresaId: string): Partial<Insight>[] => {
+export const generateDefaultInsight = (empresaId: string): InsightInsert[] => {
   return [{
     empresa_id: empresaId,
     tipo: "sugestão",
