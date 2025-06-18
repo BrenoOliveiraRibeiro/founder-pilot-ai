@@ -11,7 +11,7 @@ import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
 
 const FinancesPage = () => {
-  const runway = 4.2; // em meses
+  const runway = 0; // em meses
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   return (
