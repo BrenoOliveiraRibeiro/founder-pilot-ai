@@ -14,8 +14,9 @@ import { FooterSection } from "@/components/landing/FooterSection";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, empresas } = useAuth();
   const [showIntro, setShowIntro] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     // Simular menos tempo de carregamento da animação em desenvolvimento
@@ -27,12 +28,28 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Só redirecionar usuários autenticados após intro finalizada
-    if (!loading && !showIntro && user) {
-      console.log("Usuário autenticado detectado, redirecionando para dashboard");
-      navigate("/dashboard");
+    // Se carregamento da autenticação terminou e não está mostrando introdução
+    if (!loading && !showIntro) {
+      setCheckingAuth(false);
+      
+      if (user) {
+        console.log("Usuário autenticado:", user.email);
+        console.log("Empresas:", empresas.length);
+        
+        // Se o usuário está autenticado e tem empresas, enviar direto para o dashboard
+        if (empresas.length > 0) {
+          console.log("Usuário com empresas, redirecionando para dashboard");
+          navigate("/dashboard");
+        } else {
+          // Se não tem empresa, enviar para onboarding
+          console.log("Usuário sem empresas, redirecionando para onboarding");
+          navigate("/onboarding");
+        }
+      } else {
+        console.log("Usuário não autenticado, permanecendo na landing page");
+      }
     }
-  }, [navigate, user, loading, showIntro]);
+  }, [navigate, user, loading, showIntro, empresas]);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
@@ -43,7 +60,7 @@ const Index = () => {
   }
 
   // Se ainda está verificando autenticação, mostrar loader
-  if (loading) {
+  if (checkingAuth) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-background to-background/95">
         <motion.div 
@@ -68,7 +85,7 @@ const Index = () => {
     );
   }
 
-  // Para usuários não autenticados, mostrar landing page
+  // Se não está autenticado, mostrar landing page
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <HeroSection />

@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [currentEmpresa, setCurrentEmpresaState] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
   const { toast } = useToast();
 
   // Função para salvar a empresa atual no localStorage
@@ -112,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (!currentUser) {
       console.log("Não é possível buscar empresas sem usuário autenticado");
+      setEmpresasLoaded(true);
       return;
     }
     
@@ -131,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Empresas carregadas:", empresasData?.length || 0);
       const empresasList = (empresasData as Empresa[]) || [];
       setEmpresas(empresasList);
+      setEmpresasLoaded(true);
 
       // Restaurar a empresa atual ou definir a primeira
       if (empresasList.length > 0) {
@@ -142,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
+      setEmpresasLoaded(true);
       toast({
         title: "Erro",
         description: "Não foi possível carregar suas empresas. Por favor, tente novamente.",
@@ -202,26 +205,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Função para inicializar dados do usuário (perfil + empresas)
-  const initializeUserData = async (currentUser: User) => {
-    try {
-      console.log("Inicializando dados do usuário:", currentUser.id);
-      
-      // Buscar perfil e empresas em paralelo
-      await Promise.all([
-        fetchUserProfile(currentUser.id),
-        refreshEmpresas()
-      ]);
-      
-      console.log("Dados do usuário inicializados com sucesso");
-    } catch (error) {
-      console.error('Erro ao inicializar dados do usuário:', error);
-    } finally {
-      setIsInitialized(true);
-      setLoading(false);
-    }
-  };
-
   // UseEffect para inicialização da sessão
   useEffect(() => {
     console.log("AuthProvider inicializado - verificando sessão existente");
@@ -233,10 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(initialSession?.user ?? null);
       
       if (initialSession?.user) {
-        // Inicializar dados do usuário
-        initializeUserData(initialSession.user);
+        // Buscar o perfil do usuário
+        fetchUserProfile(initialSession.user.id);
       } else {
-        setIsInitialized(true);
         setLoading(false);
       }
     });
@@ -254,17 +236,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           setEmpresas([]);
           setCurrentEmpresaState(null);
+          setEmpresasLoaded(false);
           localStorage.removeItem('currentEmpresaId');
-          setIsInitialized(true);
           setLoading(false);
         }
         
-        // Se o usuário fizer login, buscar dados
+        // Se o usuário fizer login, buscar perfil
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user) {
-          console.log("Usuário autenticado - inicializando dados");
-          setIsInitialized(false);
-          setLoading(true);
-          initializeUserData(newSession.user);
+          console.log("Usuário autenticado - buscando perfil");
+          fetchUserProfile(newSession.user.id);
         }
       }
     );
@@ -274,6 +254,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // UseEffect separado para carregar empresas quando o usuário estiver disponível
+  useEffect(() => {
+    if (user && !empresasLoaded) {
+      console.log("Usuário disponível - carregando empresas");
+      refreshEmpresas();
+    }
+  }, [user, empresasLoaded]);
+
+  // UseEffect para controlar o estado de loading
+  useEffect(() => {
+    if (user) {
+      // Se temos usuário, aguardar empresas serem carregadas
+      if (empresasLoaded) {
+        console.log("Dados carregados - removendo loading");
+        setLoading(false);
+      }
+    } else {
+      // Se não temos usuário, não estamos loading
+      setLoading(false);
+    }
+  }, [user, empresasLoaded]);
 
   const getAuthErrorMessage = (error: AuthError): string => {
     // Tratar erros específicos de autenticação
@@ -300,17 +302,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     console.log("Tentando login para:", email);
     try {
-      // Reset do estado para forçar recarregamento
-      setIsInitialized(false);
+      // Reset do estado de empresas para forçar recarregamento
+      setEmpresasLoaded(false);
       setEmpresas([]);
       setCurrentEmpresaState(null);
-      setLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        setLoading(false);
-        setIsInitialized(true);
         // Retornar erro com mensagem amigável
         return { error: { ...error, message: getAuthErrorMessage(error) } };
       }
@@ -319,8 +318,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null };
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
-      setLoading(false);
-      setIsInitialized(true);
       return { error: { ...error, message: getAuthErrorMessage(error) } };
     }
   };
@@ -352,7 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Iniciando logout");
     // Limpar dados locais antes do logout
     localStorage.removeItem('currentEmpresaId');
-    setIsInitialized(false);
+    setEmpresasLoaded(false);
     await supabase.auth.signOut();
     console.log("Logout concluído");
   };
@@ -367,7 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
-    loading: loading || !isInitialized,
+    loading,
     refreshEmpresas,
     refreshProfile
   };
