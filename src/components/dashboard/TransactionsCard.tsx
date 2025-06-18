@@ -2,10 +2,11 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Filter } from "lucide-react";
+import { Eye, Filter, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
+import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 
@@ -13,6 +14,7 @@ export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
   const { loading: financeLoading, transactions } = useFinanceData(currentEmpresa?.id || null);
   const { metrics, loading: openFinanceLoading } = useOpenFinanceDashboard();
+  const { activeIntegrations, syncing, handleSyncData } = useOpenFinanceConnections();
 
   // Determinar se usar dados do Open Finance ou dados estáticos
   const hasOpenFinanceData = metrics && metrics.integracoesAtivas > 0;
@@ -24,6 +26,14 @@ export const TransactionsCard = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  // Função para sincronizar todas as integrações
+  const handleSyncAll = async () => {
+    if (activeIntegrations.length > 0) {
+      // Sincronizar a primeira integração ativa
+      await handleSyncData(activeIntegrations[0].id);
+    }
   };
 
   // Configuração de animações para lista
@@ -50,6 +60,8 @@ export const TransactionsCard = () => {
   const recentTransactions = transactionsToDisplay
     .sort((a, b) => new Date(b.data_transacao).getTime() - new Date(a.data_transacao).getTime())
     .slice(0, 5);
+
+  const isSyncing = syncing !== null;
 
   return (
     <Card>
@@ -146,8 +158,15 @@ export const TransactionsCard = () => {
                       Suas {metrics.integracoesAtivas} contas estão conectadas.
                       As transações aparecerão aqui após a próxima sincronização.
                     </p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      Sincronizar Agora
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={handleSyncAll}
+                      disabled={isSyncing || activeIntegrations.length === 0}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+                      {isSyncing ? "Sincronizando..." : "Sincronizar Agora"}
                     </Button>
                   </div>
                 ) : (
