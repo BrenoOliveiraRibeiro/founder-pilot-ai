@@ -20,6 +20,7 @@ export const ProtectedRoute = ({
   const { user, loading, empresas } = useAuth();
   const location = useLocation();
   const [initialCheck, setInitialCheck] = useState(false);
+  const [empresasLoaded, setEmpresasLoaded] = useState(false);
 
   useEffect(() => {
     // Marcar como verificado apenas se não estiver carregando
@@ -28,8 +29,23 @@ export const ProtectedRoute = ({
     }
   }, [loading]);
 
-  // Aguardar a verificação de autenticação
-  if (loading || !initialCheck) {
+  useEffect(() => {
+    // Se temos um usuário autenticado, aguardar empresas serem carregadas
+    if (user && !loading) {
+      // Aguardar um pouco para as empresas carregarem
+      const timer = setTimeout(() => {
+        setEmpresasLoaded(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else if (!user) {
+      // Se não há usuário, não precisamos aguardar empresas
+      setEmpresasLoaded(true);
+    }
+  }, [user, loading]);
+
+  // Aguardar a verificação de autenticação e carregamento das empresas
+  if (loading || !initialCheck || (user && !empresasLoaded)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <motion.div 
@@ -49,7 +65,9 @@ export const ProtectedRoute = ({
             <Skeleton className="h-4 w-[250px]" />
             <Skeleton className="h-4 w-[200px]" />
           </div>
-          <p className="text-sm text-muted-foreground mt-2">Verificando autenticação...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {user ? "Carregando dados da empresa..." : "Verificando autenticação..."}
+          </p>
         </motion.div>
       </div>
     );
