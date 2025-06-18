@@ -21,7 +21,7 @@ export const useDashboardEffects = () => {
     const hasVisitedDashboard = localStorage.getItem('hasVisitedDashboard');
     if (!hasVisitedDashboard) {
       setTimeout(() => {
-        if (hasA1nyRealData) {
+        if (hasAnyRealData) {
           toast({
             title: "Bem-vindo ao FounderPilot AI",
             description: "Seu copiloto estratégico para tomada de decisões de negócios com dados financeiros conectados.",

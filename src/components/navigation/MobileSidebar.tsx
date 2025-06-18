@@ -7,7 +7,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 import { CompanyInfo } from "./CompanyInfo";
 import { ConnectFinanceCard } from "./ConnectFinanceCard";
-import { NavGroupsList } from "./NavGroups";
+import { NavGroups } from "./NavGroups";
 import { navItems } from "./types";
 
 interface MobileSidebarProps {
@@ -39,7 +39,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           <CompanyInfo />
 
           <nav className="flex-1 px-3 py-2 overflow-y-auto">
-            <NavGroupsList groupedItems={groupedNavItems} />
+            <NavGroups />
           </nav>
 
           <div className="p-4 border-t border-border">
