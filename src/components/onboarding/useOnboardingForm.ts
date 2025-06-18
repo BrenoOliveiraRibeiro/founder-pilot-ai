@@ -86,17 +86,16 @@ export const useOnboardingForm = () => {
       
       // Preparar dados da empresa para validação
       const empresaData = {
-        id: crypto.randomUUID(), // Gerar UUID temporário para validação
         nome: values.nome,
         segmento: values.segmento || undefined,
         estagio: values.estagio || undefined,
         num_funcionarios: values.num_funcionarios || undefined,
-        data_fundacao: values.data_fundacao || undefined,
+        data_fundacao: values.data_fundacao ? new Date(values.data_fundacao) : undefined,
         website: values.website || undefined,
       };
 
       // Validar dados da empresa antes de enviar
-      const validatedEmpresa = empresaSchema.omit({ id: true }).parse(empresaData);
+      const validatedEmpresa = empresaSchema.parse(empresaData);
       
       // 1. Criar empresa vinculada ao usuário
       const { data: empresa, error } = await supabase
