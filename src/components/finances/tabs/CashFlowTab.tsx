@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -8,8 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
 
 interface MonthlyData {
   month: string;
@@ -19,11 +16,7 @@ interface MonthlyData {
   resultado: number;
 }
 
-interface CashFlowTabProps {
-  selectedDate?: Date;
-}
-
-export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
+export const CashFlowTab: React.FC = () => {
   const { currentEmpresa } = useAuth();
   const [cashFlowData, setCashFlowData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,25 +34,13 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
         setError(null);
 
         console.log('=== BUSCANDO DADOS PARA GRÁFICO DE FLUXO ===');
-        console.log('Data selecionada no CashFlowTab:', selectedDate?.toISOString());
 
-        // Buscar transações com filtro até a data selecionada se fornecida
-        let query = supabase
+        // Buscar todas as transações
+        const { data: transacoes, error } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id)
           .order('data_transacao', { ascending: true });
-
-        // Se uma data específica foi selecionada, filtrar até ela
-        if (selectedDate) {
-          const endOfSelectedMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-          const endOfSelectedMonthStr = `${endOfSelectedMonth.getFullYear()}-${String(endOfSelectedMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfSelectedMonth.getDate()).padStart(2, '0')}`;
-          query = query.lte('data_transacao', endOfSelectedMonthStr);
-          
-          console.log('Filtrando até:', endOfSelectedMonthStr);
-        }
-
-        const { data: transacoes, error } = await query;
 
         if (error) throw error;
 
@@ -132,18 +113,14 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
     };
 
     fetchCashFlowData();
-  }, [currentEmpresa?.id, selectedDate]);
-
-  const periodDescription = selectedDate 
-    ? `até ${format(selectedDate, "MMMM 'de' yyyy", { locale: pt })}` 
-    : "dos últimos meses";
+  }, [currentEmpresa?.id]);
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Fluxo de Caixa</CardTitle>
-          <CardDescription>Entradas e saídas {periodDescription}</CardDescription>
+          <CardDescription>Entradas e saídas dos últimos 6 meses</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-80 w-full mb-6">
@@ -164,7 +141,7 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
       <Card>
         <CardHeader>
           <CardTitle>Fluxo de Caixa</CardTitle>
-          <CardDescription>Entradas e saídas {periodDescription}</CardDescription>
+          <CardDescription>Entradas e saídas dos últimos 6 meses</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-80">
@@ -184,7 +161,7 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
       <Card>
         <CardHeader>
           <CardTitle>Fluxo de Caixa</CardTitle>
-          <CardDescription>Entradas e saídas {periodDescription}</CardDescription>
+          <CardDescription>Entradas e saídas dos últimos 6 meses</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-80">
@@ -206,7 +183,7 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
       <CardHeader>
         <CardTitle>Fluxo de Caixa</CardTitle>
         <CardDescription>
-          Entradas e saídas agrupadas por mês {periodDescription}
+          Entradas e saídas agrupadas por mês
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -284,7 +261,7 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({ selectedDate }) => {
 
         <div className="mt-4 text-sm text-muted-foreground">
           <p>
-            * Dados agrupados por mês baseados nas datas das transações {periodDescription}
+            * Dados agrupados por mês baseados nas datas das transações
           </p>
         </div>
       </CardContent>

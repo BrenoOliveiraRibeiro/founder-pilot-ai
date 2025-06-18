@@ -7,8 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, TrendingDown, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
 
 interface ExpenseData {
   category: string;
@@ -17,11 +15,7 @@ interface ExpenseData {
   transactions: number;
 }
 
-interface ExpensesTabProps {
-  selectedDate?: Date;
-}
-
-export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
+export const ExpensesTab: React.FC = () => {
   const { currentEmpresa } = useAuth();
   const [expensesData, setExpensesData] = useState<ExpenseData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,31 +35,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
         setLoading(true);
         setError(null);
 
-        console.log('=== BUSCANDO DADOS DE DESPESAS ===');
-        console.log('Data selecionada no ExpensesTab:', selectedDate?.toISOString());
-        console.log('Período selecionado:', selectedPeriod);
-
         const monthsAgo = parseInt(selectedPeriod);
-        let startDate: Date;
-        
-        if (selectedDate) {
-          // Se uma data específica foi selecionada, calcular a partir dela
-          startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - monthsAgo + 1, 1);
-        } else {
-          // Caso contrário, usar a data atual
-          startDate = new Date();
-          startDate.setMonth(startDate.getMonth() - monthsAgo);
-        }
-
-        let endDate: Date;
-        if (selectedDate) {
-          // Último dia do mês selecionado
-          endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-        } else {
-          endDate = new Date();
-        }
-
-        console.log('Período de análise:', startDate.toISOString(), 'até', endDate.toISOString());
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - monthsAgo);
 
         // Buscar transações de despesas do período selecionado
         const { data: currentTransactions, error: currentError } = await supabase
@@ -74,17 +46,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
           .eq('empresa_id', currentEmpresa.id)
           .eq('tipo', 'despesa')
           .gte('data_transacao', startDate.toISOString().split('T')[0])
-          .lte('data_transacao', endDate.toISOString().split('T')[0])
           .order('data_transacao', { ascending: false });
 
         if (currentError) throw currentError;
 
         // Buscar transações do período anterior para comparação
-        const previousStartDate = new Date(startDate);
-        previousStartDate.setMonth(previousStartDate.getMonth() - monthsAgo);
-        
-        const previousEndDate = new Date(startDate);
-        previousEndDate.setDate(previousEndDate.getDate() - 1);
+        const previousStartDate = new Date();
+        previousStartDate.setMonth(previousStartDate.getMonth() - (monthsAgo * 2));
+        previousStartDate.setDate(previousStartDate.getDate() + 1);
 
         const { data: previousTransactions, error: previousError } = await supabase
           .from('transacoes')
@@ -92,7 +61,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
           .eq('empresa_id', currentEmpresa.id)
           .eq('tipo', 'despesa')
           .gte('data_transacao', previousStartDate.toISOString().split('T')[0])
-          .lte('data_transacao', previousEndDate.toISOString().split('T')[0]);
+          .lt('data_transacao', startDate.toISOString().split('T')[0]);
 
         if (previousError) throw previousError;
 
@@ -145,7 +114,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
     };
 
     fetchExpensesData();
-  }, [currentEmpresa?.id, selectedPeriod, selectedDate]);
+  }, [currentEmpresa?.id, selectedPeriod]);
 
   const getComparisonText = () => {
     if (!comparisonData) return null;
@@ -162,9 +131,6 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
   };
 
   const comparison = getComparisonText();
-  const periodDescription = selectedDate 
-    ? `baseado em ${format(selectedDate, "MMMM 'de' yyyy", { locale: pt })}` 
-    : "período atual";
 
   if (loading) {
     return (
@@ -239,7 +205,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
               </span>
             </CardTitle>
             <CardDescription>
-              Detalhamento das principais categorias de despesas ({periodDescription})
+              Detalhamento das principais categorias de despesas
               {comparison && (
                 <span className={`ml-2 text-sm font-medium ${
                   comparison.isIncrease ? 'text-red-600' : 'text-green-600'
@@ -296,7 +262,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ selectedDate }) => {
           {expensesData.length > 0 && (
             <div className="mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                * Dados baseados em transações reais dos últimos {selectedPeriod} meses ({periodDescription})
+                * Dados baseados em transações reais dos últimos {selectedPeriod} meses
               </div>
             </div>
           )}
