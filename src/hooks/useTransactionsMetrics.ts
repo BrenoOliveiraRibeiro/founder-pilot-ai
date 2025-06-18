@@ -28,16 +28,28 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         setLoading(true);
         setError(null);
 
+        console.log('Buscando métricas para empresa:', currentEmpresa.id);
+        console.log('Data selecionada:', selectedDate);
+
         // Buscar todas as transações
         const { data: transacoes, error: transacoesError } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id);
 
-        if (transacoesError) throw transacoesError;
+        if (transacoesError) {
+          console.error('Erro ao buscar transações:', transacoesError);
+          throw transacoesError;
+        }
+
+        console.log('Transações encontradas:', transacoes?.length || 0);
 
         if (!transacoes || transacoes.length === 0) {
-          // Não há transações, manter valores em zero
+          console.log('Não há transações, mantendo valores em zero');
+          setSaldoCaixa(0);
+          setEntradasMesAtual(0);
+          setSaidasMesAtual(0);
+          setFluxoCaixaMesAtual(0);
           setLoading(false);
           return;
         }
@@ -47,13 +59,21 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         const anoTarget = targetDate.getFullYear();
         const mesTarget = targetDate.getMonth();
 
+        console.log('Filtrando para ano:', anoTarget, 'mês:', mesTarget);
+
         // Calcular saldo total até a data selecionada (inclusive)
         const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0); // último dia do mês selecionado
         const saldoTotal = transacoes
-          .filter(tx => new Date(tx.data_transacao) <= endOfSelectedMonth)
+          .filter(tx => {
+            const dataTransacao = new Date(tx.data_transacao);
+            return dataTransacao <= endOfSelectedMonth;
+          })
           .reduce((acc, tx) => {
-            return acc + Number(tx.valor);
+            const valor = Number(tx.valor) || 0;
+            return acc + valor;
           }, 0);
+
+        console.log('Saldo total calculado:', saldoTotal);
 
         // Filtrar transações do mês selecionado
         const transacoesMesSelecionado = transacoes.filter(tx => {
@@ -62,12 +82,14 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
                  dataTransacao.getMonth() === mesTarget;
         });
 
+        console.log('Transações do mês selecionado:', transacoesMesSelecionado.length);
+
         // Calcular métricas do mês selecionado
         let entradas = 0;
         let saidas = 0;
 
         transacoesMesSelecionado.forEach(tx => {
-          const valor = Number(tx.valor);
+          const valor = Number(tx.valor) || 0;
           if (valor > 0) {
             entradas += valor;
           } else {
@@ -77,6 +99,8 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
 
         const fluxo = entradas - saidas;
 
+        console.log('Entradas:', entradas, 'Saídas:', saidas, 'Fluxo:', fluxo);
+
         // Validar dados antes de definir estado
         const metricsData: FinanceData = {
           saldoCaixa: saldoTotal,
@@ -85,7 +109,11 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
           fluxoCaixaMesAtual: fluxo,
         };
 
+        console.log('Dados para validação:', metricsData);
+
         const validatedData = financeDataSchema.parse(metricsData);
+
+        console.log('Dados validados com sucesso:', validatedData);
 
         setSaldoCaixa(validatedData.saldoCaixa);
         setEntradasMesAtual(validatedData.entradasMesAtual);
@@ -97,10 +125,17 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         
         // Se for erro de validação Zod, mostrar erro mais específico
         if (error.name === 'ZodError') {
+          console.error('Erro de validação:', error.errors);
           setError(`Dados inválidos: ${error.errors.map((e: any) => e.message).join(', ')}`);
         } else {
           setError(error.message || 'Erro ao carregar dados financeiros');
         }
+        
+        // Em caso de erro, definir valores padrão para não deixar a tela em branco
+        setSaldoCaixa(0);
+        setEntradasMesAtual(0);
+        setSaidasMesAtual(0);
+        setFluxoCaixaMesAtual(0);
       } finally {
         setLoading(false);
       }
