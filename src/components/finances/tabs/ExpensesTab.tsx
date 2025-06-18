@@ -131,13 +131,21 @@ export const ExpensesTab: React.FC = () => {
 
   const comparison = getComparisonText();
 
-  // Função para obter cor da categoria baseada no índice
+  // Função para obter cor da categoria baseada no índice com gradientes
   const getCategoryColor = (index: number) => {
-    const colors = [
-      'bg-slate-500', 'bg-gray-500', 'bg-zinc-500', 'bg-neutral-500', 'bg-stone-500',
-      'bg-indigo-500', 'bg-blue-500', 'bg-sky-500', 'bg-cyan-500', 'bg-teal-500'
+    const gradients = [
+      'bg-gradient-to-r from-slate-400 to-slate-600',
+      'bg-gradient-to-r from-gray-400 to-gray-600', 
+      'bg-gradient-to-r from-zinc-400 to-zinc-600',
+      'bg-gradient-to-r from-neutral-400 to-neutral-600',
+      'bg-gradient-to-r from-stone-400 to-stone-600',
+      'bg-gradient-to-r from-indigo-400 to-indigo-600',
+      'bg-gradient-to-r from-blue-400 to-blue-600',
+      'bg-gradient-to-r from-sky-400 to-sky-600',
+      'bg-gradient-to-r from-cyan-400 to-cyan-600',
+      'bg-gradient-to-r from-teal-400 to-teal-600'
     ];
-    return colors[index % colors.length];
+    return gradients[index % gradients.length];
   };
 
   if (loading) {
