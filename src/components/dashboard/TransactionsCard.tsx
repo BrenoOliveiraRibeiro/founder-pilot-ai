@@ -18,69 +18,8 @@ export const TransactionsCard = () => {
   const hasOpenFinanceData = metrics && metrics.integracoesAtivas > 0;
   const loading = hasOpenFinanceData ? openFinanceLoading : financeLoading;
 
-  // Usar dados reais se disponíveis, caso contrário usar exemplos
-  const transactionsToDisplay = transactions.length > 0 ? transactions : [
-    {
-      id: "tx1",
-      empresa_id: "",
-      descricao: "AWS Cloud Services",
-      valor: -1240,
-      data_transacao: "2023-10-23",
-      categoria: "Infraestrutura",
-      tipo: "despesa" as const,
-      metodo_pagamento: "Cartão",
-      recorrente: true,
-      created_at: "",
-    },
-    {
-      id: "tx2",
-      empresa_id: "",
-      descricao: "Pagamento Cliente - Acme Corp",
-      valor: 5000,
-      data_transacao: "2023-10-22",
-      categoria: "Receita",
-      tipo: "receita" as const,
-      metodo_pagamento: "Transferência",
-      recorrente: false,
-      created_at: "",
-    },
-    {
-      id: "tx3",
-      empresa_id: "",
-      descricao: "Aluguel do Escritório",
-      valor: -3500,
-      data_transacao: "2023-10-20",
-      categoria: "Instalações",
-      tipo: "despesa" as const,
-      metodo_pagamento: "Débito",
-      recorrente: true,
-      created_at: "",
-    },
-    {
-      id: "tx4",
-      empresa_id: "",
-      descricao: "Assinatura SaaS - Notion",
-      valor: -890,
-      data_transacao: "2023-10-19",
-      categoria: "Software",
-      tipo: "despesa" as const,
-      metodo_pagamento: "Cartão",
-      recorrente: true,
-      created_at: "",
-    },
-    {
-      id: "tx5",
-      empresa_id: "",
-      descricao: "Pagamento Cliente - TechStart Inc",
-      valor: 3500,
-      data_transacao: "2023-10-18",
-      categoria: "Receita",
-      tipo: "receita" as const,
-      metodo_pagamento: "Transferência",
-      recorrente: false,
-      created_at: "",
-    },
-  ];
+  // Usar apenas dados reais se disponíveis, caso contrário mostrar mensagem de conexão
+  const transactionsToDisplay = hasOpenFinanceData && transactions.length > 0 ? transactions : [];
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -119,16 +58,18 @@ export const TransactionsCard = () => {
           <div>
             <CardTitle className="text-xl flex items-center gap-2">
               Transações Recentes
-              {hasOpenFinanceData && (
+              {hasOpenFinanceData && transactionsToDisplay.length > 0 && (
                 <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full font-normal">
                   Dados Reais
                 </span>
               )}
             </CardTitle>
             <CardDescription>
-              {hasOpenFinanceData 
+              {hasOpenFinanceData && transactionsToDisplay.length > 0
                 ? `Últimas transações das suas ${metrics.integracoesAtivas} contas conectadas`
-                : "Últimos 30 dias de atividade"
+                : hasOpenFinanceData
+                ? `${metrics.integracoesAtivas} contas conectadas - aguardando sincronização`
+                : "Conecte suas contas bancárias para ver transações reais"
               }
             </CardDescription>
           </div>
@@ -198,13 +139,28 @@ export const TransactionsCard = () => {
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <p>Nenhuma transação encontrada</p>
-                <p className="text-sm mt-1">
-                  {hasOpenFinanceData 
-                    ? "Sincronize suas contas para ver as transações"
-                    : "Conecte suas contas bancárias para ver transações reais"
-                  }
-                </p>
+                {hasOpenFinanceData ? (
+                  <div className="space-y-3">
+                    <p>Nenhuma transação sincronizada ainda</p>
+                    <p className="text-sm">
+                      Suas {metrics.integracoesAtivas} contas estão conectadas.
+                      As transações aparecerão aqui após a próxima sincronização.
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      Sincronizar Agora
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p>Conecte suas contas bancárias</p>
+                    <p className="text-sm">
+                      Para ver suas transações reais aqui, conecte suas contas via Open Finance
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      Conectar Contas
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
