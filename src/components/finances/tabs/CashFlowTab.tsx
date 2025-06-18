@@ -1,7 +1,9 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -10,7 +12,6 @@ import { AlertCircle } from "lucide-react";
 
 interface MonthlyData {
   month: string;
-  monthYear: string;
   entrada: number;
   saida: number;
   resultado: number;
@@ -33,76 +34,61 @@ export const CashFlowTab: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        console.log('=== BUSCANDO DADOS PARA GRÁFICO DE FLUXO ===');
+        // Buscar transações dos últimos 6 meses
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        // Buscar todas as transações
         const { data: transacoes, error } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id)
+          .gte('data_transacao', sixMonthsAgo.toISOString().split('T')[0])
           .order('data_transacao', { ascending: true });
 
         if (error) throw error;
 
-        console.log('Total de transações encontradas:', transacoes?.length || 0);
-
-        if (!transacoes || transacoes.length === 0) {
-          setCashFlowData([]);
-          return;
+        // Processar dados por mês
+        const monthlyDataMap = new Map<string, { entrada: number; saida: number }>();
+        
+        // Inicializar últimos 6 meses
+        for (let i = 5; i >= 0; i--) {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+          const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
+          monthlyDataMap.set(monthKey, { entrada: 0, saida: 0 });
         }
 
-        // Agrupar transações por mês/ano
-        const monthlyDataMap = new Map<string, { entrada: number; saida: number; monthYear: string }>();
-        
-        transacoes.forEach(tx => {
-          const txDate = new Date(tx.data_transacao + 'T00:00:00'); // Forçar timezone local
-          const year = txDate.getFullYear();
-          const month = txDate.getMonth(); // 0-based
-          const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        // Agrupar transações por mês
+        transacoes?.forEach(tx => {
+          const txDate = new Date(tx.data_transacao);
+          const monthKey = txDate.toISOString().substring(0, 7);
           
-          const monthName = txDate.toLocaleDateString('pt-BR', { month: 'short' });
-          const monthYear = `${monthName}/${year}`;
-          
-          if (!monthlyDataMap.has(monthKey)) {
-            monthlyDataMap.set(monthKey, { 
-              entrada: 0, 
-              saida: 0, 
-              monthYear 
-            });
-          }
-          
-          const monthData = monthlyDataMap.get(monthKey)!;
-          const valor = Number(tx.valor) || 0;
-          
-          if (valor > 0) {
-            monthData.entrada += valor;
-          } else {
-            monthData.saida += Math.abs(valor);
+          if (monthlyDataMap.has(monthKey)) {
+            const monthData = monthlyDataMap.get(monthKey)!;
+            
+            if (tx.tipo === 'receita' && tx.valor > 0) {
+              monthData.entrada += Number(tx.valor);
+            } else if (tx.tipo === 'despesa' && tx.valor < 0) {
+              monthData.saida += Math.abs(Number(tx.valor));
+            }
           }
         });
 
-        // Converter para array e ordenar por data
+        // Converter para array formatado
         const formattedData: MonthlyData[] = [];
-        
-        // Ordenar as chaves do mapa
-        const sortedKeys = Array.from(monthlyDataMap.keys()).sort();
-        
-        sortedKeys.forEach(monthKey => {
-          const data = monthlyDataMap.get(monthKey)!;
-          const [year, month] = monthKey.split('-');
-          const date = new Date(Number(year), Number(month) - 1);
+        monthlyDataMap.forEach((data, monthKey) => {
+          const date = new Date(monthKey + '-01');
           const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
           
           formattedData.push({
             month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
-            monthYear: data.monthYear,
             entrada: data.entrada,
             saida: data.saida,
             resultado: data.entrada - data.saida
           });
         });
 
-        console.log('Dados agrupados por mês:', formattedData);
         setCashFlowData(formattedData);
       } catch (error: any) {
         console.error('Erro ao buscar dados de fluxo de caixa:', error);
@@ -183,7 +169,7 @@ export const CashFlowTab: React.FC = () => {
       <CardHeader>
         <CardTitle>Fluxo de Caixa</CardTitle>
         <CardDescription>
-          Entradas e saídas agrupadas por mês
+          Entradas e saídas dos últimos 6 meses baseado em dados reais do Open Finance
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -245,7 +231,7 @@ export const CashFlowTab: React.FC = () => {
             <tbody>
               {cashFlowData.map((month, index) => (
                 <tr key={index} className="border-b">
-                  <td className="p-3 font-medium">{month.monthYear}</td>
+                  <td className="p-3 font-medium">{month.month}</td>
                   <td className="p-3 text-right text-green-500">{formatCurrency(month.entrada)}</td>
                   <td className="p-3 text-right text-red-500">{formatCurrency(month.saida)}</td>
                   <td className={`p-3 text-right font-medium ${
@@ -261,7 +247,7 @@ export const CashFlowTab: React.FC = () => {
 
         <div className="mt-4 text-sm text-muted-foreground">
           <p>
-            * Dados agrupados por mês baseados nas datas das transações
+            * Dados baseados em transações reais importadas via Open Finance
           </p>
         </div>
       </CardContent>
