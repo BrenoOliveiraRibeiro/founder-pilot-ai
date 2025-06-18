@@ -1,14 +1,13 @@
 
 import { z } from "zod";
 
+// Schema para dados financeiros básicos
 export const financeDataSchema = z.object({
-  saldoCaixa: z.number().finite(),
+  saldoCaixa: z.number().min(0, "Saldo deve ser positivo"),
   entradasMesAtual: z.number().min(0, "Entradas devem ser positivas"),
   saidasMesAtual: z.number().min(0, "Saídas devem ser positivas"),
-  fluxoCaixaMesAtual: z.number().finite(),
+  fluxoCaixaMesAtual: z.number(),
 });
-
-export type FinanceData = z.infer<typeof financeDataSchema>;
 
 // Schema para métricas do Open Finance
 export const openFinanceMetricsSchema = z.object({
@@ -51,7 +50,7 @@ export const pluggyConnectionSchema = z.object({
   connectionToken: z.string().optional(),
 });
 
-// Schema para simulação de runway
+// Schema para simulação de runway - agora com campos obrigatórios
 export const runwaySimulationSchema = z.object({
   cashReserve: z.number().min(0, "Reserva de caixa deve ser positiva"),
   burnRate: z.number().min(0, "Burn rate deve ser positivo"),
@@ -62,29 +61,30 @@ export const runwaySimulationSchema = z.object({
 
 // Schema para empresa
 export const empresaSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
+  id: z.string().uuid("ID da empresa deve ser um UUID válido"),
+  nome: z.string().min(2, "Nome da empresa deve ter pelo menos 2 caracteres"),
   segmento: z.string().optional(),
   estagio: z.string().optional(),
-  website: z.string().url("URL inválida").optional().or(z.literal("")),
-  num_funcionarios: z.number().min(1, "Número de funcionários deve ser positivo").optional(),
-  data_fundacao: z.date().optional(),
+  num_funcionarios: z.number().int().positive().optional(),
+  data_fundacao: z.string().optional(),
+  website: z.string().url("Website deve ser uma URL válida").optional(),
 });
 
 // Schema para perfil de usuário
 export const profileSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
-  cargo: z.string().min(2, "Cargo deve ter pelo menos 2 caracteres").optional(),
+  cargo: z.string().min(2, "Cargo deve ter pelo menos 2 caracteres"),
   bio: z.string().max(500, "Bio deve ter no máximo 500 caracteres").optional(),
   avatar_url: z.string().url("URL do avatar deve ser válida").optional(),
 });
 
 // Tipos derivados dos schemas
-export type EmpresaData = z.infer<typeof empresaSchema>;
-export type Empresa = z.infer<typeof empresaSchema>;
+export type FinanceData = z.infer<typeof financeDataSchema>;
 export type OpenFinanceMetrics = z.infer<typeof openFinanceMetricsSchema>;
 export type Transaction = z.infer<typeof transactionSchema>;
 export type AccountData = z.infer<typeof accountDataSchema>;
 export type PluggyConnection = z.infer<typeof pluggyConnectionSchema>;
 export type RunwaySimulation = z.infer<typeof runwaySimulationSchema>;
+export type Empresa = z.infer<typeof empresaSchema>;
 export type Profile = z.infer<typeof profileSchema>;

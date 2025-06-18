@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -131,18 +132,6 @@ export const ExpensesTab: React.FC = () => {
 
   const comparison = getComparisonText();
 
-  // Função para obter cores baseadas no índice da categoria
-  const getCategoryColor = (index: number) => {
-    const colors = [
-      'bg-slate-500',    // Principal categoria - tom neutro escuro
-      'bg-blue-500',     // Segunda categoria - azul
-      'bg-indigo-500',   // Terceira categoria - índigo
-      'bg-purple-500',   // Quarta categoria - roxo
-      'bg-gray-500',     // Quinta categoria - cinza
-    ];
-    return colors[index % colors.length];
-  };
-
   if (loading) {
     return (
       <Card>
@@ -211,7 +200,7 @@ export const ExpensesTab: React.FC = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               Análise de Despesas
-              <span className="text-lg font-bold text-slate-700 dark:text-slate-300">
+              <span className="text-lg font-bold text-red-600">
                 {formatCurrency(totalExpenses)}
               </span>
             </CardTitle>
@@ -219,7 +208,7 @@ export const ExpensesTab: React.FC = () => {
               Detalhamento das principais categorias de despesas
               {comparison && (
                 <span className={`ml-2 text-sm font-medium ${
-                  comparison.isIncrease ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'
+                  comparison.isIncrease ? 'text-red-600' : 'text-green-600'
                 }`}>
                   {comparison.text}
                 </span>
@@ -249,18 +238,18 @@ export const ExpensesTab: React.FC = () => {
             <div key={index}>
               <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{expense.category}</span>
+                  <span className="font-medium">{expense.category}</span>
                   <span className="text-xs text-muted-foreground">
                     ({expense.transactions} transações)
                   </span>
                 </div>
-                <span className="font-bold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-red-600">
                   {formatCurrency(expense.amount)}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2.5 mb-1">
                 <div 
-                  className={`h-2.5 rounded-full ${getCategoryColor(index)}`}
+                  className="h-2.5 rounded-full bg-red-500"
                   style={{ width: `${expense.percentage}%` }}
                 ></div>
               </div>

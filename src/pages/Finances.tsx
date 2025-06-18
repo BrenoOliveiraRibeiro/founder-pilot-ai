@@ -9,32 +9,15 @@ import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTa
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
-import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
-import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 
 const FinancesPage = () => {
+  const runway = 4.2; // em meses
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // Buscar dados reais para calcular runway
-  const { metrics, loading: openFinanceLoading } = useOpenFinanceDashboard();
-  const { saldoCaixa, saidasMesAtual, loading: transactionsLoading } = useTransactionsMetrics();
-  
-  // Calcular runway baseado nos dados disponíveis
-  const loading = openFinanceLoading || transactionsLoading;
-  let runway = 0;
-  
-  if (metrics && metrics.integracoesAtivas > 0) {
-    // Usar dados do Open Finance se disponíveis
-    runway = metrics.runwayMeses;
-  } else if (saldoCaixa > 0 && saidasMesAtual > 0) {
-    // Calcular com base nas transações manuais
-    runway = saldoCaixa / saidasMesAtual;
-  }
 
   return (
     <AppLayout>
       <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
-      <RunwayAlert runway={runway} loading={loading} />
+      <RunwayAlert runway={runway} />
       <FinanceMetricsGrid selectedDate={selectedDate} />
 
       <Tabs defaultValue="overview">

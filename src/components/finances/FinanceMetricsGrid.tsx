@@ -30,25 +30,17 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
     loading: openFinanceLoading 
   } = useOpenFinanceDashboard();
 
-  // Para entradas e saídas, sempre usar o mês atual
-  const currentDate = new Date();
-  const {
-    entradasMesAtual: entradasMesAtualCorrente,
-    saidasMesAtual: saidasMesAtualCorrente,
-    fluxoCaixaMesAtual: fluxoCaixaMesAtualCorrente
-  } = useTransactionsMetrics({ selectedDate: currentDate });
-
   // Usar dados do Open Finance se disponíveis, caso contrário usar dados de transações
   const loading = transactionsLoading || openFinanceLoading;
   const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
   
   // Verificar se existe algum dado real (transações ou Open Finance)
-  const hasAnyRealData = hasOpenFinanceData || saldoCaixa > 0 || entradasMesAtualCorrente > 0 || saidasMesAtualCorrente > 0;
+  const hasAnyRealData = hasOpenFinanceData || saldoCaixa > 0 || entradasMesAtual > 0 || saidasMesAtual > 0;
   
   const saldoAtual = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
-  const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtualCorrente;
-  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtualCorrente;
-  const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtualCorrente;
+  const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
+  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtual;
+  const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtual;
 
   const error = transactionsError;
 
@@ -116,7 +108,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Entradas ({format(currentDate, "MMMM yyyy", { locale: pt })})</CardTitle>
+            <CardTitle className="text-sm font-medium">Entradas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -125,7 +117,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
             </div>
             <div className="flex items-center mt-1">
               <span className="text-xs text-muted-foreground">
-                {format(currentDate, "MMMM yyyy", { locale: pt })}
+                {format(selectedDate, "MMMM yyyy", { locale: pt })}
               </span>
             </div>
           </CardContent>
@@ -133,7 +125,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Saídas ({format(currentDate, "MMMM yyyy", { locale: pt })})</CardTitle>
+            <CardTitle className="text-sm font-medium">Saídas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -170,7 +162,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Entradas ({format(currentDate, "MMMM yyyy", { locale: pt })})</CardTitle>
+          <CardTitle className="text-sm font-medium">Entradas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
@@ -179,7 +171,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
           </div>
           <div className="flex items-center mt-1">
             <span className="text-xs text-muted-foreground">
-              {format(currentDate, "MMMM yyyy", { locale: pt })}
+              {format(selectedDate, "MMMM yyyy", { locale: pt })}
             </span>
           </div>
         </CardContent>
@@ -187,7 +179,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Saídas ({format(currentDate, "MMMM yyyy", { locale: pt })})</CardTitle>
+          <CardTitle className="text-sm font-medium">Saídas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
