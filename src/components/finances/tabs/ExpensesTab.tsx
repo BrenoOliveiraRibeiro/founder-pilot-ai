@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -132,21 +131,43 @@ export const ExpensesTab: React.FC = () => {
 
   const comparison = getComparisonText();
 
-  // Função para obter gradiente em tons de cinza e slate
-  const getCategoryGradient = (index: number) => {
-    const gradients = [
-      'bg-gradient-to-r from-slate-400 to-slate-600',
-      'bg-gradient-to-r from-gray-400 to-gray-600', 
+  // Função para obter gradiente progressivo de escuro para claro
+  const getCategoryGradient = (index: number, totalItems: number) => {
+    // Gradientes organizados do mais escuro para o mais claro
+    const darkGradients = [
+      'bg-gradient-to-r from-slate-700 to-slate-900',
+      'bg-gradient-to-r from-gray-700 to-gray-900',
+      'bg-gradient-to-r from-slate-600 to-slate-800',
+      'bg-gradient-to-r from-gray-600 to-gray-800'
+    ];
+    
+    const mediumGradients = [
       'bg-gradient-to-r from-slate-500 to-slate-700',
       'bg-gradient-to-r from-gray-500 to-gray-700',
+      'bg-gradient-to-r from-slate-400 to-slate-600',
+      'bg-gradient-to-r from-gray-400 to-gray-600'
+    ];
+    
+    const lightGradients = [
       'bg-gradient-to-r from-slate-300 to-slate-500',
       'bg-gradient-to-r from-gray-300 to-gray-500',
-      'bg-gradient-to-r from-slate-600 to-slate-800',
-      'bg-gradient-to-r from-gray-600 to-gray-800',
-      'bg-gradient-to-r from-slate-400 to-gray-600',
-      'bg-gradient-to-r from-gray-400 to-slate-600'
+      'bg-gradient-to-r from-slate-200 to-slate-400',
+      'bg-gradient-to-r from-gray-200 to-gray-400'
     ];
-    return gradients[index % gradients.length];
+    
+    // Determinar qual categoria de gradiente usar baseado na posição
+    const third = Math.floor(totalItems / 3);
+    
+    if (index < third) {
+      // Primeiros itens: gradientes escuros
+      return darkGradients[index % darkGradients.length];
+    } else if (index < third * 2) {
+      // Itens do meio: gradientes médios
+      return mediumGradients[(index - third) % mediumGradients.length];
+    } else {
+      // Últimos itens: gradientes claros
+      return lightGradients[(index - third * 2) % lightGradients.length];
+    }
   };
 
   if (loading) {
@@ -266,7 +287,7 @@ export const ExpensesTab: React.FC = () => {
               </div>
               <div className="w-full bg-muted rounded-full h-2.5 mb-1">
                 <div 
-                  className={`h-2.5 rounded-full ${getCategoryGradient(index)}`}
+                  className={`h-2.5 rounded-full ${getCategoryGradient(index, expensesData.length)}`}
                   style={{ width: `${expense.percentage}%` }}
                 ></div>
               </div>
