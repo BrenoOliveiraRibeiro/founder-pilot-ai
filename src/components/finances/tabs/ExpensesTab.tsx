@@ -200,7 +200,7 @@ export const ExpensesTab: React.FC = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               Análise de Despesas
-              <span className="text-lg font-bold text-red-600">
+              <span className="text-lg font-bold text-slate-700">
                 {formatCurrency(totalExpenses)}
               </span>
             </CardTitle>
@@ -208,7 +208,7 @@ export const ExpensesTab: React.FC = () => {
               Detalhamento das principais categorias de despesas
               {comparison && (
                 <span className={`ml-2 text-sm font-medium ${
-                  comparison.isIncrease ? 'text-red-600' : 'text-green-600'
+                  comparison.isIncrease ? 'text-orange-600' : 'text-green-600'
                 }`}>
                   {comparison.text}
                 </span>
@@ -243,13 +243,13 @@ export const ExpensesTab: React.FC = () => {
                     ({expense.transactions} transações)
                   </span>
                 </div>
-                <span className="font-bold text-red-600">
+                <span className="font-bold text-slate-700">
                   {formatCurrency(expense.amount)}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2.5 mb-1">
                 <div 
-                  className="h-2.5 rounded-full bg-red-500"
+                  className="h-2.5 rounded-full bg-slate-500"
                   style={{ width: `${expense.percentage}%` }}
                 ></div>
               </div>

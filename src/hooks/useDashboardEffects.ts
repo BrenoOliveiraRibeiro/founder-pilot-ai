@@ -21,7 +21,7 @@ export const useDashboardEffects = () => {
     const hasVisitedDashboard = localStorage.getItem('hasVisitedDashboard');
     if (!hasVisitedDashboard) {
       setTimeout(() => {
-        if (hasAnyRealData) {
+        if (hasA1nyRealData) {
           toast({
             title: "Bem-vindo ao FounderPilot AI",
             description: "Seu copiloto estratégico para tomada de decisões de negócios com dados financeiros conectados.",
@@ -40,16 +40,6 @@ export const useDashboardEffects = () => {
       }, 2500);
     }
     
-    // Alerta de runway crítico apenas se houver dados reais
-    if (hasAnyRealData && metrics?.alertaCritico) {
-      setTimeout(() => {
-        toast({
-          title: "ALERTA: Runway Crítico",
-          description: `Seu runway atual é de apenas ${metrics.runwayMeses.toFixed(1)} meses baseado nos dados das suas contas conectadas. Acesse a seção de Finanças para mais detalhes.`,
-          variant: "destructive",
-          duration: 8000,
-        });
-      }, 3000);
-    }
-  }, [toast, metrics?.alertaCritico, metrics?.runwayMeses, hasAnyRealData]);
+    // Removido o alerta de runway crítico do dashboard
+  }, [toast, hasAnyRealData]);
 };
