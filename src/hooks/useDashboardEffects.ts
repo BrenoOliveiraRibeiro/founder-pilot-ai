@@ -40,16 +40,7 @@ export const useDashboardEffects = () => {
       }, 2500);
     }
     
-    // Alerta de runway crítico apenas se houver dados reais
-    if (hasAnyRealData && metrics?.alertaCritico) {
-      setTimeout(() => {
-        toast({
-          title: "ALERTA: Runway Crítico",
-          description: `Seu runway atual é de apenas ${metrics.runwayMeses.toFixed(1)} meses baseado nos dados das suas contas conectadas. Acesse a seção de Finanças para mais detalhes.`,
-          variant: "destructive",
-          duration: 8000,
-        });
-      }, 3000);
-    }
-  }, [toast, metrics?.alertaCritico, metrics?.runwayMeses, hasAnyRealData]);
+    // Removido: Alerta de runway crítico em popup
+    // Os avisos de runway crítico já aparecem nos cards e outros componentes
+  }, [toast, hasAnyRealData]);
 };
