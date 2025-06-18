@@ -107,7 +107,7 @@ export const useOnboardingForm = () => {
             segmento: validatedEmpresa.segmento || null,
             estagio: validatedEmpresa.estagio || null,
             num_funcionarios: validatedEmpresa.num_funcionarios || null,
-            data_fundacao: validatedEmpresa.data_fundacao || null,
+            data_fundacao: validatedEmpresa.data_fundacao ? validatedEmpresa.data_fundacao.toISOString().split('T')[0] : null,
             website: validatedEmpresa.website || null,
           }
         ])
