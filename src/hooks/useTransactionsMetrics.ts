@@ -38,21 +38,25 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         console.log('Mês alvo:', mesTarget);
         console.log('Empresa ID:', currentEmpresa.id);
 
-        // 1. Buscar saldo acumulado até o final do mês selecionado
-        const endOfMonth = `${anoTarget}-${String(mesTarget).padStart(2, '0')}-31`;
+        // Calcular corretamente o último dia do mês
+        const endOfMonth = new Date(anoTarget, mesTarget, 0); // Dia 0 do próximo mês = último dia do mês atual
+        const endOfMonthStr = `${anoTarget}-${String(mesTarget).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
         
+        console.log('Último dia do mês:', endOfMonthStr);
+
+        // 1. Buscar saldo acumulado até o final do mês selecionado
         const { data: saldoData, error: saldoError } = await supabase
           .from('transacoes')
           .select('valor')
           .eq('empresa_id', currentEmpresa.id)
-          .lte('data_transacao', endOfMonth);
+          .lte('data_transacao', endOfMonthStr);
 
         if (saldoError) {
           console.error('Erro ao buscar saldo:', saldoError);
           throw saldoError;
         }
 
-        console.log('Transações para saldo (até', endOfMonth, '):', saldoData?.length || 0);
+        console.log('Transações para saldo (até', endOfMonthStr, '):', saldoData?.length || 0);
 
         const saldoCalculado = saldoData?.reduce((acc, tx) => {
           const valor = Number(tx.valor) || 0;
@@ -61,13 +65,13 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
 
         console.log('Saldo calculado:', saldoCalculado);
 
-        // 2. Buscar transações específicas do mês selecionado
+        // 2. Buscar transações específicas do mês selecionado usando EXTRACT
         const { data: transacoesMes, error: transacoesMesError } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id)
-          .gte('data_transacao', `${anoTarget}-${String(mesTarget).padStart(2, '0')}-01`)
-          .lte('data_transacao', `${anoTarget}-${String(mesTarget).padStart(2, '0')}-31`)
+          .filter('data_transacao', 'gte', `${anoTarget}-${String(mesTarget).padStart(2, '0')}-01`)
+          .filter('data_transacao', 'lte', endOfMonthStr)
           .order('data_transacao', { ascending: true });
 
         if (transacoesMesError) {
