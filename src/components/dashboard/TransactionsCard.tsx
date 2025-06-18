@@ -1,8 +1,6 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Eye, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -64,15 +62,9 @@ export const TransactionsCard = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-xl">Transações Recentes</CardTitle>
-            <CardDescription>Últimas 10 transações salvas</CardDescription>
-          </div>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtrar
-          </Button>
+        <div>
+          <CardTitle className="text-xl">Transações Recentes</CardTitle>
+          <CardDescription>Últimas 10 transações salvas</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -143,18 +135,6 @@ export const TransactionsCard = () => {
             <p className="text-sm mt-2">Conecte suas contas bancárias no Open Finance para ver suas transações.</p>
           </motion.div>
         )}
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-          className="mt-4 flex justify-center"
-        >
-          <Button variant="ghost" size="sm" className="text-primary">
-            <Eye className="h-4 w-4 mr-2" />
-            Ver Todas as Transações
-          </Button>
-        </motion.div>
       </CardContent>
     </Card>
   );
