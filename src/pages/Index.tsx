@@ -27,13 +27,13 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Aguardar carregamento da autenticação e não mostrar introdução
+    // Só executar redirecionamentos após carregamento completo e intro finalizada
     if (!loading && !showIntro) {
       if (user) {
         console.log("Usuário autenticado:", user.email);
         console.log("Empresas:", empresas.length);
         
-        // Se o usuário está autenticado e tem empresas, enviar direto para o dashboard
+        // Se o usuário está autenticado e tem empresas, enviar para o dashboard
         if (empresas.length > 0) {
           console.log("Usuário com empresas, redirecionando para dashboard");
           navigate("/dashboard");
@@ -42,9 +42,8 @@ const Index = () => {
           console.log("Usuário sem empresas, redirecionando para onboarding");
           navigate("/onboarding");
         }
-      } else {
-        console.log("Usuário não autenticado, permanecendo na landing page");
       }
+      // Se não está autenticado, permanece na landing page (não faz nada)
     }
   }, [navigate, user, loading, showIntro, empresas]);
 
@@ -82,7 +81,7 @@ const Index = () => {
     );
   }
 
-  // Se não está autenticado, mostrar landing page
+  // Para usuários não autenticados, mostrar landing page
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <HeroSection />
