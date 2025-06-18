@@ -725,7 +725,7 @@ const OpenFinance = () => {
             <div className="text-center space-y-6">
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
                 <img 
-                  src="https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=40&h=40&fit=crop" 
+                  src="https://media.licdn.com/dms/image/v2/C560BAQGbP3joPjasLw/company-logo_200_200/company-logo_200_200/0/1630665861354/pluggyai_logo?e=2147483647&v=beta&t=k1PIBzxSkL0wxz2q1R4RcjhiZ3JQhnyQQom2NQtfk1Y" 
                   alt="Pluggy" 
                   className="w-10 h-10 rounded"
                 />
