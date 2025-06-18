@@ -28,6 +28,7 @@ const OpenFinance = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const [totalPages, setTotalPages] = useState(1);
+  const [savedTransactions, setSavedTransactions] = useState<any[]>([]);
   const { toast } = useToast();
   
   // Use ref to track the current instance
@@ -65,6 +66,29 @@ const OpenFinance = () => {
     processAndSaveTransactions,
     autoProcessAllAccountsAllPages
   } = usePluggyConnectionPersistence();
+
+  // Função para buscar as 10 últimas transações salvas no Supabase
+  const fetchSavedTransactions = async () => {
+    if (!currentEmpresa?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('transacoes')
+        .select('*')
+        .eq('empresa_id', currentEmpresa.id)
+        .order('data_transacao', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Erro ao buscar transações salvas:', error);
+        return;
+      }
+
+      setSavedTransactions(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar transações salvas:', error);
+    }
+  };
 
   useEffect(() => {
     console.log("OpenFinance component mounted/updated");
@@ -121,6 +145,13 @@ const OpenFinance = () => {
       handleAccountSelection(firstAccountId);
     }
   }, [connectionData?.accountData, selectedAccountId]);
+
+  // Buscar transações salvas quando componente carrega ou empresa muda
+  useEffect(() => {
+    if (currentEmpresa?.id && connectionData?.isConnected) {
+      fetchSavedTransactions();
+    }
+  }, [currentEmpresa?.id, connectionData?.isConnected]);
 
   const formatCurrency = (amount: number, currencyCode: string) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -196,6 +227,9 @@ const OpenFinance = () => {
           title: "Todas as transações processadas!",
           description: `${result.totalNewTransactions} novas transações foram salvas de ${result.totalProcessedAccounts} conta${result.totalProcessedAccounts !== 1 ? 's' : ''}.`,
         });
+        
+        // Atualizar as transações salvas após o salvamento
+        await fetchSavedTransactions();
       } else {
         toast({
           title: "Verificação completa realizada",
@@ -240,6 +274,9 @@ const OpenFinance = () => {
             title: "Transações processadas!",
             description: `${result.newTransactions} novas transações foram salvas.`,
           });
+          
+          // Atualizar as transações salvas após o salvamento
+          await fetchSavedTransactions();
         } else {
           toast({
             title: "Nenhuma transação nova",
@@ -340,6 +377,9 @@ const OpenFinance = () => {
                 
                 // Apenas buscar transações para visualização (já foram salvas automaticamente)
                 await loadTransactions(firstAccountId, 1);
+                
+                // Buscar transações salvas após conexão
+                await fetchSavedTransactions();
                 
                 toast({
                   title: "Conexão estabelecida!",
@@ -488,31 +528,24 @@ const OpenFinance = () => {
               </Card>
             </div>
 
-            {/* Transactions */}
+            {/* Transactions - Mostrar transações salvas do Supabase */}
             <div className="lg:col-span-2">
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold">Transações</h2>
+                  <h2 className="text-lg font-semibold">Últimas 10 Transações Salvas</h2>
                   <div className="flex gap-2">
-                    {(isLoadingTransactions || processingTransactions) && (
-                      <span className="text-sm text-gray-500">
-                        {processingTransactions ? 'Processando...' : 'Carregando...'}
-                      </span>
-                    )}
-                    {transactionsData?.results && selectedAccountId && (
-                      <Button 
-                        size="sm" 
-                        onClick={handleSaveCurrentPageTransactions}
-                        disabled={processingTransactions}
-                        variant="outline"
-                      >
-                        {processingTransactions ? 'Salvando...' : 'Salvar Página Atual'}
-                      </Button>
-                    )}
+                    <Button 
+                      size="sm" 
+                      onClick={fetchSavedTransactions}
+                      variant="outline"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Atualizar
+                    </Button>
                   </div>
                 </div>
 
-                {transactionsData?.results && transactionsData.results.length > 0 ? (
+                {savedTransactions.length > 0 ? (
                   <div className="space-y-4">
                     <div className="overflow-hidden">
                       <Table>
@@ -525,33 +558,33 @@ const OpenFinance = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {transactionsData.results.map((transaction: any, index: number) => (
-                            <TableRow key={index}>
+                          {savedTransactions.map((transaction: any) => (
+                            <TableRow key={transaction.id}>
                               <TableCell className="font-medium">
-                                {formatDateTransaction(transaction.date)}
+                                {formatDateTransaction(transaction.data_transacao)}
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  {transaction.amount > 0 ? (
+                                  {transaction.valor > 0 ? (
                                     <ArrowUpCircle className="w-4 h-4 text-green-600" />
                                   ) : (
                                     <ArrowDownCircle className="w-4 h-4 text-red-600" />
                                   )}
-                                  <span className="truncate max-w-xs" title={transaction.description}>
-                                    {transaction.description || 'Transação'}
+                                  <span className="truncate max-w-xs" title={transaction.descricao}>
+                                    {transaction.descricao || 'Transação'}
                                   </span>
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                  {transaction.category || 'Outros'}
+                                  {transaction.categoria || 'Outros'}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right">
                                 <span className={`font-medium ${
-                                  transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
+                                  transaction.valor > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                  {formatCurrency(Math.abs(transaction.amount), transaction.currencyCode || 'BRL')}
+                                  {formatCurrency(Math.abs(transaction.valor), 'BRL')}
                                 </span>
                               </TableCell>
                             </TableRow>
@@ -560,72 +593,23 @@ const OpenFinance = () => {
                       </Table>
                     </div>
                     
-                    {/* Paginação */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center mt-6">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious 
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                            
-                            {(() => {
-                              const startPage = Math.max(1, currentPage - 2);
-                              const endPage = Math.min(totalPages, startPage + 4);
-                              const pages = [];
-                              
-                              for (let i = startPage; i <= endPage; i++) {
-                                pages.push(
-                                  <PaginationItem key={i}>
-                                    <PaginationLink
-                                      onClick={() => handlePageChange(i)}
-                                      isActive={currentPage === i}
-                                      className="cursor-pointer"
-                                    >
-                                      {i}
-                                    </PaginationLink>
-                                  </PaginationItem>
-                                );
-                              }
-                              
-                              return pages;
-                            })()}
-                            
-                            <PaginationItem>
-                              <PaginationNext 
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
-                    )}
-                    
                     <div className="text-center text-sm text-gray-500">
-                      Página {currentPage} de {totalPages} • 
-                      Mostrando {transactionsData.results.length} de {transactionsData.total || transactionsData.results.length} transações
+                      Mostrando {savedTransactions.length} transação{savedTransactions.length !== 1 ? 'ões' : ''} salva{savedTransactions.length !== 1 ? 's' : ''} no Supabase
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">
-                      {isLoadingTransactions ? 'Carregando transações...' : 'Nenhuma transação encontrada'}
+                    <p className="text-gray-500 mb-4">
+                      Nenhuma transação salva encontrada
                     </p>
-                    {selectedAccountId && !isLoadingTransactions && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-4"
-                        onClick={() => handleAccountSelection(selectedAccountId)}
-                      >
-                        Recarregar Transações
-                      </Button>
-                    )}
+                    <Button 
+                      onClick={handleSaveAllTransactions}
+                      disabled={processingTransactions}
+                      variant="outline"
+                    >
+                      {processingTransactions ? 'Processando...' : 'Sincronizar Transações'}
+                    </Button>
                   </div>
                 )}
               </Card>
