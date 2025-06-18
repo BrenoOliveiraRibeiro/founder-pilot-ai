@@ -3,7 +3,6 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -12,6 +11,7 @@ import { AlertCircle } from "lucide-react";
 
 interface MonthlyData {
   month: string;
+  monthYear: string;
   entrada: number;
   saida: number;
   resultado: number;
@@ -37,6 +37,7 @@ export const CashFlowTab: React.FC = () => {
         // Buscar transações dos últimos 6 meses
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setDate(1); // Primeiro dia do mês
 
         const { data: transacoes, error } = await supabase
           .from('transacoes')
@@ -47,30 +48,43 @@ export const CashFlowTab: React.FC = () => {
 
         if (error) throw error;
 
+        console.log('Transações para gráfico de fluxo de caixa:', transacoes?.length || 0);
+
         // Processar dados por mês
-        const monthlyDataMap = new Map<string, { entrada: number; saida: number }>();
+        const monthlyDataMap = new Map<string, { entrada: number; saida: number; monthYear: string }>();
         
         // Inicializar últimos 6 meses
         for (let i = 5; i >= 0; i--) {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
-          const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+          const year = date.getFullYear();
+          const month = date.getMonth();
+          const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
           const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
-          monthlyDataMap.set(monthKey, { entrada: 0, saida: 0 });
+          const monthYear = `${monthName}/${year}`;
+          
+          monthlyDataMap.set(monthKey, { 
+            entrada: 0, 
+            saida: 0, 
+            monthYear 
+          });
         }
 
         // Agrupar transações por mês
         transacoes?.forEach(tx => {
           const txDate = new Date(tx.data_transacao);
-          const monthKey = txDate.toISOString().substring(0, 7);
+          const year = txDate.getFullYear();
+          const month = txDate.getMonth();
+          const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
           
           if (monthlyDataMap.has(monthKey)) {
             const monthData = monthlyDataMap.get(monthKey)!;
+            const valor = Number(tx.valor) || 0;
             
-            if (tx.tipo === 'receita' && tx.valor > 0) {
-              monthData.entrada += Number(tx.valor);
-            } else if (tx.tipo === 'despesa' && tx.valor < 0) {
-              monthData.saida += Math.abs(Number(tx.valor));
+            if (valor > 0) {
+              monthData.entrada += valor;
+            } else {
+              monthData.saida += Math.abs(valor);
             }
           }
         });
@@ -78,17 +92,20 @@ export const CashFlowTab: React.FC = () => {
         // Converter para array formatado
         const formattedData: MonthlyData[] = [];
         monthlyDataMap.forEach((data, monthKey) => {
-          const date = new Date(monthKey + '-01');
+          const [year, month] = monthKey.split('-');
+          const date = new Date(Number(year), Number(month) - 1);
           const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
           
           formattedData.push({
             month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+            monthYear: data.monthYear,
             entrada: data.entrada,
             saida: data.saida,
             resultado: data.entrada - data.saida
           });
         });
 
+        console.log('Dados formatados por mês:', formattedData);
         setCashFlowData(formattedData);
       } catch (error: any) {
         console.error('Erro ao buscar dados de fluxo de caixa:', error);
@@ -169,7 +186,7 @@ export const CashFlowTab: React.FC = () => {
       <CardHeader>
         <CardTitle>Fluxo de Caixa</CardTitle>
         <CardDescription>
-          Entradas e saídas dos últimos 6 meses baseado em dados reais do Open Finance
+          Entradas e saídas dos últimos 6 meses agrupadas por mês
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -231,7 +248,7 @@ export const CashFlowTab: React.FC = () => {
             <tbody>
               {cashFlowData.map((month, index) => (
                 <tr key={index} className="border-b">
-                  <td className="p-3 font-medium">{month.month}</td>
+                  <td className="p-3 font-medium">{month.monthYear}</td>
                   <td className="p-3 text-right text-green-500">{formatCurrency(month.entrada)}</td>
                   <td className="p-3 text-right text-red-500">{formatCurrency(month.saida)}</td>
                   <td className={`p-3 text-right font-medium ${
@@ -247,7 +264,7 @@ export const CashFlowTab: React.FC = () => {
 
         <div className="mt-4 text-sm text-muted-foreground">
           <p>
-            * Dados baseados em transações reais importadas via Open Finance
+            * Dados agrupados por mês baseados nas datas das transações
           </p>
         </div>
       </CardContent>
