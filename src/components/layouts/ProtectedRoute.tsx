@@ -19,17 +19,16 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, loading, empresas } = useAuth();
   const location = useLocation();
-  const [initialCheck, setInitialCheck] = useState(false);
 
-  useEffect(() => {
-    // Marcar como verificado apenas se não estiver carregando
-    if (!loading) {
-      setInitialCheck(true);
-    }
-  }, [loading]);
+  console.log("ProtectedRoute - Auth state:", { 
+    user: !!user, 
+    empresas: empresas.length, 
+    loading,
+    path: location.pathname 
+  });
 
-  // Aguardar a verificação de autenticação
-  if (loading || !initialCheck) {
+  // Aguardar a verificação de autenticação completa
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <motion.div 
@@ -54,8 +53,6 @@ export const ProtectedRoute = ({
       </div>
     );
   }
-
-  console.log("Auth state:", { user: !!user, empresas: empresas.length, path: location.pathname });
 
   // Se precisar de autenticação e não estiver autenticado
   if (requireAuth && !user) {

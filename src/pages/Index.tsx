@@ -16,7 +16,6 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading, empresas } = useAuth();
   const [showIntro, setShowIntro] = useState(true);
-  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     // Simular menos tempo de carregamento da animação em desenvolvimento
@@ -28,10 +27,8 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Se carregamento da autenticação terminou e não está mostrando introdução
+    // Aguardar carregamento da autenticação e não mostrar introdução
     if (!loading && !showIntro) {
-      setCheckingAuth(false);
-      
       if (user) {
         console.log("Usuário autenticado:", user.email);
         console.log("Empresas:", empresas.length);
@@ -60,7 +57,7 @@ const Index = () => {
   }
 
   // Se ainda está verificando autenticação, mostrar loader
-  if (checkingAuth) {
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-background to-background/95">
         <motion.div 
