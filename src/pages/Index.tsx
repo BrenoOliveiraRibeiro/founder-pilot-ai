@@ -42,8 +42,9 @@ const Index = () => {
           console.log("Usuário sem empresas, redirecionando para onboarding");
           navigate("/onboarding");
         }
+      } else {
+        console.log("Usuário não autenticado, permanecendo na landing page");
       }
-      // Se não está autenticado, permanecer na landing page (não fazer nada)
     }
   }, [navigate, user, loading, showIntro, empresas]);
 
