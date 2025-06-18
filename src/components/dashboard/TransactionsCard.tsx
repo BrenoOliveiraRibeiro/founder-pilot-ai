@@ -5,14 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Eye, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 
 export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
-  const { loading, transactions } = useFinanceData(currentEmpresa?.id || null);
+  const { loading: financeLoading, transactions } = useFinanceData(currentEmpresa?.id || null);
+  const { metrics, loading: openFinanceLoading } = useOpenFinanceDashboard();
 
-  // Se não houver dados reais, usar um conjunto de exemplos
+  // Determinar se usar dados do Open Finance ou dados estáticos
+  const hasOpenFinanceData = metrics && metrics.integracoesAtivas > 0;
+  const loading = hasOpenFinanceData ? openFinanceLoading : financeLoading;
+
+  // Usar dados reais se disponíveis, caso contrário usar exemplos
   const transactionsToDisplay = transactions.length > 0 ? transactions : [
     {
       id: "tx1",
@@ -53,7 +59,7 @@ export const TransactionsCard = () => {
     {
       id: "tx4",
       empresa_id: "",
-      descricao: "Assinaturas SaaS",
+      descricao: "Assinatura SaaS - Notion",
       valor: -890,
       data_transacao: "2023-10-19",
       categoria: "Software",
@@ -101,13 +107,30 @@ export const TransactionsCard = () => {
     }
   };
 
+  // Mostrar apenas as 5 transações mais recentes
+  const recentTransactions = transactionsToDisplay
+    .sort((a, b) => new Date(b.data_transacao).getTime() - new Date(a.data_transacao).getTime())
+    .slice(0, 5);
+
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-xl">Transações Recentes</CardTitle>
-            <CardDescription>Últimos 30 dias de atividade</CardDescription>
+            <CardTitle className="text-xl flex items-center gap-2">
+              Transações Recentes
+              {hasOpenFinanceData && (
+                <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full font-normal">
+                  Dados Reais
+                </span>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {hasOpenFinanceData 
+                ? `Últimas transações das suas ${metrics.integracoesAtivas} contas conectadas`
+                : "Últimos 30 dias de atividade"
+              }
+            </CardDescription>
           </div>
           <Button variant="outline" size="sm">
             <Filter className="h-4 w-4 mr-2" />
@@ -141,37 +164,49 @@ export const TransactionsCard = () => {
             initial="hidden"
             animate="visible"
           >
-            {transactionsToDisplay.map((tx) => (
-              <motion.div 
-                key={tx.id}
-                variants={itemVariants}
-                className="flex items-center justify-between py-3 border-b border-border last:border-none"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{tx.descricao}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span>{formatDate(tx.data_transacao)}</span>
-                    <span className="h-1 w-1 bg-muted-foreground rounded-full"></span>
-                    <span>{tx.categoria}</span>
-                    {tx.recorrente && (
-                      <>
-                        <span className="h-1 w-1 bg-muted-foreground rounded-full"></span>
-                        <span>Recorrente</span>
-                      </>
-                    )}
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((tx) => (
+                <motion.div 
+                  key={tx.id}
+                  variants={itemVariants}
+                  className="flex items-center justify-between py-3 border-b border-border last:border-none"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{tx.descricao}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span>{formatDate(tx.data_transacao)}</span>
+                      <span className="h-1 w-1 bg-muted-foreground rounded-full"></span>
+                      <span>{tx.categoria}</span>
+                      {tx.recorrente && (
+                        <>
+                          <span className="h-1 w-1 bg-muted-foreground rounded-full"></span>
+                          <span>Recorrente</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className={`text-sm font-medium ${
-                  tx.valor > 0 ? "text-success" : "text-destructive"
-                }`}>
-                  {tx.valor > 0 ? "+" : ""}
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                  }).format(tx.valor)}
-                </div>
-              </motion.div>
-            ))}
+                  <div className={`text-sm font-medium ${
+                    tx.valor > 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {tx.valor > 0 ? "+" : ""}
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(tx.valor)}
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Nenhuma transação encontrada</p>
+                <p className="text-sm mt-1">
+                  {hasOpenFinanceData 
+                    ? "Sincronize suas contas para ver as transações"
+                    : "Conecte suas contas bancárias para ver transações reais"
+                  }
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
         
@@ -186,6 +221,14 @@ export const TransactionsCard = () => {
             Ver Todas as Transações
           </Button>
         </motion.div>
+        
+        {hasOpenFinanceData && metrics.ultimaAtualizacao && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="text-xs text-muted-foreground text-center">
+              Última sincronização: {new Date(metrics.ultimaAtualizacao).toLocaleString('pt-BR')}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
