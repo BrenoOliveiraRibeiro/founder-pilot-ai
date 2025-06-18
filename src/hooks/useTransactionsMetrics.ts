@@ -28,56 +28,46 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         setLoading(true);
         setError(null);
 
-        // Determinar o mês e ano a serem filtrados
         const targetDate = selectedDate || new Date();
         const anoTarget = targetDate.getFullYear();
-        const mesTarget = targetDate.getMonth(); // 0-based (0 = Janeiro, 11 = Dezembro)
+        const mesTarget = targetDate.getMonth() + 1; // Converter para 1-based (1 = Janeiro, 12 = Dezembro)
 
-        console.log('Filtrando dados para:', {
-          ano: anoTarget,
-          mes: mesTarget + 1,
-          dataCompleta: targetDate.toISOString()
-        });
+        console.log('=== FILTRO DE MÊS ===');
+        console.log('Data selecionada:', targetDate.toISOString());
+        console.log('Ano alvo:', anoTarget);
+        console.log('Mês alvo:', mesTarget);
+        console.log('Empresa ID:', currentEmpresa.id);
 
-        // Definir período do mês selecionado
-        const startOfSelectedMonth = new Date(anoTarget, mesTarget, 1);
-        const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0, 23, 59, 59);
-
-        console.log('Período do mês selecionado:', {
-          inicio: startOfSelectedMonth.toISOString(),
-          fim: endOfSelectedMonth.toISOString()
-        });
-
-        // Buscar todas as transações até o final do mês selecionado (para calcular saldo)
-        const { data: todasTransacoes, error: transacoesError } = await supabase
+        // 1. Buscar saldo acumulado até o final do mês selecionado
+        const endOfMonth = `${anoTarget}-${String(mesTarget).padStart(2, '0')}-31`;
+        
+        const { data: saldoData, error: saldoError } = await supabase
           .from('transacoes')
-          .select('*')
+          .select('valor')
           .eq('empresa_id', currentEmpresa.id)
-          .lte('data_transacao', endOfSelectedMonth.toISOString().split('T')[0])
-          .order('data_transacao', { ascending: true });
+          .lte('data_transacao', endOfMonth);
 
-        if (transacoesError) {
-          console.error('Erro ao buscar transações:', transacoesError);
-          throw transacoesError;
+        if (saldoError) {
+          console.error('Erro ao buscar saldo:', saldoError);
+          throw saldoError;
         }
 
-        console.log('Total de transações encontradas até o mês selecionado:', todasTransacoes?.length || 0);
+        console.log('Transações para saldo (até', endOfMonth, '):', saldoData?.length || 0);
 
-        // Calcular saldo acumulado até o final do mês selecionado
-        const saldoTotal = todasTransacoes?.reduce((acc, tx) => {
+        const saldoCalculado = saldoData?.reduce((acc, tx) => {
           const valor = Number(tx.valor) || 0;
           return acc + valor;
         }, 0) || 0;
 
-        console.log('Saldo total acumulado até o mês selecionado:', saldoTotal);
+        console.log('Saldo calculado:', saldoCalculado);
 
-        // Buscar transações apenas do mês selecionado
-        const { data: transacoesMesSelecionado, error: transacoesMesError } = await supabase
+        // 2. Buscar transações específicas do mês selecionado
+        const { data: transacoesMes, error: transacoesMesError } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id)
-          .gte('data_transacao', startOfSelectedMonth.toISOString().split('T')[0])
-          .lte('data_transacao', endOfSelectedMonth.toISOString().split('T')[0])
+          .gte('data_transacao', `${anoTarget}-${String(mesTarget).padStart(2, '0')}-01`)
+          .lte('data_transacao', `${anoTarget}-${String(mesTarget).padStart(2, '0')}-31`)
           .order('data_transacao', { ascending: true });
 
         if (transacoesMesError) {
@@ -85,22 +75,20 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
           throw transacoesMesError;
         }
 
-        console.log('Transações do mês selecionado:', transacoesMesSelecionado?.length || 0);
+        console.log('Transações do mês', mesTarget + '/' + anoTarget, ':', transacoesMes?.length || 0);
 
-        if (transacoesMesSelecionado) {
-          console.log('Detalhes das transações do mês:', transacoesMesSelecionado.map(tx => ({
-            data: tx.data_transacao,
-            valor: tx.valor,
-            descricao: tx.descricao,
-            tipo: tx.tipo
-          })));
+        if (transacoesMes && transacoesMes.length > 0) {
+          console.log('Detalhes das transações do mês:');
+          transacoesMes.forEach((tx, index) => {
+            console.log(`${index + 1}. ${tx.data_transacao} - R$ ${tx.valor} - ${tx.descricao}`);
+          });
         }
 
-        // Calcular métricas do mês selecionado
+        // 3. Calcular entradas e saídas do mês
         let entradas = 0;
         let saidas = 0;
 
-        transacoesMesSelecionado?.forEach(tx => {
+        transacoesMes?.forEach(tx => {
           const valor = Number(tx.valor) || 0;
           
           if (valor > 0) {
@@ -112,17 +100,16 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
 
         const fluxo = entradas - saidas;
 
-        console.log('Métricas calculadas para o mês:', {
-          entradas,
-          saidas,
-          fluxo,
-          saldoTotal,
-          mesAno: `${mesTarget + 1}/${anoTarget}`
-        });
+        console.log('=== RESULTADO FINAL ===');
+        console.log('Saldo em caixa:', saldoCalculado);
+        console.log('Entradas do mês:', entradas);
+        console.log('Saídas do mês:', saidas);
+        console.log('Fluxo do mês:', fluxo);
+        console.log('======================');
 
-        // Validar dados antes de definir estado
+        // 4. Validar e definir estado
         const metricsData: FinanceData = {
-          saldoCaixa: saldoTotal,
+          saldoCaixa: saldoCalculado,
           entradasMesAtual: entradas,
           saidasMesAtual: saidas,
           fluxoCaixaMesAtual: fluxo,

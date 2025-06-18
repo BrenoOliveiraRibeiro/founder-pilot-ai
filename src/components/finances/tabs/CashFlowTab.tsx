@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -34,64 +33,62 @@ export const CashFlowTab: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Buscar transações dos últimos 6 meses
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        sixMonthsAgo.setDate(1); // Primeiro dia do mês
+        console.log('=== BUSCANDO DADOS PARA GRÁFICO DE FLUXO ===');
 
+        // Buscar todas as transações
         const { data: transacoes, error } = await supabase
           .from('transacoes')
           .select('*')
           .eq('empresa_id', currentEmpresa.id)
-          .gte('data_transacao', sixMonthsAgo.toISOString().split('T')[0])
           .order('data_transacao', { ascending: true });
 
         if (error) throw error;
 
-        console.log('Transações para gráfico de fluxo de caixa:', transacoes?.length || 0);
+        console.log('Total de transações encontradas:', transacoes?.length || 0);
 
-        // Processar dados por mês
-        const monthlyDataMap = new Map<string, { entrada: number; saida: number; monthYear: string }>();
-        
-        // Inicializar últimos 6 meses
-        for (let i = 5; i >= 0; i--) {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          const year = date.getFullYear();
-          const month = date.getMonth();
-          const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-          const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
-          const monthYear = `${monthName}/${year}`;
-          
-          monthlyDataMap.set(monthKey, { 
-            entrada: 0, 
-            saida: 0, 
-            monthYear 
-          });
+        if (!transacoes || transacoes.length === 0) {
+          setCashFlowData([]);
+          return;
         }
 
-        // Agrupar transações por mês
-        transacoes?.forEach(tx => {
-          const txDate = new Date(tx.data_transacao);
+        // Agrupar transações por mês/ano
+        const monthlyDataMap = new Map<string, { entrada: number; saida: number; monthYear: string }>();
+        
+        transacoes.forEach(tx => {
+          const txDate = new Date(tx.data_transacao + 'T00:00:00'); // Forçar timezone local
           const year = txDate.getFullYear();
-          const month = txDate.getMonth();
+          const month = txDate.getMonth(); // 0-based
           const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
           
-          if (monthlyDataMap.has(monthKey)) {
-            const monthData = monthlyDataMap.get(monthKey)!;
-            const valor = Number(tx.valor) || 0;
-            
-            if (valor > 0) {
-              monthData.entrada += valor;
-            } else {
-              monthData.saida += Math.abs(valor);
-            }
+          const monthName = txDate.toLocaleDateString('pt-BR', { month: 'short' });
+          const monthYear = `${monthName}/${year}`;
+          
+          if (!monthlyDataMap.has(monthKey)) {
+            monthlyDataMap.set(monthKey, { 
+              entrada: 0, 
+              saida: 0, 
+              monthYear 
+            });
+          }
+          
+          const monthData = monthlyDataMap.get(monthKey)!;
+          const valor = Number(tx.valor) || 0;
+          
+          if (valor > 0) {
+            monthData.entrada += valor;
+          } else {
+            monthData.saida += Math.abs(valor);
           }
         });
 
-        // Converter para array formatado
+        // Converter para array e ordenar por data
         const formattedData: MonthlyData[] = [];
-        monthlyDataMap.forEach((data, monthKey) => {
+        
+        // Ordenar as chaves do mapa
+        const sortedKeys = Array.from(monthlyDataMap.keys()).sort();
+        
+        sortedKeys.forEach(monthKey => {
+          const data = monthlyDataMap.get(monthKey)!;
           const [year, month] = monthKey.split('-');
           const date = new Date(Number(year), Number(month) - 1);
           const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
@@ -105,7 +102,7 @@ export const CashFlowTab: React.FC = () => {
           });
         });
 
-        console.log('Dados formatados por mês:', formattedData);
+        console.log('Dados agrupados por mês:', formattedData);
         setCashFlowData(formattedData);
       } catch (error: any) {
         console.error('Erro ao buscar dados de fluxo de caixa:', error);
@@ -186,7 +183,7 @@ export const CashFlowTab: React.FC = () => {
       <CardHeader>
         <CardTitle>Fluxo de Caixa</CardTitle>
         <CardDescription>
-          Entradas e saídas dos últimos 6 meses agrupadas por mês
+          Entradas e saídas agrupadas por mês
         </CardDescription>
       </CardHeader>
       <CardContent>
