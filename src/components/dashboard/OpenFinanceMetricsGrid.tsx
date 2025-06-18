@@ -1,4 +1,3 @@
-
 import React from "react";
 import { MetricCard } from "./MetricCard";
 import { 
@@ -17,7 +16,7 @@ import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { formatCurrency } from "@/lib/utils";
 
 export const OpenFinanceMetricsGrid = () => {
-  const { metrics, loading, error } = useOpenFinanceDashboard();
+  const { metrics, loading, error, hasOpenFinanceData } = useOpenFinanceDashboard();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -81,7 +80,7 @@ export const OpenFinanceMetricsGrid = () => {
         </motion.div>
       )}
 
-      {metrics.integracoesAtivas === 0 && (
+      {!hasOpenFinanceData && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
