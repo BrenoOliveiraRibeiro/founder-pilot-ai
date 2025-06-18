@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Insight } from "@/integrations/supabase/models";
@@ -58,13 +57,16 @@ export const useInsights = (empresaId: string | undefined) => {
         throw metricasError;
       }
 
-      // Buscar transações recentes
+      // Buscar transações recentes dos últimos 3 meses para cálculos mais precisos
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
       const { data: transacoes, error: transacoesError } = await supabase
         .from("transacoes")
         .select("*")
         .eq("empresa_id", empresaId)
-        .order("data_transacao", { ascending: false })
-        .limit(30);
+        .gte("data_transacao", threeMonthsAgo.toISOString().split('T')[0])
+        .order("data_transacao", { ascending: false });
 
       if (transacoesError) {
         throw transacoesError;
@@ -78,111 +80,142 @@ export const useInsights = (empresaId: string | undefined) => {
 
       const newInsights = [];
 
-      if (metricas) {
-        // Insight 1: Runway crítico
-        if (metricas.runway_meses && metricas.runway_meses < 3) {
+      // Calcular métricas corretas baseadas nas transações reais
+      let caixaAtual = 0;
+      let receitaMensal = 0;
+      let burnRate = 0;
+      let runwayMeses = 0;
+
+      if (transacoes && transacoes.length > 0) {
+        // Separar receitas e despesas
+        const receitas = transacoes.filter(t => t.tipo === 'receita' && t.valor > 0);
+        const despesas = transacoes.filter(t => t.tipo === 'despesa' && t.valor < 0);
+
+        // Calcular receita mensal (média dos últimos 3 meses)
+        const totalReceitas = receitas.reduce((sum, t) => sum + Number(t.valor), 0);
+        receitaMensal = totalReceitas / 3;
+
+        // Calcular burn rate (média das despesas dos últimos 3 meses)
+        const totalDespesas = despesas.reduce((sum, t) => sum + Math.abs(Number(t.valor)), 0);
+        burnRate = totalDespesas / 3;
+
+        // Usar caixa atual das métricas se disponível, senão calcular saldo
+        if (metricas && metricas.caixa_atual) {
+          caixaAtual = Number(metricas.caixa_atual);
+        } else {
+          // Calcular saldo baseado em todas as transações
+          caixaAtual = transacoes.reduce((saldo, t) => saldo + Number(t.valor), 0);
+          // Se ainda for negativo ou muito baixo, usar um valor mínimo
+          if (caixaAtual < 0) caixaAtual = Math.abs(caixaAtual);
+        }
+
+        // Calcular runway (em meses)
+        runwayMeses = burnRate > 0 ? caixaAtual / burnRate : 0;
+
+        console.log("Métricas calculadas:", { 
+          caixaAtual, 
+          receitaMensal: receitaMensal.toFixed(0), 
+          burnRate: burnRate.toFixed(0), 
+          runwayMeses: runwayMeses.toFixed(1) 
+        });
+      } else if (metricas) {
+        // Usar dados das métricas se não há transações
+        caixaAtual = Number(metricas.caixa_atual) || 0;
+        receitaMensal = Number(metricas.receita_mensal) || 0;
+        burnRate = Number(metricas.burn_rate) || 0;
+        runwayMeses = Number(metricas.runway_meses) || 0;
+      }
+
+      // Gerar insights baseados nos valores reais calculados
+      if (runwayMeses > 0) {
+        if (runwayMeses < 1) {
           newInsights.push({
             empresa_id: empresaId,
             tipo: "alerta",
             titulo: "Runway Crítico",
-            descricao: `Seu runway é de apenas ${metricas.runway_meses.toFixed(1)} meses. É recomendado reduzir despesas ou buscar novas fontes de receita urgentemente.`,
+            descricao: `Seu runway é de apenas ${runwayMeses.toFixed(1)} meses. É urgente reduzir despesas ou buscar novas fontes de receita.`,
             prioridade: "alta",
             status: "pendente"
           });
-        } else if (metricas.runway_meses && metricas.runway_meses < 6) {
+        } else if (runwayMeses < 3) {
           newInsights.push({
             empresa_id: empresaId,
             tipo: "alerta",
             titulo: "Runway de Atenção",
-            descricao: `Seu runway é de ${metricas.runway_meses.toFixed(1)} meses. Monitore de perto o fluxo de caixa e planeje ações preventivas.`,
+            descricao: `Seu runway é de ${runwayMeses.toFixed(1)} meses. Monitore de perto o fluxo de caixa e planeje ações preventivas.`,
+            prioridade: "alta",
+            status: "pendente"
+          });
+        } else if (runwayMeses < 6) {
+          newInsights.push({
+            empresa_id: empresaId,
+            tipo: "alerta",
+            titulo: "runway Moderado",
+            descricao: `Seu runway é de ${runwayMeses.toFixed(1)} meses. Considere otimizar custos para estender sua autonomia financeira.`,
             prioridade: "media",
             status: "pendente"
           });
         }
+      }
 
-        // Insight 2: Burn rate vs receita
-        if (metricas.burn_rate && metricas.receita_mensal) {
-          const burnRateNumber = Number(metricas.burn_rate);
-          const receitaNumber = Number(metricas.receita_mensal);
-          
-          if (burnRateNumber > receitaNumber * 1.2) {
-            newInsights.push({
-              empresa_id: empresaId,
-              tipo: "alerta",
-              titulo: "Burn Rate Elevado",
-              descricao: `Seu burn rate (R$ ${burnRateNumber.toLocaleString('pt-BR')}) está significativamente acima da receita mensal (R$ ${receitaNumber.toLocaleString('pt-BR')}). Revise os custos operacionais.`,
-              prioridade: "alta",
-              status: "pendente"
-            });
-          }
+      // Insight sobre burn rate vs receita
+      if (burnRate > 0 && receitaMensal > 0) {
+        if (burnRate > receitaMensal * 1.5) {
+          newInsights.push({
+            empresa_id: empresaId,
+            tipo: "alerta",
+            titulo: "Burn Rate Muito Elevado",
+            descricao: `Seu burn rate (R$ ${burnRate.toFixed(0)}) está muito acima da receita mensal (R$ ${receitaMensal.toFixed(0)}). Revise urgentemente os custos operacionais.`,
+            prioridade: "alta",
+            status: "pendente"
+          });
+        } else if (burnRate > receitaMensal) {
+          newInsights.push({
+            empresa_id: empresaId,
+            tipo: "alerta",
+            titulo: "Burn Rate Elevado",
+            descricao: `Seu burn rate (R$ ${burnRate.toFixed(0)}) supera a receita mensal (R$ ${receitaMensal.toFixed(0)}). Monitore de perto os gastos.`,
+            prioridade: "media",
+            status: "pendente"
+          });
         }
+      }
 
-        // Insight 3: Crescimento de receita
-        if (metricas.mrr_growth && metricas.mrr_growth > 0.1) {
+      // Insight sobre caixa atual
+      if (caixaAtual > 0) {
+        if (caixaAtual < 1000) {
+          newInsights.push({
+            empresa_id: empresaId,
+            tipo: "alerta",
+            titulo: "Caixa Muito Baixo",
+            descricao: `Seu caixa atual é de apenas R$ ${caixaAtual.toFixed(0)}. Atenção urgente necessária para o fluxo de caixa.`,
+            prioridade: "alta",
+            status: "pendente"
+          });
+        } else if (caixaAtual < 5000) {
+          newInsights.push({
+            empresa_id: empresaId,
+            tipo: "alerta",
+            titulo: "Caixa Baixo",
+            descricao: `Seu caixa atual é de R$ ${caixaAtual.toFixed(0)}. Monitore de perto as próximas movimentações financeiras.`,
+            prioridade: "media",
+            status: "pendente"
+          });
+        }
+      }
+
+      // Análise de crescimento se há dados históricos
+      if (metricas && metricas.mrr_growth && Number(metricas.mrr_growth) > 0) {
+        const crescimento = Number(metricas.mrr_growth) * 100;
+        if (crescimento > 10) {
           newInsights.push({
             empresa_id: empresaId,
             tipo: "sugestão",
             titulo: "Crescimento Positivo",
-            descricao: `Sua receita cresceu ${(Number(metricas.mrr_growth) * 100).toFixed(1)}% no último período. Este é um bom momento para investir em escalabilidade.`,
+            descricao: `Sua receita cresceu ${crescimento.toFixed(1)}% no último período. Este é um bom momento para investir em escalabilidade.`,
             prioridade: "baixa",
             status: "pendente"
           });
-        }
-
-        // Insight 4: Caixa atual
-        if (metricas.caixa_atual) {
-          const caixaNumber = Number(metricas.caixa_atual);
-          if (caixaNumber < 10000) {
-            newInsights.push({
-              empresa_id: empresaId,
-              tipo: "alerta",
-              titulo: "Caixa Baixo",
-              descricao: `Seu caixa atual é de R$ ${caixaNumber.toLocaleString('pt-BR')}. Monitore de perto as próximas movimentações financeiras.`,
-              prioridade: "media",
-              status: "pendente"
-            });
-          }
-        }
-      }
-
-      // Análise de transações recentes
-      if (transacoes && transacoes.length > 0) {
-        const totalReceitas = transacoes
-          .filter(t => t.tipo === 'receita')
-          .reduce((sum, t) => sum + Number(t.valor), 0);
-        
-        const totalDespesas = transacoes
-          .filter(t => t.tipo === 'despesa')
-          .reduce((sum, t) => sum + Math.abs(Number(t.valor)), 0);
-
-        if (totalDespesas > totalReceitas && transacoes.length >= 10) {
-          newInsights.push({
-            empresa_id: empresaId,
-            tipo: "alerta",
-            titulo: "Fluxo de Caixa Negativo",
-            descricao: `Nas últimas transações, as despesas (R$ ${totalDespesas.toLocaleString('pt-BR')}) superaram as receitas (R$ ${totalReceitas.toLocaleString('pt-BR')}).`,
-            prioridade: "alta",
-            status: "pendente"
-          });
-        }
-
-        // Verificar transações recorrentes
-        const transacoesRecorrentes = transacoes.filter(t => t.recorrente);
-        if (transacoesRecorrentes.length > 0) {
-          const custoRecorrente = transacoesRecorrentes
-            .filter(t => t.tipo === 'despesa')
-            .reduce((sum, t) => sum + Math.abs(Number(t.valor)), 0);
-          
-          if (custoRecorrente > 0) {
-            newInsights.push({
-              empresa_id: empresaId,
-              tipo: "sugestão",
-              titulo: "Despesas Recorrentes",
-              descricao: `Você tem R$ ${custoRecorrente.toLocaleString('pt-BR')} em despesas recorrentes mensais. Revise periodicamente para otimização.`,
-              prioridade: "baixa",
-              status: "pendente"
-            });
-          }
         }
       }
 
