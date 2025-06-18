@@ -63,7 +63,30 @@ export const ProtectedRoute = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Se estiver autenticado, verificar se precisa de onboarding ou pode ir direto para o dashboard
+  // Se estiver autenticado mas tentar acessar páginas que não precisam de auth (como /auth)
+  if (!requireAuth && user) {
+    // Se o usuário tem empresas, enviar para dashboard
+    if (empresas.length > 0) {
+      console.log("Usuário autenticado com empresas, redirecionando para dashboard");
+      return <Navigate to="/dashboard" replace />;
+    }
+    // Se não tem empresas, enviar para onboarding
+    console.log("Usuário autenticado sem empresas, redirecionando para onboarding");
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // Se estiver autenticado e tentar acessar onboarding, mas já tiver empresas
+  if (
+    requireAuth && 
+    user && 
+    empresas.length > 0 && 
+    location.pathname.includes("/onboarding")
+  ) {
+    console.log("Usuário com empresas tentando acessar onboarding, redirecionando para dashboard");
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Se estiver autenticado, não tiver empresas e não estiver em páginas permitidas
   if (
     requireAuth && 
     user && 
@@ -74,18 +97,6 @@ export const ProtectedRoute = ({
   ) {
     console.log("Usuário sem empresas, redirecionando para onboarding");
     return <Navigate to="/onboarding" replace />;
-  }
-
-  // Se NÃO precisar de autenticação (como na página de auth) mas o usuário já estiver autenticado
-  if (!requireAuth && user) {
-    // Se o usuário precisa completar onboarding, enviar para lá em vez do dashboard
-    if (empresas.length === 0) {
-      console.log("Usuário autenticado sem empresas, redirecionando para onboarding");
-      return <Navigate to="/onboarding" replace />;
-    }
-    // Caso contrário, enviar para o dashboard
-    console.log("Usuário autenticado com empresas, redirecionando para dashboard");
-    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
