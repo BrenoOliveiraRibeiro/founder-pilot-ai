@@ -14,6 +14,10 @@ const FinancesPage = () => {
   const runway = 0; // em meses
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  console.log('=== FINANCES PAGE ===');
+  console.log('Data selecionada na página:', selectedDate.toISOString());
+  console.log('===================');
+
   return (
     <AppLayout>
       <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
@@ -29,15 +33,15 @@ const FinancesPage = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <FinanceOverviewTab />
+          <FinanceOverviewTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="cashflow">
-          <CashFlowTab />
+          <CashFlowTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="expenses">
-          <ExpensesTab />
+          <ExpensesTab selectedDate={selectedDate} />
         </TabsContent>
 
         <TabsContent value="accounts">
