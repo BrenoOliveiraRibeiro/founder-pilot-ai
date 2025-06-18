@@ -14,7 +14,7 @@ import { FooterSection } from "@/components/landing/FooterSection";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading, empresas } = useAuth();
+  const { user, loading } = useAuth();
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
@@ -27,25 +27,12 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Só executar redirecionamentos após carregamento completo e intro finalizada
-    if (!loading && !showIntro) {
-      if (user) {
-        console.log("Usuário autenticado:", user.email);
-        console.log("Empresas:", empresas.length);
-        
-        // Se o usuário está autenticado e tem empresas, enviar para o dashboard
-        if (empresas.length > 0) {
-          console.log("Usuário com empresas, redirecionando para dashboard");
-          navigate("/dashboard");
-        } else {
-          // Se não tem empresa, enviar para onboarding
-          console.log("Usuário sem empresas, redirecionando para onboarding");
-          navigate("/onboarding");
-        }
-      }
-      // Se não está autenticado, permanece na landing page (não faz nada)
+    // Só redirecionar usuários autenticados após intro finalizada
+    if (!loading && !showIntro && user) {
+      console.log("Usuário autenticado detectado, redirecionando para dashboard");
+      navigate("/dashboard");
     }
-  }, [navigate, user, loading, showIntro, empresas]);
+  }, [navigate, user, loading, showIntro]);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
