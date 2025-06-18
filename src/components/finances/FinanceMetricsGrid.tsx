@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 
-export const FinanceMetricsGrid: React.FC = () => {
+interface FinanceMetricsGridProps {
+  selectedDate: Date;
+}
+
+export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selectedDate }) => {
   const { 
     saldoCaixa, 
     entradasMesAtual, 
@@ -18,7 +23,7 @@ export const FinanceMetricsGrid: React.FC = () => {
     fluxoCaixaMesAtual,
     loading: transactionsLoading, 
     error: transactionsError 
-  } = useTransactionsMetrics();
+  } = useTransactionsMetrics({ selectedDate });
 
   const { 
     metrics: openFinanceMetrics, 
@@ -103,7 +108,7 @@ export const FinanceMetricsGrid: React.FC = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Entradas (Mês Atual)</CardTitle>
+            <CardTitle className="text-sm font-medium">Entradas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -112,7 +117,7 @@ export const FinanceMetricsGrid: React.FC = () => {
             </div>
             <div className="flex items-center mt-1">
               <span className="text-xs text-muted-foreground">
-                {format(new Date(), "MMMM yyyy")}
+                {format(selectedDate, "MMMM yyyy", { locale: pt })}
               </span>
             </div>
           </CardContent>
@@ -120,7 +125,7 @@ export const FinanceMetricsGrid: React.FC = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Saídas (Mês Atual)</CardTitle>
+            <CardTitle className="text-sm font-medium">Saídas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -150,14 +155,14 @@ export const FinanceMetricsGrid: React.FC = () => {
             <div className="text-2xl font-bold">{formatCurrency(saldoAtual)}</div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {hasOpenFinanceData ? "Dados sincronizados do Open Finance" : "Baseado em transações conectadas"}
+            {hasOpenFinanceData ? "Dados sincronizados do Open Finance" : `Acumulado até ${format(selectedDate, "dd/MM/yyyy", { locale: pt })}`}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Entradas (Mês Atual)</CardTitle>
+          <CardTitle className="text-sm font-medium">Entradas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
@@ -166,7 +171,7 @@ export const FinanceMetricsGrid: React.FC = () => {
           </div>
           <div className="flex items-center mt-1">
             <span className="text-xs text-muted-foreground">
-              {format(new Date(), "MMMM yyyy")}
+              {format(selectedDate, "MMMM yyyy", { locale: pt })}
             </span>
           </div>
         </CardContent>
@@ -174,7 +179,7 @@ export const FinanceMetricsGrid: React.FC = () => {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Saídas (Mês Atual)</CardTitle>
+          <CardTitle className="text-sm font-medium">Saídas ({format(selectedDate, "MMMM yyyy", { locale: pt })})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center">

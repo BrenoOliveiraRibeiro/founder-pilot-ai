@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FinanceHeader } from "@/components/finances/FinanceHeader";
@@ -12,12 +12,13 @@ import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
 
 const FinancesPage = () => {
   const runway = 4.2; // em meses
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   return (
     <AppLayout>
-      <FinanceHeader />
+      <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
       <RunwayAlert runway={runway} />
-      <FinanceMetricsGrid />
+      <FinanceMetricsGrid selectedDate={selectedDate} />
 
       <Tabs defaultValue="overview">
         <TabsList className="mb-4">

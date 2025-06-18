@@ -4,7 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { financeDataSchema, type FinanceData } from '@/schemas/validationSchemas';
 
-export const useTransactionsMetrics = () => {
+interface UseTransactionsMetricsProps {
+  selectedDate?: Date;
+}
+
+export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsProps = {}) => {
   const [saldoCaixa, setSaldoCaixa] = useState(0);
   const [entradasMesAtual, setEntradasMesAtual] = useState(0);
   const [saidasMesAtual, setSaidasMesAtual] = useState(0);
@@ -38,27 +42,31 @@ export const useTransactionsMetrics = () => {
           return;
         }
 
-        // Calcular saldo total (soma de todas as transações)
-        const saldoTotal = transacoes.reduce((acc, tx) => {
-          return acc + Number(tx.valor);
-        }, 0);
+        // Determinar o mês a ser filtrado
+        const targetDate = selectedDate || new Date();
+        const anoTarget = targetDate.getFullYear();
+        const mesTarget = targetDate.getMonth();
 
-        // Filtrar transações do mês atual
-        const hoje = new Date();
-        const anoAtual = hoje.getFullYear();
-        const mesAtual = hoje.getMonth();
+        // Calcular saldo total até a data selecionada (inclusive)
+        const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0); // último dia do mês selecionado
+        const saldoTotal = transacoes
+          .filter(tx => new Date(tx.data_transacao) <= endOfSelectedMonth)
+          .reduce((acc, tx) => {
+            return acc + Number(tx.valor);
+          }, 0);
 
-        const transacoesMesAtual = transacoes.filter(tx => {
+        // Filtrar transações do mês selecionado
+        const transacoesMesSelecionado = transacoes.filter(tx => {
           const dataTransacao = new Date(tx.data_transacao);
-          return dataTransacao.getFullYear() === anoAtual && 
-                 dataTransacao.getMonth() === mesAtual;
+          return dataTransacao.getFullYear() === anoTarget && 
+                 dataTransacao.getMonth() === mesTarget;
         });
 
-        // Calcular métricas do mês atual
+        // Calcular métricas do mês selecionado
         let entradas = 0;
         let saidas = 0;
 
-        transacoesMesAtual.forEach(tx => {
+        transacoesMesSelecionado.forEach(tx => {
           const valor = Number(tx.valor);
           if (valor > 0) {
             entradas += valor;
@@ -99,7 +107,7 @@ export const useTransactionsMetrics = () => {
     };
 
     fetchMetrics();
-  }, [currentEmpresa?.id]);
+  }, [currentEmpresa?.id, selectedDate]);
 
   return {
     saldoCaixa,
