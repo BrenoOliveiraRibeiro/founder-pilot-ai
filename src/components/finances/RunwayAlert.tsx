@@ -32,6 +32,21 @@ export const RunwayAlert: React.FC = () => {
   // Calcular runway
   const runway = saidas > 0 ? saldoAtual / saidas : 0;
 
+  // Debug logs para entender o que está acontecendo
+  console.log('RunwayAlert Debug:', {
+    loading,
+    hasOpenFinanceData,
+    openFinanceMetrics,
+    saldoCaixa,
+    entradasMesAtual,
+    saidasMesAtual,
+    hasAnyRealData,
+    saldoAtual,
+    saidas,
+    runway,
+    shouldShowAlert: hasAnyRealData && runway < 6 && runway > 0
+  });
+
   if (loading) {
     return (
       <div className="mb-6">
@@ -40,10 +55,13 @@ export const RunwayAlert: React.FC = () => {
     );
   }
 
-  // Só mostrar alerta se houver dados reais e runway < 6 meses
-  if (!hasAnyRealData || runway >= 6) {
+  // Mostrar alerta se houver dados reais e runway < 6 meses (mas > 0)
+  if (!hasAnyRealData || runway >= 6 || runway <= 0) {
+    console.log('RunwayAlert: Não mostrando alerta', { hasAnyRealData, runway });
     return null;
   }
+  
+  console.log('RunwayAlert: Mostrando alerta com runway:', runway);
   
   return (
     <Alert variant="warning" className="mb-6">
