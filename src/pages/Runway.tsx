@@ -8,7 +8,7 @@ import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 
 // Importando os componentes refatorados
 import { RunwayHeader } from "@/components/runway/header/RunwayHeader";
-import { RunwayWarningAlert } from "@/components/runway/alerts/RunwayWarningAlert";
+import { RunwayAlert } from "@/components/shared/RunwayAlert";
 import { MetricsCards } from "@/components/runway/metrics/MetricsCards";
 import { ProjectionChart } from "@/components/runway/chart/ProjectionChart";
 import { RecommendationsPanel } from "@/components/runway/recommendations/RecommendationsPanel";
@@ -125,7 +125,7 @@ const RunwayPage = () => {
         </div>
       )}
       
-      <RunwayWarningAlert runwayMonths={runwayMonths} />
+      <RunwayAlert runwayMonths={runwayMonths} className="mb-6" />
       
       <MetricsCards
         cashReserve={cashReserve}

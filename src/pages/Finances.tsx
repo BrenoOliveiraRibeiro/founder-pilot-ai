@@ -3,21 +3,27 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FinanceHeader } from "@/components/finances/FinanceHeader";
-import { RunwayAlert } from "@/components/finances/RunwayAlert";
+import { RunwayAlert } from "@/components/shared/RunwayAlert";
 import { FinanceMetricsGrid } from "@/components/finances/FinanceMetricsGrid";
 import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTab";
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 const FinancesPage = () => {
-  const runway = 4.2; // em meses
+  const { currentEmpresa } = useAuth();
+  const { metrics } = useFinanceData(currentEmpresa?.id || null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Obter runway das métricas reais ou usar valor padrão
+  const runwayMonths = metrics?.runway_meses || 4.2;
 
   return (
     <AppLayout>
       <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
-      <RunwayAlert runway={runway} />
+      <RunwayAlert runwayMonths={runwayMonths} className="mb-6" />
       <FinanceMetricsGrid selectedDate={selectedDate} />
 
       <Tabs defaultValue="overview">
