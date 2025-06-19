@@ -7,9 +7,14 @@ import { motion } from "framer-motion";
 interface RunwayAlertProps {
   runwayMonths: number;
   className?: string;
+  hasRealData?: boolean;
 }
 
-export const RunwayAlert: React.FC<RunwayAlertProps> = ({ runwayMonths, className = "" }) => {
+export const RunwayAlert: React.FC<RunwayAlertProps> = ({ 
+  runwayMonths, 
+  className = "",
+  hasRealData = false 
+}) => {
   // Só mostrar o alerta se o runway for menor que 6 meses
   if (runwayMonths >= 6) return null;
   
@@ -22,17 +27,15 @@ export const RunwayAlert: React.FC<RunwayAlertProps> = ({ runwayMonths, classNam
       transition={{ duration: 0.5 }}
       className={className}
     >
-      <Alert variant={isRunwayCritical ? "destructive" : "warning"}>
+      <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>
-          {isRunwayCritical ? "Alerta: Runway Crítico" : "Atenção: Runway abaixo do recomendado"}
+          Alerta de Runway Crítico!
         </AlertTitle>
         <AlertDescription>
-          Seu runway atual é de {runwayMonths.toFixed(1)} meses. 
-          {isRunwayCritical 
-            ? " Considere reduzir despesas ou buscar financiamento adicional imediatamente para evitar problemas de fluxo de caixa."
-            : " Recomendamos ter pelo menos 6 meses de runway para segurança financeira. Considere reduzir despesas ou buscar captação."
-          }
+          Seu runway atual é de apenas {runwayMonths.toFixed(1)} meses
+          {hasRealData ? " baseado nos dados conectados" : ""}. 
+          Recomendamos tomar ações imediatas para reduzir despesas ou buscar captação de recursos.
         </AlertDescription>
       </Alert>
     </motion.div>

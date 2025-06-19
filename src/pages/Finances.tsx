@@ -19,11 +19,12 @@ const FinancesPage = () => {
 
   // Obter runway das métricas reais ou usar valor padrão
   const runwayMonths = metrics?.runway_meses || 4.2;
+  const hasRealData = Boolean(metrics && metrics.runway_meses !== null);
 
   return (
     <AppLayout>
       <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
-      <RunwayAlert runwayMonths={runwayMonths} className="mb-6" />
+      <RunwayAlert runwayMonths={runwayMonths} hasRealData={hasRealData} className="mb-6" />
       <FinanceMetricsGrid selectedDate={selectedDate} />
 
       <Tabs defaultValue="overview">

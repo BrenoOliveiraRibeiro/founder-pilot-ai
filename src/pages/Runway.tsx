@@ -125,7 +125,7 @@ const RunwayPage = () => {
         </div>
       )}
       
-      <RunwayAlert runwayMonths={runwayMonths} className="mb-6" />
+      <RunwayAlert runwayMonths={runwayMonths} hasRealData={hasConnectedData} className="mb-6" />
       
       <MetricsCards
         cashReserve={cashReserve}
