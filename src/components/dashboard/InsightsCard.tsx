@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
+import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 
@@ -49,16 +51,170 @@ const InsightItem = ({ icon, title, status, index }: InsightItemProps) => {
 
 export const InsightsCard = () => {
   const { currentEmpresa } = useAuth();
-  const { loading, insights } = useFinanceData(currentEmpresa?.id || null);
+  const { loading: financeLoading, insights: dbInsights } = useFinanceData(currentEmpresa?.id || null);
+  const { 
+    saldoCaixa, 
+    entradasMesAtual, 
+    saidasMesAtual, 
+    fluxoCaixaMesAtual,
+    loading: transactionsLoading 
+  } = useTransactionsMetrics();
+  const { metrics: openFinanceMetrics, loading: openFinanceLoading } = useOpenFinanceDashboard();
 
-  // Mapeamento de tipo para status visual
-  const getStatusFromType = (tipo: string) => {
-    switch (tipo) {
-      case "alerta": return "danger";
-      case "sugestão": return "info";
-      case "projeção": return "info";
-      default: return "info";
+  const loading = financeLoading || transactionsLoading || openFinanceLoading;
+
+  // Função para gerar insights baseados em dados reais
+  const generateRealTimeInsights = () => {
+    const insights = [];
+    
+    // Usar dados do Open Finance se disponíveis, senão usar dados de transações
+    const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
+    const saldo = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
+    const receita = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
+    const despesas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtual;
+    const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtual;
+    const runway = hasOpenFinanceData ? openFinanceMetrics.runwayMeses : 0;
+    const burnRate = hasOpenFinanceData ? openFinanceMetrics.burnRate : despesas;
+
+    // Insight 1: Análise de Runway
+    if (runway > 0) {
+      if (runway < 3) {
+        insights.push({
+          id: "runway-critico",
+          tipo: "alerta",
+          titulo: `Runway crítico: apenas ${runway.toFixed(1)} meses restantes`,
+          prioridade: "alta"
+        });
+      } else if (runway < 6) {
+        insights.push({
+          id: "runway-atencao",
+          tipo: "alerta",
+          titulo: `Runway de ${runway.toFixed(1)} meses - considere estratégias de captação`,
+          prioridade: "media"
+        });
+      } else {
+        insights.push({
+          id: "runway-saudavel",
+          tipo: "sugestão",
+          titulo: `Runway saudável de ${runway.toFixed(1)} meses - bom momento para crescimento`,
+          prioridade: "baixa"
+        });
+      }
     }
+
+    // Insight 2: Análise de Fluxo de Caixa
+    if (fluxo < 0) {
+      const percentualNegativo = Math.abs((fluxo / receita) * 100);
+      insights.push({
+        id: "fluxo-negativo",
+        tipo: "alerta",
+        titulo: `Fluxo de caixa negativo: ${percentualNegativo.toFixed(0)}% da receita`,
+        prioridade: percentualNegativo > 50 ? "alta" : "media"
+      });
+    } else if (fluxo > 0) {
+      const percentualPositivo = (fluxo / receita) * 100;
+      insights.push({
+        id: "fluxo-positivo",
+        tipo: "sugestão",
+        titulo: `Fluxo de caixa positivo: ${percentualPositivo.toFixed(0)}% da receita`,
+        prioridade: "baixa"
+      });
+    }
+
+    // Insight 3: Análise de Burn Rate vs Receita
+    if (receita > 0 && burnRate > 0) {
+      const razaoBurnReceita = burnRate / receita;
+      if (razaoBurnReceita > 1.5) {
+        insights.push({
+          id: "burn-alto",
+          tipo: "alerta",
+          titulo: "Burn rate muito alto comparado à receita - otimize custos",
+          prioridade: "alta"
+        });
+      } else if (razaoBurnReceita > 1.2) {
+        insights.push({
+          id: "burn-atencao",
+          tipo: "alerta",
+          titulo: "Burn rate elevado - monitore gastos de perto",
+          prioridade: "media"
+        });
+      }
+    }
+
+    // Insight 4: Análise de Saldo
+    if (saldo < 0) {
+      insights.push({
+        id: "saldo-negativo",
+        tipo: "alerta",
+        titulo: "Saldo negativo - ação imediata necessária",
+        prioridade: "alta"
+      });
+    } else if (saldo < burnRate) {
+      insights.push({
+        id: "saldo-baixo",
+        tipo: "alerta",
+        titulo: "Saldo inferior ao burn rate mensal - risco de liquidez",
+        prioridade: "alta"
+      });
+    }
+
+    // Insight 5: Análise de eficiência operacional
+    if (receita > 0 && despesas > 0) {
+      const eficiencia = (receita - despesas) / receita;
+      if (eficiencia > 0.2) {
+        insights.push({
+          id: "eficiencia-boa",
+          tipo: "sugestão",
+          titulo: `Boa eficiência operacional: ${(eficiencia * 100).toFixed(0)}% de margem`,
+          prioridade: "baixa"
+        });
+      } else if (eficiencia < 0) {
+        insights.push({
+          id: "eficiencia-ruim",
+          tipo: "alerta",
+          titulo: "Despesas superam receitas - revise estrutura de custos",
+          prioridade: "alta"
+        });
+      }
+    }
+
+    // Se não há dados suficientes, usar insights do banco de dados
+    if (insights.length === 0 && dbInsights.length > 0) {
+      return dbInsights.slice(0, 4);
+    }
+
+    // Se ainda não há insights, retornar insights de exemplo baseados em dados conectados
+    if (insights.length === 0) {
+      return hasOpenFinanceData ? [
+        {
+          id: "dados-conectados",
+          tipo: "sugestão",
+          titulo: "Dados bancários conectados - análises em tempo real disponíveis",
+          prioridade: "baixa"
+        },
+        {
+          id: "monitoramento-ativo",
+          tipo: "sugestão",
+          titulo: "Monitoramento ativo das transações está funcionando",
+          prioridade: "baixa"
+        }
+      ] : [
+        {
+          id: "conectar-dados",
+          tipo: "alerta",
+          titulo: "Conecte suas contas bancárias para insights baseados em dados reais",
+          prioridade: "media"
+        },
+        {
+          id: "analise-manual",
+          tipo: "sugestão",
+          titulo: "Adicione transações manualmente para começar a análise",
+          prioridade: "baixa"
+        }
+      ];
+    }
+
+    return insights.slice(0, 4); // Limitar a 4 insights
   };
 
   // Mapeamento de prioridade para status visual
@@ -84,55 +240,7 @@ export const InsightsCard = () => {
     }
   };
 
-  // Exemplo de insights para quando não há dados reais
-  const exampleInsights = [
-    {
-      id: "1",
-      empresa_id: "",
-      tipo: "alerta",
-      titulo: "Seus gastos com engenharia são 30% maiores que startups similares",
-      descricao: "",
-      prioridade: "alta",
-      status: "pendente",
-      data_criacao: "",
-      data_resolucao: null
-    },
-    {
-      id: "2",
-      empresa_id: "",
-      tipo: "alerta",
-      titulo: "Você pode precisar captar recursos nos próximos 3 meses com base no runway atual",
-      descricao: "",
-      prioridade: "media",
-      status: "pendente",
-      data_criacao: "",
-      data_resolucao: null
-    },
-    {
-      id: "3",
-      empresa_id: "",
-      tipo: "projeção",
-      titulo: "O crescimento da receita é consistente com transições bem-sucedidas de Seed para Series A",
-      descricao: "",
-      prioridade: "baixa",
-      status: "pendente",
-      data_criacao: "",
-      data_resolucao: null
-    },
-    {
-      id: "4",
-      empresa_id: "",
-      tipo: "sugestão",
-      titulo: "Sua margem bruta (68%) é melhor que a média do setor (55%)",
-      descricao: "",
-      prioridade: "baixa",
-      status: "pendente",
-      data_criacao: "",
-      data_resolucao: null
-    }
-  ];
-
-  const insightsToDisplay = insights.length > 0 ? insights : exampleInsights;
+  const insightsToDisplay = generateRealTimeInsights();
 
   const headerVariants = {
     hidden: { opacity: 0, y: -10 },
