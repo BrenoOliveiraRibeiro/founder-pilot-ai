@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { financeDataSchema, type FinanceData } from '@/schemas/validationSchemas';
+import { useOpenFinanceDashboard } from './useOpenFinanceDashboard';
 
 interface UseTransactionsMetricsProps {
   selectedDate?: Date;
@@ -16,6 +17,9 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { currentEmpresa } = useAuth();
+  
+  // Usar dados do Open Finance quando disponíveis
+  const { metrics: openFinanceMetrics, loading: openFinanceLoading } = useOpenFinanceDashboard();
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -28,7 +32,17 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         setLoading(true);
         setError(null);
 
-        // Buscar todas as transações
+        // Se há dados do Open Finance disponíveis, usar eles
+        if (openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0) {
+          setSaldoCaixa(openFinanceMetrics.saldoTotal);
+          setEntradasMesAtual(openFinanceMetrics.receitaMensal);
+          setSaidasMesAtual(openFinanceMetrics.despesasMensais);
+          setFluxoCaixaMesAtual(openFinanceMetrics.fluxoCaixa);
+          setLoading(false);
+          return;
+        }
+
+        // Fallback para cálculo baseado apenas em transações
         const { data: transacoes, error: transacoesError } = await supabase
           .from('transacoes')
           .select('*')
@@ -37,7 +51,6 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         if (transacoesError) throw transacoesError;
 
         if (!transacoes || transacoes.length === 0) {
-          // Não há transações, manter valores em zero
           setLoading(false);
           return;
         }
@@ -48,7 +61,7 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         const mesTarget = targetDate.getMonth();
 
         // Calcular saldo total até a data selecionada (inclusive)
-        const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0); // último dia do mês selecionado
+        const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0);
         const saldoTotal = transacoes
           .filter(tx => new Date(tx.data_transacao) <= endOfSelectedMonth)
           .reduce((acc, tx) => {
@@ -95,7 +108,6 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
       } catch (error: any) {
         console.error('Erro ao carregar métricas de transações:', error);
         
-        // Se for erro de validação Zod, mostrar erro mais específico
         if (error.name === 'ZodError') {
           setError(`Dados inválidos: ${error.errors.map((e: any) => e.message).join(', ')}`);
         } else {
@@ -107,14 +119,14 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
     };
 
     fetchMetrics();
-  }, [currentEmpresa?.id, selectedDate]);
+  }, [currentEmpresa?.id, selectedDate, openFinanceMetrics, openFinanceLoading]);
 
   return {
     saldoCaixa,
     entradasMesAtual,
     saidasMesAtual,
     fluxoCaixaMesAtual,
-    loading,
+    loading: loading || openFinanceLoading,
     error
   };
 };

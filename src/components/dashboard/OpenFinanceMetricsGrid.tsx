@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { MetricCard } from "./MetricCard";
 import { 
   AlertTriangle,
@@ -17,7 +17,17 @@ import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { formatCurrency } from "@/lib/utils";
 
 export const OpenFinanceMetricsGrid = () => {
-  const { metrics, loading, error } = useOpenFinanceDashboard();
+  const { metrics, loading, error, refetch } = useOpenFinanceDashboard();
+
+  // Recarregar dados quando a página Open Finance é acessada
+  useEffect(() => {
+    const handleStorageChange = () => {
+      refetch();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refetch]);
 
   const containerVariants = {
     hidden: { opacity: 0 },

@@ -9,14 +9,13 @@ import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Zap } from "lucide-react";
 
 interface FinanceMetricsGridProps {
   selectedDate: Date;
 }
 
 export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selectedDate }) => {
-  // Data atual para os cards de Entradas e Saídas (sempre mês atual)
   const currentDate = new Date();
   
   const { 
@@ -33,19 +32,14 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
     loading: openFinanceLoading 
   } = useOpenFinanceDashboard();
 
-  // Usar dados do Open Finance se disponíveis, caso contrário usar dados de transações
   const loading = transactionsLoading || openFinanceLoading;
   const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
-  
-  // Verificar se existe algum dado real (transações ou Open Finance)
   const hasAnyRealData = hasOpenFinanceData || saldoCaixa > 0 || entradasMesAtual > 0 || saidasMesAtual > 0;
   
-  const saldoAtual = hasOpenFinanceData ? openFinanceMetrics.saldoTotal : saldoCaixa;
-  const entradas = hasOpenFinanceData ? openFinanceMetrics.receitaMensal : entradasMesAtual;
-  const saidas = hasOpenFinanceData ? openFinanceMetrics.despesasMensais : saidasMesAtual;
-  const fluxo = hasOpenFinanceData ? openFinanceMetrics.fluxoCaixa : fluxoCaixaMesAtual;
-
-  const error = transactionsError;
+  const saldoAtual = saldoCaixa;
+  const entradas = entradasMesAtual;
+  const saidas = saidasMesAtual;
+  const fluxo = fluxoCaixaMesAtual;
 
   if (loading) {
     return (
@@ -68,28 +62,27 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
     );
   }
 
-  if (error) {
+  if (transactionsError) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="col-span-full">
           <CardContent className="pt-6">
-            <p className="text-red-500 text-center">Erro ao carregar métricas: {error}</p>
+            <p className="text-red-500 text-center">Erro ao carregar métricas: {transactionsError}</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Se não há dados reais, mostrar estado vazio
   if (!hasAnyRealData) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="col-span-full">
           <Alert className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Nenhum dado financeiro encontrado</AlertTitle>
+            <Zap className="h-4 w-4" />
+            <AlertTitle>Conecte suas contas bancárias</AlertTitle>
             <AlertDescription>
-              Conecte suas contas bancárias via Open Finance para visualizar suas métricas financeiras em tempo real.
+              Para ver métricas dinâmicas e precisas, conecte suas contas bancárias via Open Finance.
             </AlertDescription>
           </Alert>
         </div>
@@ -158,7 +151,14 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
             <div className="text-2xl font-bold">{formatCurrency(saldoAtual)}</div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {hasOpenFinanceData ? "Dados sincronizados do Open Finance" : `Acumulado até ${format(selectedDate, "dd/MM/yyyy", { locale: pt })}`}
+            {hasOpenFinanceData ? (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                Dados sincronizados do Open Finance
+              </span>
+            ) : (
+              `Acumulado até ${format(selectedDate, "dd/MM/yyyy", { locale: pt })}`
+            )}
           </p>
         </CardContent>
       </Card>
