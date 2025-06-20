@@ -119,7 +119,7 @@ export const useOpenFinanceDashboard = () => {
         .filter(tx => tx.tipo === 'despesa')
         .reduce((sum, tx) => sum + tx.valor, 0)) / 3;
 
-      // Calcular runway usando o saldo das contas conectadas
+      // Calcular runway
       const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;
       const alertaCritico = runwayMeses < 3;
 
