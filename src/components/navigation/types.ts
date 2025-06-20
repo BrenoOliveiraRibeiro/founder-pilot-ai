@@ -20,6 +20,7 @@ export interface NavItem {
   badge?: string | React.ReactNode;
   badgeColor?: string;
   group?: string;
+  disabled?: boolean;
 }
 
 export interface NavGroup {
@@ -59,7 +60,9 @@ export const navItems: NavItem[] = [
     title: "Análise de Mercado", 
     href: "/market",
     icon: BarChart3,
-    group: "Análise"
+    group: "Análise",
+    disabled: true,
+    badge: "Em breve"
   },
   {
     title: "Co-Founder AI",
@@ -72,25 +75,33 @@ export const navItems: NavItem[] = [
     title: "Relatórios",
     href: "/reports",
     icon: FileText,
-    group: "Gestão"
+    group: "Gestão",
+    disabled: true,
+    badge: "Em breve"
   },
   {
     title: "Calendário",
     href: "/calendar",
     icon: Calendar,
-    group: "Gestão"
+    group: "Gestão",
+    disabled: true,
+    badge: "Em breve"
   },
   {
     title: "Equipe",
     href: "/team",
     icon: Users2,
-    group: "Gestão"
+    group: "Gestão",
+    disabled: true,
+    badge: "Em breve"
   },
   {
     title: "Configurações",
     href: "/settings",
     icon: Settings,
-    group: "Gestão"
+    group: "Gestão",
+    disabled: true,
+    badge: "Em breve"
   },
 ];
 

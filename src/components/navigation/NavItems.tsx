@@ -31,6 +31,35 @@ export const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive }) => 
   const dynamicBadge = item.href === '/runway' ? runwayStatus.label : item.badge;
   const badgeColor = item.href === '/runway' ? runwayStatus.color : undefined;
   
+  // Se o item está desabilitado, renderizar como span não clicável
+  if (item.disabled) {
+    return (
+      <motion.li 
+        whileHover={{ x: 3 }}
+        transition={{ duration: 0.2 }}
+      >
+        <span
+          className={cn(
+            "flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-all duration-300",
+            "text-foreground/40 cursor-not-allowed opacity-60"
+          )}
+          title={`${item.title} - Em breve`}
+        >
+          <div className="flex items-center gap-3">
+            <IconComponent className="h-4 w-4" />
+            <span>{item.title}</span>
+          </div>
+          
+          {item.badge && (
+            <span className="px-1.5 py-0.5 text-xs rounded-md font-medium bg-amber-500/20 text-amber-600 dark:text-amber-400">
+              {item.badge}
+            </span>
+          )}
+        </span>
+      </motion.li>
+    );
+  }
+  
   return (
     <motion.li 
       whileHover={{ x: 3 }}
