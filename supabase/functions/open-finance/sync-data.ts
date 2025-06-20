@@ -68,6 +68,14 @@ export async function syncData(
 ) {
   console.log(`Sincronizando dados da empresa ${empresaId}`);
   
+  // Log dos parâmetros recebidos para debug
+  console.log(`Parâmetros recebidos:`, {
+    empresaId: empresaId,
+    integrationId: integrationId,
+    empresaIdType: typeof empresaId,
+    integrationIdType: typeof integrationId
+  });
+  
   try {
     // Get API key
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
@@ -80,6 +88,8 @@ export async function syncData(
     
     // If integration_id is provided, sync only that integration
     if (integrationId) {
+      console.log(`Buscando integração específica com ID: ${integrationId} para empresa: ${empresaId}`);
+      
       const { data: integracao, error: integracaoError } = await supabase
         .from("integracoes_bancarias")
         .select("*")
@@ -89,12 +99,27 @@ export async function syncData(
         .single();
         
       if (integracaoError) {
+        console.error("Erro ao buscar integração:", integracaoError);
         throw new Error(`Integração não encontrada: ${integracaoError.message}`);
       }
       
-      console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}`);
+      if (!integracao) {
+        throw new Error(`Integração com ID ${integrationId} não encontrada ou não está ativa`);
+      }
       
-      const itemId = integracao.detalhes.item_id || integracao.item_id;
+      console.log(`Integração encontrada:`, {
+        id: integracao.id,
+        nome_banco: integracao.nome_banco,
+        item_id: integracao.detalhes?.item_id || integracao.item_id
+      });
+      
+      const itemId = integracao.detalhes?.item_id || integracao.item_id;
+      
+      if (!itemId) {
+        throw new Error(`Item ID não encontrado na integração ${integracao.id}`);
+      }
+      
+      console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}, item: ${itemId}`);
       
       // 1. PATCH: Atualizar item na Pluggy para forçar atualização dos dados
       console.log('Etapa 1: Atualizando dados do item na Pluggy...');
@@ -112,13 +137,18 @@ export async function syncData(
         updatedAccountData = await fetchUpdatedAccountData(itemId, apiKey);
         
         // Atualizar account_data na integração
-        await supabase
+        const { error: updateError } = await supabase
           .from("integracoes_bancarias")
           .update({ 
             account_data: updatedAccountData,
             ultimo_sincronismo: new Date().toISOString()
           })
           .eq("id", integracao.id);
+          
+        if (updateError) {
+          console.error("Erro ao atualizar account_data:", updateError);
+          throw new Error(`Erro ao salvar dados das contas: ${updateError.message}`);
+        }
           
         console.log('Dados das contas atualizados na base de dados');
       } catch (error) {
@@ -137,7 +167,7 @@ export async function syncData(
         apiKey,
         pluggyClientId, 
         pluggyClientSecret, 
-        integracao.detalhes.sandbox || sandbox, 
+        integracao.detalhes?.sandbox || sandbox, 
         supabase
       );
       
@@ -156,6 +186,8 @@ export async function syncData(
       );
     } else {
       // Fetch all active integrations for the company
+      console.log(`Buscando todas as integrações ativas para empresa: ${empresaId}`);
+      
       const { data: integracoes, error: integracoesError } = await supabase
         .from("integracoes_bancarias")
         .select("*")
@@ -164,6 +196,7 @@ export async function syncData(
         .eq("tipo_conexao", "Open Finance");
         
       if (integracoesError) {
+        console.error("Erro ao buscar integrações:", integracoesError);
         throw integracoesError;
       }
       
@@ -186,7 +219,12 @@ export async function syncData(
         try {
           console.log(`Processando integração: ${integracao.nome_banco} (${integracao.id})`);
           
-          const itemId = integracao.detalhes.item_id || integracao.item_id;
+          const itemId = integracao.detalhes?.item_id || integracao.item_id;
+          
+          if (!itemId) {
+            console.warn(`Item ID não encontrado para integração ${integracao.id}, pulando...`);
+            continue;
+          }
           
           // 1. PATCH: Atualizar item na Pluggy
           console.log(`Etapa 1: Atualizando item ${itemId} na Pluggy...`);
@@ -202,12 +240,16 @@ export async function syncData(
             const updatedAccountData = await fetchUpdatedAccountData(itemId, apiKey);
             
             // Atualizar account_data na integração
-            await supabase
+            const { error: updateError } = await supabase
               .from("integracoes_bancarias")
               .update({ account_data: updatedAccountData })
               .eq("id", integracao.id);
               
-            console.log(`Dados das contas atualizados para ${integracao.nome_banco}`);
+            if (updateError) {
+              console.error(`Erro ao atualizar account_data para ${integracao.nome_banco}:`, updateError);
+            } else {
+              console.log(`Dados das contas atualizados para ${integracao.nome_banco}`);
+            }
           } catch (error) {
             console.warn(`Aviso: Não foi possível atualizar dados das contas para ${integracao.nome_banco}: ${error.message}`);
           }
@@ -222,7 +264,7 @@ export async function syncData(
             apiKey,
             pluggyClientId, 
             pluggyClientSecret, 
-            integracao.detalhes.sandbox || sandbox, 
+            integracao.detalhes?.sandbox || sandbox, 
             supabase
           );
           
@@ -237,11 +279,15 @@ export async function syncData(
       }
       
       // Update sync timestamp for all integrations
-      await supabase
+      const { error: timestampError } = await supabase
         .from("integracoes_bancarias")
         .update({ ultimo_sincronismo: new Date().toISOString() })
         .eq("empresa_id", empresaId)
         .eq("tipo_conexao", "Open Finance");
+        
+      if (timestampError) {
+        console.error("Erro ao atualizar timestamp de sincronização:", timestampError);
+      }
       
       // Determinar mensagem baseada no resultado
       let message = "";
