@@ -7,6 +7,7 @@ import { authorizeConnection } from "./authorize.ts";
 import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
 import { processFinancialData } from "./financial-data.ts";
+import { updatePluggyItem } from "./update-item.ts";
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -15,6 +16,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log(`[${new Date().toISOString()}] Requisição recebida: ${req.method}`);
+    
     // Use your specific Supabase and Pluggy credentials
     const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -28,9 +31,13 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
+    console.log("Request data received:", JSON.stringify(requestData, null, 2));
+    
     const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
+    console.log(`Action: ${action}, Empresa ID: ${empresa_id}`);
 
     if (!empresa_id && action !== "test_connection") {
+      console.log("ERROR: Empresa ID é obrigatório");
       return new Response(
         JSON.stringify({ 
           error: "Empresa ID é obrigatório",
@@ -43,9 +50,11 @@ serve(async (req) => {
     // Route to appropriate handler based on action
     switch (action) {
       case "test_connection":
+        console.log("Executando test_connection...");
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
+        console.log("Executando authorize...");
         return await authorizeConnection(
           empresa_id, 
           institution, 
@@ -56,6 +65,7 @@ serve(async (req) => {
         );
       
       case "callback":
+        console.log("Executando callback...");
         return await processCallback(
           empresa_id, 
           item_id, 
@@ -67,6 +77,7 @@ serve(async (req) => {
         );
       
       case "sync":
+        console.log("Executando sync...");
         return await syncData(
           empresa_id, 
           requestData.integration_id, 
@@ -74,6 +85,19 @@ serve(async (req) => {
           pluggyClientId, 
           pluggyClientSecret, 
           supabase, 
+          corsHeaders
+        );
+
+      case "update_item":
+        console.log("Executando update_item...");
+        return await updatePluggyItem(
+          empresa_id,
+          requestData.item_id,
+          requestData.integration_id,
+          sandbox,
+          pluggyClientId,
+          pluggyClientSecret,
+          supabase,
           corsHeaders
         );
 
@@ -146,6 +170,7 @@ serve(async (req) => {
         }
       
       default:
+        console.log(`Ação não suportada: ${action}`);
         return new Response(
           JSON.stringify({ 
             error: "Ação não suportada",

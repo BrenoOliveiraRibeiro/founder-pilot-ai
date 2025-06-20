@@ -9,6 +9,7 @@ export const useOpenFinanceConnections = () => {
   const [activeIntegrations, setActiveIntegrations] = useState<IntegracaoBancaria[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [updatingItems, setUpdatingItems] = useState(false);
   const { currentEmpresa, refreshEmpresas } = useAuth();
   const { toast } = useToast();
 
@@ -45,6 +46,71 @@ export const useOpenFinanceConnections = () => {
     }
   };
 
+  const updatePluggyItems = async () => {
+    if (!currentEmpresa?.id || activeIntegrations.length === 0) {
+      return;
+    }
+
+    setUpdatingItems(true);
+    console.log('Iniciando atualização automática dos items Pluggy...');
+    
+    try {
+      // Para cada integração ativa, fazer PATCH no item da Pluggy
+      for (const integration of activeIntegrations) {
+        if (!integration.item_id) {
+          console.warn(`Integração ${integration.nome_banco} não possui item_id`);
+          continue;
+        }
+
+        console.log(`Atualizando item Pluggy para ${integration.nome_banco} (${integration.item_id})`);
+
+        // Chamar edge function para fazer PATCH no item e processar novas transações
+        const { data, error } = await supabase.functions.invoke("open-finance", {
+          body: {
+            action: "update_item",
+            empresa_id: currentEmpresa.id,
+            item_id: integration.item_id,
+            integration_id: integration.id
+          }
+        });
+
+        if (error) {
+          console.error(`Erro ao atualizar item ${integration.item_id}:`, error);
+          continue;
+        }
+
+        if (data?.error) {
+          console.error(`Erro retornado pela edge function para ${integration.item_id}:`, data.error);
+          continue;
+        }
+
+        console.log(`Item ${integration.item_id} atualizado:`, data);
+
+        // Se houver novas transações, mostrar toast
+        if (data?.newTransactions > 0) {
+          toast({
+            title: `${integration.nome_banco} atualizado`,
+            description: `${data.newTransactions} novas transações foram encontradas e salvas.`,
+          });
+        }
+      }
+
+      // Atualizar a lista de integrações para mostrar o último sincronismo
+      await fetchIntegrations();
+      refreshEmpresas();
+      
+    } catch (error: any) {
+      console.error("Erro ao atualizar items Pluggy:", error);
+      toast({
+        title: "Erro na atualização automática",
+        description: "Houve um problema ao verificar atualizações nas contas bancárias.",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingItems(false);
+    }
+  };
+
   const handleSyncData = async (integracaoId: string) => {
     if (!currentEmpresa?.id) return;
 
@@ -63,7 +129,6 @@ export const useOpenFinanceConnections = () => {
       if (error) {
         console.error("Erro na chamada da função:", error);
         
-        // Extrair mensagem de erro mais detalhada
         let errorMessage = 'Erro desconhecido na sincronização';
         
         if (error.message) {
@@ -77,7 +142,6 @@ export const useOpenFinanceConnections = () => {
         throw new Error(errorMessage);
       }
 
-      // Verificar se a resposta contém erro
       if (data?.error) {
         console.error("Erro retornado pela edge function:", data.error);
         throw new Error(data.message || data.error);
@@ -85,7 +149,6 @@ export const useOpenFinanceConnections = () => {
 
       console.log("Resultado da sincronização:", data);
 
-      // Determinar mensagem e tipo de toast baseado no resultado
       let title = "Sincronização concluída";
       let description = "Os dados foram processados com sucesso.";
       let variant: "default" | "destructive" = "default";
@@ -114,7 +177,6 @@ export const useOpenFinanceConnections = () => {
         variant: variant
       });
 
-      // Update the list of integrations to show the latest sync
       fetchIntegrations();
       refreshEmpresas();
     } catch (error: any) {
@@ -138,9 +200,13 @@ export const useOpenFinanceConnections = () => {
     }
   };
 
+  // Effect para carregar integrações e fazer update automático na primeira carga
   useEffect(() => {
     if (currentEmpresa?.id) {
-      fetchIntegrations();
+      fetchIntegrations().then(() => {
+        // Após carregar integrações, fazer update automático dos items
+        updatePluggyItems();
+      });
     } else {
       setActiveIntegrations([]);
     }
@@ -162,8 +228,10 @@ export const useOpenFinanceConnections = () => {
     activeIntegrations,
     loading,
     syncing,
+    updatingItems,
     handleSyncData,
     formatDate,
-    fetchIntegrations
+    fetchIntegrations,
+    updatePluggyItems
   };
 };

@@ -42,6 +42,7 @@ const OpenFinance = () => {
     activeIntegrations,
     loading,
     syncing,
+    updatingItems,
     handleSyncData,
     formatDate
   } = useOpenFinanceConnections();
@@ -706,6 +707,7 @@ const OpenFinance = () => {
             integrations={activeIntegrations}
             handleSync={handleSyncData}
             syncing={syncing}
+            updatingItems={updatingItems}
             formatDate={formatDate}
           />
         )}
