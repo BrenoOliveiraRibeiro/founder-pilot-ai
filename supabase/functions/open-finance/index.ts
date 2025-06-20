@@ -9,8 +9,11 @@ import { syncData } from "./sync-data.ts";
 import { processFinancialData } from "./financial-data.ts";
 
 serve(async (req) => {
+  console.log(`🚀 [INDEX] Nova requisição recebida: ${req.method} ${req.url}`);
+  
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
+    console.log(`✅ [INDEX] Respondendo CORS preflight`);
     return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
@@ -27,10 +30,36 @@ serve(async (req) => {
     // Inicializa cliente do Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const requestData = await req.json();
+    console.log(`📦 [INDEX] Tentando fazer parse do JSON da requisição...`);
+    
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log(`✅ [INDEX] JSON parseado com sucesso:`, JSON.stringify(requestData, null, 2));
+    } catch (parseError) {
+      console.error(`❌ [INDEX] Erro ao fazer parse do JSON:`, parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Erro ao fazer parse do JSON da requisição",
+          message: parseError.message
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
     const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
+    
+    console.log(`🎯 [INDEX] Parâmetros extraídos:`, {
+      action: action,
+      empresa_id: empresa_id,
+      institution: institution,
+      item_id: item_id,
+      sandbox: sandbox,
+      integration_id: requestData.integration_id
+    });
 
     if (!empresa_id && action !== "test_connection") {
+      console.error(`❌ [INDEX] Empresa ID é obrigatório para action: ${action}`);
       return new Response(
         JSON.stringify({ 
           error: "Empresa ID é obrigatório",
@@ -40,12 +69,16 @@ serve(async (req) => {
       );
     }
 
+    console.log(`🔀 [INDEX] Entrando no switch com action: "${action}"`);
+
     // Route to appropriate handler based on action
     switch (action) {
       case "test_connection":
+        console.log(`🧪 [INDEX] Executando test_connection`);
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
+        console.log(`🔐 [INDEX] Executando authorize`);
         return await authorizeConnection(
           empresa_id, 
           institution, 
@@ -56,6 +89,7 @@ serve(async (req) => {
         );
       
       case "callback":
+        console.log(`📞 [INDEX] Executando callback`);
         return await processCallback(
           empresa_id, 
           item_id, 
@@ -67,7 +101,15 @@ serve(async (req) => {
         );
       
       case "sync":
-        return await syncData(
+        console.log(`🔄 [INDEX] Executando SYNC - Parâmetros para syncData:`);
+        console.log(`   - empresa_id: ${empresa_id}`);
+        console.log(`   - integration_id: ${requestData.integration_id}`);
+        console.log(`   - sandbox: ${sandbox}`);
+        console.log(`   - pluggyClientId: ${pluggyClientId ? 'PRESENTE' : 'AUSENTE'}`);
+        console.log(`   - pluggyClientSecret: ${pluggyClientSecret ? 'PRESENTE' : 'AUSENTE'}`);
+        
+        console.log(`🚀 [INDEX] Chamando função syncData...`);
+        const syncResult = await syncData(
           empresa_id, 
           requestData.integration_id, 
           sandbox, 
@@ -76,8 +118,11 @@ serve(async (req) => {
           supabase, 
           corsHeaders
         );
+        console.log(`✅ [INDEX] syncData retornou:`, syncResult.status, syncResult.statusText);
+        return syncResult;
 
       case "process_financial_data":
+        console.log(`💰 [INDEX] Executando process_financial_data`);
         console.log(`Processando dados financeiros - Empresa: ${empresa_id}, Item: ${requestData.item_id}, Account: ${requestData.account_id}`);
         
         try {
@@ -146,6 +191,7 @@ serve(async (req) => {
         }
       
       default:
+        console.error(`❌ [INDEX] Ação não reconhecida: "${action}"`);
         return new Response(
           JSON.stringify({ 
             error: "Ação não suportada",
@@ -155,7 +201,7 @@ serve(async (req) => {
         );
     }
   } catch (error: any) {
-    console.error("Erro na função de Open Finance:", error);
+    console.error("💥 [INDEX] Erro geral na função de Open Finance:", error);
     return new Response(
       JSON.stringify({ 
         error: "Erro interno do servidor", 
