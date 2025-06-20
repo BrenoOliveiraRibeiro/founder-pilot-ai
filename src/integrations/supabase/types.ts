@@ -282,6 +282,7 @@ export type Database = {
           id: string
           metodo_pagamento: string | null
           recorrente: boolean | null
+          saldo_conta: Json | null
           tipo: string
           transaction_hash: string | null
           valor: number
@@ -295,6 +296,7 @@ export type Database = {
           id?: string
           metodo_pagamento?: string | null
           recorrente?: boolean | null
+          saldo_conta?: Json | null
           tipo: string
           transaction_hash?: string | null
           valor: number
@@ -308,6 +310,7 @@ export type Database = {
           id?: string
           metodo_pagamento?: string | null
           recorrente?: boolean | null
+          saldo_conta?: Json | null
           tipo?: string
           transaction_hash?: string | null
           valor?: number
