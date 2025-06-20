@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NavItem } from "./types";
 import { motion } from "framer-motion";
+import { useRunwayStatus } from "@/hooks/useRunwayStatus";
 
 interface NavItemProps {
   item: NavItem;
@@ -24,6 +25,11 @@ interface NavItemProps {
 
 export const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive }) => {
   const IconComponent = item.icon;
+  const runwayStatus = useRunwayStatus();
+  
+  // Aplicar badge dinâmico para o item Runway
+  const dynamicBadge = item.href === '/runway' ? runwayStatus.label : item.badge;
+  const badgeColor = item.href === '/runway' ? runwayStatus.color : undefined;
   
   return (
     <motion.li 
@@ -52,9 +58,13 @@ export const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive }) => 
           <span>{item.title}</span>
         </div>
         
-        {item.badge && (
-          <span className="px-1.5 py-0.5 text-xs rounded-md bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse-subtle">
-            {item.badge}
+        {dynamicBadge && (
+          <span className={cn(
+            "px-1.5 py-0.5 text-xs rounded-md font-medium",
+            badgeColor || "bg-red-500/20 text-red-600 dark:text-red-400",
+            item.href === '/runway' && !runwayStatus.hasRealData && "animate-pulse-subtle"
+          )}>
+            {dynamicBadge}
           </span>
         )}
         
