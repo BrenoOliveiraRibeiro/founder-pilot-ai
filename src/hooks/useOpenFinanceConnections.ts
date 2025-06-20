@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,34 +49,19 @@ export const useOpenFinanceConnections = () => {
     if (!currentEmpresa?.id) return;
 
     setSyncing(integracaoId);
-    console.log(`🚀 [FRONTEND] Iniciando sincronização da integração ${integracaoId} para empresa ${currentEmpresa.id}`);
-    
-    // Toast inicial informando que a sincronização começou
-    toast({
-      title: "Sincronização iniciada",
-      description: "Atualizando dados bancários e sincronizando transações...",
-    });
-
-    // Preparar payload para debug
-    const payload = {
-      action: "sync",
-      empresa_id: currentEmpresa.id,
-      integration_id: integracaoId
-    };
-    
-    console.log(`📦 [FRONTEND] Payload sendo enviado:`, JSON.stringify(payload, null, 2));
+    console.log(`Iniciando sincronização da integração ${integracaoId} para empresa ${currentEmpresa.id}`);
     
     try {
-      console.log(`📡 [FRONTEND] Chamando supabase.functions.invoke("open-finance")...`);
       const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: payload
+        body: {
+          action: "sync",
+          empresa_id: currentEmpresa.id,
+          integration_id: integracaoId
+        }
       });
 
-      console.log(`📥 [FRONTEND] Resposta recebida - data:`, data);
-      console.log(`📥 [FRONTEND] Resposta recebida - error:`, error);
-
       if (error) {
-        console.error("❌ [FRONTEND] Erro na chamada da função:", error);
+        console.error("Erro na chamada da função:", error);
         
         // Extrair mensagem de erro mais detalhada
         let errorMessage = 'Erro desconhecido na sincronização';
@@ -93,11 +79,11 @@ export const useOpenFinanceConnections = () => {
 
       // Verificar se a resposta contém erro
       if (data?.error) {
-        console.error("❌ [FRONTEND] Erro retornado pela edge function:", data.error);
+        console.error("Erro retornado pela edge function:", data.error);
         throw new Error(data.message || data.error);
       }
 
-      console.log("✅ [FRONTEND] Resultado da sincronização:", data);
+      console.log("Resultado da sincronização:", data);
 
       // Determinar mensagem e tipo de toast baseado no resultado
       let title = "Sincronização concluída";
@@ -118,11 +104,6 @@ export const useOpenFinanceConnections = () => {
           title = "Sincronização concluída";
           description = "Nenhuma transação encontrada para sincronizar.";
         }
-        
-        // Adicionar informação sobre atualização de contas se disponível
-        if (data.accountDataUpdated) {
-          description += " Saldos das contas foram atualizados.";
-        }
       } else if (data && data.message) {
         description = data.message;
       }
@@ -137,7 +118,7 @@ export const useOpenFinanceConnections = () => {
       fetchIntegrations();
       refreshEmpresas();
     } catch (error: any) {
-      console.error("💥 [FRONTEND] Erro ao sincronizar dados:", error);
+      console.error("Erro ao sincronizar dados:", error);
       
       let errorMessage = "Não foi possível sincronizar os dados financeiros.";
       

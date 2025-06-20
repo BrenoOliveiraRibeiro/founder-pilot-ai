@@ -1,49 +1,6 @@
+
 import { getPluggyToken } from "./utils.ts";
 import { processFinancialData } from "./financial-data.ts";
-
-async function updatePluggyItem(itemId: string, apiKey: string) {
-  console.log(`🔄 [SYNC-DATA] INICIANDO ATUALIZAÇÃO - Item ID: ${itemId}`);
-  console.log(`🔑 [SYNC-DATA] API Key disponível: ${apiKey ? 'SIM' : 'NÃO'}`);
-  
-  if (!itemId) {
-    console.error(`❌ [SYNC-DATA] ERRO: Item ID está vazio ou inválido`);
-    return { success: false, error: 'Item ID é obrigatório' };
-  }
-  
-  if (!apiKey) {
-    console.error(`❌ [SYNC-DATA] ERRO: API Key está vazia ou inválida`);
-    return { success: false, error: 'API Key é obrigatória' };
-  }
-  
-  console.log(`🚀 [SYNC-DATA] Fazendo PATCH request para: https://api.pluggy.ai/items/${itemId}`);
-  
-  try {
-    const response = await fetch(`https://api.pluggy.ai/items/${itemId}`, {
-      method: 'PATCH',
-      headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'X-API-KEY': apiKey
-      }
-    });
-
-    console.log(`📡 [SYNC-DATA] Resposta recebida - Status: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ [SYNC-DATA] ERRO na resposta da API Pluggy: ${response.status} ${response.statusText}`);
-      console.error(`📄 [SYNC-DATA] Detalhes do erro:`, errorText);
-      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
-    }
-
-    const result = await response.json();
-    console.log(`✅ [SYNC-DATA] Item ${itemId} atualizado com sucesso na API Pluggy:`, result);
-    return { success: true, data: result };
-  } catch (error) {
-    console.error(`💥 [SYNC-DATA] ERRO na requisição PATCH para item ${itemId}:`, error);
-    return { success: false, error: error.message };
-  }
-}
 
 export async function syncData(
   empresaId: string, 
@@ -54,39 +11,20 @@ export async function syncData(
   supabase: any, 
   corsHeaders: Record<string, string>
 ) {
-  console.log(`🏢 [SYNC-DATA] === INÍCIO DA FUNÇÃO SYNCDATA ===`);
-  console.log(`🏢 [SYNC-DATA] Sincronizando dados da empresa ${empresaId}`);
-  console.log(`🔧 [SYNC-DATA] Integration ID: ${integrationId || 'TODAS AS INTEGRAÇÕES'}`);
-  console.log(`🧪 [SYNC-DATA] Sandbox: ${sandbox}`);
-  console.log(`👤 [SYNC-DATA] Pluggy Client ID: ${pluggyClientId ? pluggyClientId.substring(0, 8) + '***' : 'AUSENTE'}`);
-  console.log(`🔐 [SYNC-DATA] Pluggy Client Secret: ${pluggyClientSecret ? 'PRESENTE (length: ' + pluggyClientSecret.length + ')' : 'AUSENTE'}`);
-  
-  // Log dos parâmetros recebidos para debug
-  console.log(`📋 [SYNC-DATA] Parâmetros recebidos:`, {
-    empresaId: empresaId,
-    integrationId: integrationId,
-    empresaIdType: typeof empresaId,
-    integrationIdType: typeof integrationId
-  });
+  console.log(`Sincronizando dados da empresa ${empresaId}`);
   
   try {
     // Get API key
-    console.log(`🔑 [SYNC-DATA] Obtendo token da API Pluggy...`);
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
     if (!tokenResult.success) {
-      console.error(`❌ [SYNC-DATA] Falha na autenticação com a API Pluggy:`, tokenResult.error);
       throw new Error(`Falha na autenticação com a API Pluggy: ${tokenResult.error.message}`);
     }
     
     const apiKey = tokenResult.data.apiKey;
-    console.log(`✅ [SYNC-DATA] Token obtido com sucesso`);
-    console.log(`🔑 [SYNC-DATA] API Key obtida: ${apiKey ? apiKey.substring(0, 10) + '***' : 'NULA'}`);
     
     // If integration_id is provided, sync only that integration
     if (integrationId) {
-      console.log(`🎯 [SYNC-DATA] Buscando integração específica com ID: ${integrationId} para empresa: ${empresaId}`);
-      
       const { data: integracao, error: integracaoError } = await supabase
         .from("integracoes_bancarias")
         .select("*")
@@ -96,70 +34,31 @@ export async function syncData(
         .single();
         
       if (integracaoError) {
-        console.error("❌ [SYNC-DATA] Erro ao buscar integração:", integracaoError);
         throw new Error(`Integração não encontrada: ${integracaoError.message}`);
       }
       
-      if (!integracao) {
-        console.error(`❌ [SYNC-DATA] Integração com ID ${integrationId} não encontrada ou não está ativa`);
-        throw new Error(`Integração com ID ${integrationId} não encontrada ou não está ativa`);
-      }
+      console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}`);
       
-      console.log(`📋 [SYNC-DATA] Integração encontrada:`, {
-        id: integracao.id,
-        nome_banco: integracao.nome_banco,
-        item_id: integracao.detalhes?.item_id || integracao.item_id,
-        detalhes: integracao.detalhes
-      });
-      
-      const itemId = integracao.detalhes?.item_id || integracao.item_id;
-      
-      if (!itemId) {
-        console.error(`❌ [SYNC-DATA] Item ID não encontrado na integração ${integracao.id}`);
-        console.error(`📋 [SYNC-DATA] Estrutura da integração:`, JSON.stringify(integracao, null, 2));
-        throw new Error(`Item ID não encontrado na integração ${integracao.id}`);
-      }
-      
-      console.log(`🚀 [SYNC-DATA] Iniciando sincronização da integração: ${integracao.id}, ${integracao.nome_banco}, item: ${itemId}`);
-      
-      // 1. PATCH: Atualizar item na Pluggy para forçar atualização dos dados
-      console.log('📍 [SYNC-DATA] Etapa 1: Atualizando dados do item na Pluggy...');
-      console.log(`🔄 [SYNC-DATA] Chamando updatePluggyItem com itemId: ${itemId} e apiKey: ${apiKey ? 'PRESENTE' : 'AUSENTE'}`);
-      
-      const updateResult = await updatePluggyItem(itemId, apiKey);
-      
-      console.log(`📊 [SYNC-DATA] Resultado da atualização:`, updateResult);
-      
-      if (!updateResult.success) {
-        console.warn(`⚠️ [SYNC-DATA] Aviso: Não foi possível atualizar o item ${itemId}: ${updateResult.error}`);
-        // Continua com a sincronização mesmo se o PATCH falhar
-      }
-      
-      // 2. Processar dados financeiros (transações)
-      console.log('📍 [SYNC-DATA] Etapa 2: Processando transações...');
+      // Use processFinancialData para sincronização consistente
       const result = await processFinancialData(
         empresaId, 
-        itemId, 
+        integracao.detalhes.item_id || integracao.item_id, 
         null, // accountId será determinado automaticamente
         null, // transactionsData será buscado da API
         apiKey,
         pluggyClientId, 
         pluggyClientSecret, 
-        integracao.detalhes?.sandbox || sandbox, 
+        integracao.detalhes.sandbox || sandbox, 
         supabase
       );
       
-      // 3. Atualizar timestamp de sincronização
-      const { error: timestampError } = await supabase
+      // Update sync timestamp
+      await supabase
         .from("integracoes_bancarias")
         .update({ ultimo_sincronismo: new Date().toISOString() })
         .eq("id", integracao.id);
         
-      if (timestampError) {
-        console.error("❌ [SYNC-DATA] Erro ao atualizar timestamp:", timestampError);
-      }
-      
-      console.log(`✅ [SYNC-DATA] Resultado da sincronização: ${result.message}, novas: ${result.newTransactions}, duplicatas: ${result.duplicates}`);
+      console.log(`Resultado da sincronização: ${result.message}, novas: ${result.newTransactions}, duplicatas: ${result.duplicates}`);
         
       return new Response(
         JSON.stringify({ 
@@ -167,15 +66,12 @@ export async function syncData(
           message: result.message,
           newTransactions: result.newTransactions || 0,
           duplicates: result.duplicates || 0,
-          total: result.total || 0,
-          itemUpdated: updateResult.success
+          total: result.total || 0
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     } else {
       // Fetch all active integrations for the company
-      console.log(`[SYNC-DATA] Buscando todas as integrações ativas para empresa: ${empresaId}`);
-      
       const { data: integracoes, error: integracoesError } = await supabase
         .from("integracoes_bancarias")
         .select("*")
@@ -184,7 +80,6 @@ export async function syncData(
         .eq("tipo_conexao", "Open Finance");
         
       if (integracoesError) {
-        console.error("Erro ao buscar integrações:", integracoesError);
         throw integracoesError;
       }
       
@@ -200,39 +95,21 @@ export async function syncData(
       let totalNewTransactions = 0;
       let totalDuplicates = 0;
       let totalProcessed = 0;
-      let itemsUpdated = 0;
       
-      // For each integration, update item and process financial data
+      // For each integration, use processFinancialData consistently
       for (const integracao of integracoes) {
         try {
           console.log(`Processando integração: ${integracao.nome_banco} (${integracao.id})`);
           
-          const itemId = integracao.detalhes?.item_id || integracao.item_id;
-          
-          if (!itemId) {
-            console.warn(`Item ID não encontrado para integração ${integracao.id}, pulando...`);
-            continue;
-          }
-          
-          // 1. PATCH: Atualizar item na Pluggy
-          console.log(`Etapa 1: Atualizando item ${itemId} na Pluggy...`);
-          const updateResult = await updatePluggyItem(itemId, apiKey);
-          
-          if (updateResult.success) {
-            itemsUpdated++;
-          }
-          
-          // 2. Processar dados financeiros
-          console.log(`Etapa 2: Processando transações para ${integracao.nome_banco}...`);
           const result = await processFinancialData(
             empresaId, 
-            itemId, 
+            integracao.detalhes.item_id || integracao.item_id, 
             null, // accountId será determinado automaticamente
             null, // transactionsData será buscado da API
             apiKey,
             pluggyClientId, 
             pluggyClientSecret, 
-            integracao.detalhes?.sandbox || sandbox, 
+            integracao.detalhes.sandbox || sandbox, 
             supabase
           );
           
@@ -247,15 +124,11 @@ export async function syncData(
       }
       
       // Update sync timestamp for all integrations
-      const { error: timestampError } = await supabase
+      await supabase
         .from("integracoes_bancarias")
         .update({ ultimo_sincronismo: new Date().toISOString() })
         .eq("empresa_id", empresaId)
         .eq("tipo_conexao", "Open Finance");
-        
-      if (timestampError) {
-        console.error("Erro ao atualizar timestamp de sincronização:", timestampError);
-      }
       
       // Determinar mensagem baseada no resultado
       let message = "";
@@ -270,10 +143,6 @@ export async function syncData(
         message = "Nenhuma transação encontrada para sincronizar";
       }
       
-      if (itemsUpdated > 0) {
-        message += `. ${itemsUpdated} item(s) atualizados.`;
-      }
-      
       console.log(`Sincronização completa: ${message}`);
       
       return new Response(
@@ -282,14 +151,13 @@ export async function syncData(
           message: message,
           newTransactions: totalNewTransactions,
           duplicates: totalDuplicates,
-          total: totalProcessed,
-          itemsUpdated: itemsUpdated
+          total: totalProcessed
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
   } catch (error) {
-    console.error("💥 [SYNC-DATA] Erro na sincronização:", error);
+    console.error("Erro na sincronização:", error);
     return new Response(
       JSON.stringify({ 
         error: "Falha ao sincronizar dados", 
