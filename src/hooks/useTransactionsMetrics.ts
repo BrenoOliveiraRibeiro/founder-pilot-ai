@@ -47,48 +47,13 @@ export const useTransactionsMetrics = ({ selectedDate }: UseTransactionsMetricsP
         const anoTarget = targetDate.getFullYear();
         const mesTarget = targetDate.getMonth();
 
-        // Buscar saldo atual das contas conectadas primeiro
-        const { data: transacoesComSaldo } = await supabase
-          .from('transacoes')
-          .select('saldo_conta, data_transacao')
-          .eq('empresa_id', currentEmpresa.id)
-          .not('saldo_conta', 'is', null)
-          .order('data_transacao', { ascending: false })
-          .limit(10);
-
-        let saldoAtualContas = 0;
-        
-        // Calcular saldo das contas conectadas a partir dos dados mais recentes
-        if (transacoesComSaldo && transacoesComSaldo.length > 0) {
-          const contasProcessadas = new Set();
-          
-          for (const transacao of transacoesComSaldo) {
-            if (transacao.saldo_conta && typeof transacao.saldo_conta === 'object') {
-              const saldoData = transacao.saldo_conta as any;
-              const contaId = saldoData.accountId || JSON.stringify(saldoData);
-              
-              if (!contasProcessadas.has(contaId)) {
-                saldoAtualContas += saldoData.balance || 0;
-                contasProcessadas.add(contaId);
-              }
-            }
-          }
-        }
-
-        // Se temos saldo das contas conectadas, usar este valor
-        // Caso contrário, calcular saldo acumulado das transações
-        let saldoTotal;
-        if (saldoAtualContas > 0) {
-          saldoTotal = saldoAtualContas;
-        } else {
-          // Calcular saldo total até a data selecionada (inclusive)
-          const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0);
-          saldoTotal = transacoes
-            .filter(tx => new Date(tx.data_transacao) <= endOfSelectedMonth)
-            .reduce((acc, tx) => {
-              return acc + Number(tx.valor);
-            }, 0);
-        }
+        // Calcular saldo total até a data selecionada (inclusive)
+        const endOfSelectedMonth = new Date(anoTarget, mesTarget + 1, 0); // último dia do mês selecionado
+        const saldoTotal = transacoes
+          .filter(tx => new Date(tx.data_transacao) <= endOfSelectedMonth)
+          .reduce((acc, tx) => {
+            return acc + Number(tx.valor);
+          }, 0);
 
         // Filtrar transações do mês selecionado
         const transacoesMesSelecionado = transacoes.filter(tx => {

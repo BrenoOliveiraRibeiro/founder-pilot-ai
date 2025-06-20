@@ -61,58 +61,23 @@ export const useOpenFinanceDashboard = () => {
         return;
       }
 
-      // Buscar transações mais recentes para obter saldo atual das contas conectadas
-      const { data: transacoesRecentes, error: transacoesError } = await supabase
-        .from('transacoes')
-        .select('saldo_conta, data_transacao')
-        .eq('empresa_id', currentEmpresa.id)
-        .not('saldo_conta', 'is', null)
-        .order('data_transacao', { ascending: false })
-        .limit(10);
-
-      if (transacoesError) {
-        console.error('Erro ao buscar transações com saldo:', transacoesError);
-      }
-
-      // Calcular saldo total das contas conectadas a partir dos dados mais recentes
+      // Calcular saldo total das contas conectadas
       let saldoTotal = 0;
       let ultimaAtualizacao: string | null = null;
 
-      // Se temos dados de saldo nas transações, usar estes
-      if (transacoesRecentes && transacoesRecentes.length > 0) {
-        const contasProcessadas = new Set();
-        
-        for (const transacao of transacoesRecentes) {
-          if (transacao.saldo_conta && typeof transacao.saldo_conta === 'object') {
-            const saldoData = transacao.saldo_conta as any;
-            const contaId = saldoData.accountId || 'default';
-            
-            if (!contasProcessadas.has(contaId)) {
-              saldoTotal += saldoData.balance || 0;
-              contasProcessadas.add(contaId);
-            }
-          }
-          
-          if (!ultimaAtualizacao || transacao.data_transacao > ultimaAtualizacao) {
-            ultimaAtualizacao = transacao.data_transacao;
+      for (const integracao of integracoes || []) {
+        if (integracao.account_data && typeof integracao.account_data === 'object') {
+          const accountData = integracao.account_data as any;
+          if (accountData.results && Array.isArray(accountData.results)) {
+            saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+              return sum + (account.balance || 0);
+            }, 0);
           }
         }
-      } else {
-        // Fallback para account_data nas integrações
-        for (const integracao of integracoes || []) {
-          if (integracao.account_data && typeof integracao.account_data === 'object') {
-            const accountData = integracao.account_data as any;
-            if (accountData.results && Array.isArray(accountData.results)) {
-              saldoTotal += accountData.results.reduce((sum: number, account: any) => {
-                return sum + (account.balance || 0);
-              }, 0);
-            }
-          }
-          
-          if (integracao.ultimo_sincronismo) {
-            if (!ultimaAtualizacao || new Date(integracao.ultimo_sincronismo) > new Date(ultimaAtualizacao)) {
-              ultimaAtualizacao = integracao.ultimo_sincronismo;
-            }
+        
+        if (integracao.ultimo_sincronismo) {
+          if (!ultimaAtualizacao || new Date(integracao.ultimo_sincronismo) > new Date(ultimaAtualizacao)) {
+            ultimaAtualizacao = integracao.ultimo_sincronismo;
           }
         }
       }
@@ -121,13 +86,13 @@ export const useOpenFinanceDashboard = () => {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-      const { data: transacoes, error: transacoesMetricasError } = await supabase
+      const { data: transacoes, error: transacoesError } = await supabase
         .from('transacoes')
         .select('*')
         .eq('empresa_id', currentEmpresa.id)
         .gte('data_transacao', threeMonthsAgo.toISOString().split('T')[0]);
 
-      if (transacoesMetricasError) throw transacoesMetricasError;
+      if (transacoesError) throw transacoesError;
 
       // Calcular métricas baseadas nas transações
       const hoje = new Date();
