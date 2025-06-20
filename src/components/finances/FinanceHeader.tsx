@@ -45,6 +45,10 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
               initialFocus
               className={cn("p-3 pointer-events-auto")}
               locale={pt}
+              captionLayout="dropdown-buttons"
+              fromYear={2020}
+              toYear={2030}
+              hideNavigation
             />
           </PopoverContent>
         </Popover>
