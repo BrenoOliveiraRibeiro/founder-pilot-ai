@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   BarChart3, 
@@ -18,6 +19,7 @@ export interface NavItem {
   highlight?: boolean;
   badge?: string | React.ReactNode;
   badgeColor?: string;
+  group?: string;
 }
 
 export interface NavGroup {
@@ -27,60 +29,78 @@ export interface NavGroup {
 
 export type NavGroups = Record<string, NavItem[]>;
 
+export const groupLabels: Record<string, string> = {
+  "Principal": "Principal",
+  "Análise": "Análise", 
+  "Gestão": "Gestão"
+};
+
 export const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/",
     icon: HomeIcon,
+    group: "Principal"
   },
   {
     title: "Saúde Financeira",
     href: "/finances",
     icon: DollarSign,
+    group: "Principal"
   },
   {
     title: "Runway",
     href: "/runway",
     icon: TrendingUp,
+    group: "Principal"
     // O badge será definido dinamicamente
   },
   {
     title: "Análise de Mercado", 
     href: "/market",
     icon: BarChart3,
+    group: "Análise"
   },
   {
     title: "Co-Founder AI",
     href: "/advisor",
     icon: Sparkles,
     highlight: true,
+    group: "Análise"
   },
   {
     title: "Relatórios",
     href: "/reports",
     icon: FileText,
+    group: "Gestão"
   },
   {
     title: "Calendário",
     href: "/calendar",
     icon: Calendar,
+    group: "Gestão"
   },
   {
     title: "Equipe",
     href: "/team",
     icon: Users2,
+    group: "Gestão"
   },
   {
     title: "Configurações",
     href: "/settings",
     icon: Settings,
+    group: "Gestão"
   },
 ];
 
 export const groupNavItems = (items: NavItem[]): NavGroups => {
-  return {
-    "Principal": items.slice(0, 3),
-    "Análise": items.slice(3, 5),
-    "Gestão": items.slice(5)
-  };
+  return items.reduce((groups, item) => {
+    const group = item.group || 'outros';
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(item);
+    return groups;
+  }, {} as NavGroups);
 };
