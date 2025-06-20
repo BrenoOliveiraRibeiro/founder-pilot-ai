@@ -48,7 +48,6 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
               captionLayout="dropdown-buttons"
               fromYear={2020}
               toYear={2030}
-              hideNavigation
             />
           </PopoverContent>
         </Popover>
