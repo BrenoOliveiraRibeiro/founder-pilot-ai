@@ -702,7 +702,12 @@ const OpenFinance = () => {
         )}
         
         {activeIntegrations.length > 0 && (
-          <ActiveIntegrationsCard />
+          <ActiveIntegrationsCard 
+            integrations={activeIntegrations}
+            handleSync={handleSyncData}
+            syncing={syncing}
+            formatDate={formatDate}
+          />
         )}
         
         <Card className="border-none shadow-md">
