@@ -3,7 +3,7 @@ import { z } from "zod";
 
 // Schema para dados financeiros básicos
 export const financeDataSchema = z.object({
-  saldoCaixa: z.number().min(0, "Saldo deve ser positivo"),
+  saldoCaixa: z.number(), // Removido .min(0) para permitir saldo negativo
   entradasMesAtual: z.number().min(0, "Entradas devem ser positivas"),
   saidasMesAtual: z.number().min(0, "Saídas devem ser positivas"),
   fluxoCaixaMesAtual: z.number(),
