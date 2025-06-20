@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -28,6 +28,10 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  
+  // Refs para os campos de input
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -106,6 +110,22 @@ const Auth = () => {
     form.reset();
   };
 
+  // Função para lidar com a tecla Enter no campo de email
+  const handleEmailKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      passwordRef.current?.focus();
+    }
+  };
+
+  // Função para lidar com a tecla Enter no campo de senha
+  const handlePasswordKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
   // Se estiver mostrando confirmação de email
   if (showEmailConfirmation && registeredEmail) {
     return (
@@ -166,7 +186,12 @@ const Auth = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="seu@email.com" {...field} />
+                        <Input 
+                          placeholder="seu@email.com" 
+                          {...field} 
+                          ref={emailRef}
+                          onKeyDown={handleEmailKeyDown}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -179,7 +204,13 @@ const Auth = () => {
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="******" {...field} />
+                        <Input 
+                          type="password" 
+                          placeholder="******" 
+                          {...field} 
+                          ref={passwordRef}
+                          onKeyDown={handlePasswordKeyDown}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
