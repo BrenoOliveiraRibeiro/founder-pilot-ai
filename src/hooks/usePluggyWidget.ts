@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { pluggyAuth } from '@/utils/pluggyAuth';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -15,6 +16,7 @@ export const usePluggyWidget = () => {
   const pluggyConnectInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
   const { toast } = useToast();
+  const { currentEmpresa } = useAuth();
 
   useEffect(() => {
     if (window.PluggyConnect && !scriptLoadedRef.current) {
@@ -69,6 +71,15 @@ export const usePluggyWidget = () => {
       return;
     }
 
+    if (!currentEmpresa?.id) {
+      toast({
+        title: "Erro",
+        description: "Empresa não encontrada. Faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (pluggyConnectInstanceRef.current) {
       console.log('Destroying existing Pluggy Connect instance');
       try {
@@ -83,34 +94,32 @@ export const usePluggyWidget = () => {
     console.log("Iniciando conexão com Pluggy Connect...");
 
     try {
-      pluggyAuth.clearToken();
-      
-      const response = await pluggyAuth.makeAuthenticatedRequest('https://api.pluggy.ai/connect_token', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          options: {
-            clientUserId: `user_${Date.now()}`,
-          },
-        }),
+      // Usar a edge function via supabase
+      const { data, error } = await supabase.functions.invoke('open-finance', {
+        body: {
+          action: 'authorize',
+          empresa_id: currentEmpresa.id,
+          institution: 'pluggy',
+          sandbox: true
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        throw new Error(`Erro na edge function: ${error.message}`);
       }
 
-      const tokenData = await response.json();
-      console.log('Connect token response:', tokenData);
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-      if (!tokenData.accessToken) {
-        throw new Error('No access token received');
+      console.log('Connect token response:', data);
+
+      if (!data?.connect_token) {
+        throw new Error('No connect token received');
       }
 
       pluggyConnectInstanceRef.current = new window.PluggyConnect({
-        connectToken: tokenData.accessToken,
+        connectToken: data.connect_token,
         includeSandbox: true,
         onSuccess: async (itemData: any) => {
           console.log('Pluggy connect success!', itemData);
@@ -118,7 +127,7 @@ export const usePluggyWidget = () => {
           
           setIsConnecting(false);
           
-          // Chamar callback de sucesso que irá processar automaticamente
+          // Chamar callback de sucesso
           await onSuccess(itemData);
         },
         onError: (error: any) => {
@@ -126,16 +135,20 @@ export const usePluggyWidget = () => {
           setIsConnecting(false);
           onError(error);
         },
+        onClose: () => {
+          console.log('Pluggy Connect closed');
+          setIsConnecting(false);
+        }
       });
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
     } catch (error) {
-      console.error('Error fetching connect token or initializing Pluggy Connect:', error);
+      console.error('Error initializing Pluggy Connect:', error);
       setIsConnecting(false);
       toast({
         title: "Erro",
-        description: `Falha ao obter token de conexão: ${error.message || 'Erro desconhecido'}`,
+        description: `Falha ao inicializar widget: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }

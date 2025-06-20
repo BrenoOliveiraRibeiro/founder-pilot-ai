@@ -24,7 +24,14 @@ export async function authorizeConnection(empresaId: string, institution: string
     
     // Agora, gerar connect token para o widget
     const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, {
-      clientUserId: empresaId
+      clientUserId: `empresa_${empresaId}`,
+      options: {
+        // Configurações opcionais do widget
+        includeSandbox: sandbox,
+        products: ['accounts', 'transactions'],
+        // Webhook URL para receber callbacks (opcional)
+        webhookUrl: null
+      }
     });
     
     if (!connectTokenResult.success) {
@@ -42,7 +49,9 @@ export async function authorizeConnection(empresaId: string, institution: string
       JSON.stringify({ 
         connect_token: connectTokenResult.data.accessToken,
         api_key: apiKey,
-        institution
+        institution,
+        sandbox: sandbox,
+        empresa_id: empresaId
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
