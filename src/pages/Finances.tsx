@@ -53,15 +53,15 @@ const FinancesPage = () => {
         </TabsContent>
 
         <TabsContent value="cashflow">
-          <CashFlowTab selectedDate={selectedDate} />
+          <CashFlowTab />
         </TabsContent>
 
         <TabsContent value="expenses">
-          <ExpensesTab selectedDate={selectedDate} />
+          <ExpensesTab />
         </TabsContent>
 
         <TabsContent value="accounts">
-          <AccountsTab selectedDate={selectedDate} />
+          <AccountsTab />
         </TabsContent>
       </Tabs>
     </AppLayout>
