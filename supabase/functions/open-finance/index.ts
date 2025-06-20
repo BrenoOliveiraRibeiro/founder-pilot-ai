@@ -10,8 +10,9 @@ import { processFinancialData } from "./financial-data.ts";
 import { updatePluggyItem } from "./update-item.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight request FIRST
   if (req.method === "OPTIONS") {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
