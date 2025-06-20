@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, CheckCircle, Database } from "lucide-react";
 import { IntegracaoBancaria } from "@/integrations/supabase/models";
 
 interface ActiveIntegrationsCardProps {
@@ -20,6 +20,20 @@ export const ActiveIntegrationsCard = ({
 }: ActiveIntegrationsCardProps) => {
   const isRunwayCritical = (integration: IntegracaoBancaria) => {
     return integration.detalhes?.runway_meses < 3;
+  };
+
+  const getSyncButtonText = (integrationId: string) => {
+    if (syncing === integrationId) {
+      return "Sincronizando...";
+    }
+    return "Sincronizar Dados";
+  };
+
+  const getSyncButtonDescription = (integrationId: string) => {
+    if (syncing === integrationId) {
+      return "Atualizando saldos e transações";
+    }
+    return "Atualizar saldos e sincronizar transações";
   };
 
   return (
@@ -49,8 +63,22 @@ export const ActiveIntegrationsCard = ({
                 {integration.nome_banco.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="font-medium">{integration.nome_banco}</h3>
-                <p className="text-xs text-muted-foreground">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-medium">{integration.nome_banco}</h3>
+                  {isRunwayCritical(integration) && (
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  )}
+                  {syncing === integration.id && (
+                    <div className="flex items-center gap-1">
+                      <Database className="h-3 w-3 text-blue-500 animate-pulse" />
+                      <span className="text-xs text-blue-600">Atualizando...</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {integration.tipo_conexao}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
                   Última sincronização: {formatDate(integration.ultimo_sincronismo)}
                 </p>
                 {isRunwayCritical(integration) && (
@@ -61,16 +89,24 @@ export const ActiveIntegrationsCard = ({
                 )}
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="transition-all duration-200 hover:bg-primary/5"
-              onClick={() => handleSync(integration.id)}
-              disabled={syncing === integration.id}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncing === integration.id ? "animate-spin" : ""}`} />
-              {syncing === integration.id ? "Sincronizando..." : "Sincronizar Dados"}
-            </Button>
+            <div className="text-right">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="transition-all duration-200 hover:bg-primary/5"
+                onClick={() => handleSync(integration.id)}
+                disabled={syncing === integration.id}
+                title={getSyncButtonDescription(integration.id)}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing === integration.id ? "animate-spin" : ""}`} />
+                {getSyncButtonText(integration.id)}
+              </Button>
+              {syncing === integration.id && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Processando em 3 etapas...
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </CardContent>

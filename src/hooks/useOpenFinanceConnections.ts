@@ -51,6 +51,12 @@ export const useOpenFinanceConnections = () => {
     setSyncing(integracaoId);
     console.log(`Iniciando sincronização da integração ${integracaoId} para empresa ${currentEmpresa.id}`);
     
+    // Toast inicial informando que a sincronização começou
+    toast({
+      title: "Sincronização iniciada",
+      description: "Atualizando dados bancários e sincronizando transações...",
+    });
+    
     try {
       const { data, error } = await supabase.functions.invoke("open-finance", {
         body: {
@@ -103,6 +109,11 @@ export const useOpenFinanceConnections = () => {
         } else {
           title = "Sincronização concluída";
           description = "Nenhuma transação encontrada para sincronizar.";
+        }
+        
+        // Adicionar informação sobre atualização de contas se disponível
+        if (data.accountDataUpdated) {
+          description += " Saldos das contas foram atualizados.";
         }
       } else if (data && data.message) {
         description = data.message;
