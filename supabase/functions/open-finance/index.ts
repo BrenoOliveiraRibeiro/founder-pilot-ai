@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 import { corsHeaders } from "./utils.ts";
@@ -6,7 +7,6 @@ import { authorizeConnection } from "./authorize.ts";
 import { processCallback } from "./callback.ts";
 import { syncData } from "./sync-data.ts";
 import { processFinancialData } from "./financial-data.ts";
-import { refreshBalances } from "./refresh-balances.ts";
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -74,17 +74,6 @@ serve(async (req) => {
           pluggyClientId, 
           pluggyClientSecret, 
           supabase, 
-          corsHeaders
-        );
-
-      case "refresh_balances":
-        console.log(`Atualizando saldos - Empresa: ${empresa_id}`);
-        return await refreshBalances(
-          empresa_id,
-          pluggyClientId,
-          pluggyClientSecret,
-          sandbox,
-          supabase,
           corsHeaders
         );
 

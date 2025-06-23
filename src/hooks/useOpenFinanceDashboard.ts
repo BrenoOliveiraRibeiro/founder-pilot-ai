@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { useBalanceRefresh } from './useBalanceRefresh';
 
 interface OpenFinanceMetrics {
   saldoTotal: number;
@@ -22,9 +22,8 @@ export const useOpenFinanceDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
-  const { refreshBalances, refreshing } = useBalanceRefresh();
 
-  const fetchOpenFinanceData = async (skipBalanceRefresh = false) => {
+  const fetchOpenFinanceData = async () => {
     if (!currentEmpresa?.id) {
       setLoading(false);
       return;
@@ -34,13 +33,7 @@ export const useOpenFinanceDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Atualizar saldos automaticamente antes de buscar métricas (apenas na primeira carga)
-      if (!skipBalanceRefresh) {
-        console.log('Atualizando saldos antes de calcular métricas...');
-        await refreshBalances();
-      }
-
-      // Buscar integrações ativas (com dados potencialmente atualizados)
+      // Buscar integrações ativas
       const { data: integracoes, error: integracoesError } = await supabase
         .from('integracoes_bancarias')
         .select('*')
@@ -68,7 +61,7 @@ export const useOpenFinanceDashboard = () => {
         return;
       }
 
-      // Calcular saldo total das contas conectadas (com dados atualizados)
+      // Calcular saldo total das contas conectadas
       let saldoTotal = 0;
       let ultimaAtualizacao: string | null = null;
 
@@ -162,8 +155,8 @@ export const useOpenFinanceDashboard = () => {
 
   return {
     metrics,
-    loading: loading || refreshing,
+    loading,
     error,
-    refetch: () => fetchOpenFinanceData(true) // Skip balance refresh on manual refetch
+    refetch: fetchOpenFinanceData
   };
 };
