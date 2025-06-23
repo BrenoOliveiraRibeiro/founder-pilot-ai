@@ -2,12 +2,13 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
+import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { RefreshCw, Plus, AlertCircle, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export const AccountsTab: React.FC = () => {
   const navigate = useNavigate();
@@ -18,8 +19,42 @@ export const AccountsTab: React.FC = () => {
     handleSyncData,
     formatDate
   } = useOpenFinanceConnections();
+  
+  const { refreshBalance } = useBalanceRefresh();
+  const [refreshingBalance, setRefreshingBalance] = useState<string | null>(null);
+  const [updatedBalances, setUpdatedBalances] = useState<Record<string, any>>({});
 
-  const formatAccountBalance = (accountData: any) => {
+  // Buscar saldos atualizados para todas as integrações ao carregar
+  useEffect(() => {
+    const refreshAllBalances = async () => {
+      if (activeIntegrations.length === 0) return;
+      
+      console.log('Atualizando saldos de todas as integrações no AccountsTab...');
+      
+      for (const integration of activeIntegrations) {
+        if (integration.item_id) {
+          try {
+            const updatedData = await refreshBalance(integration.item_id, false);
+            if (updatedData) {
+              setUpdatedBalances(prev => ({
+                ...prev,
+                [integration.id]: updatedData
+              }));
+            }
+          } catch (error) {
+            console.error(`Erro ao atualizar saldo da integração ${integration.id}:`, error);
+          }
+        }
+      }
+    };
+
+    refreshAllBalances();
+  }, [activeIntegrations, refreshBalance]);
+
+  const formatAccountBalance = (integration: any) => {
+    // Usar dados atualizados se disponíveis, senão usar dados originais
+    const accountData = updatedBalances[integration.id] || integration.account_data;
+    
     if (!accountData?.results) return 0;
     
     // Calcular saldo total de todas as contas
@@ -28,12 +63,40 @@ export const AccountsTab: React.FC = () => {
     }, 0);
   };
 
-  const getAccountsCount = (accountData: any) => {
+  const getAccountsCount = (integration: any) => {
+    const accountData = updatedBalances[integration.id] || integration.account_data;
     return accountData?.results?.length || 0;
+  };
+
+  const getAccountsDetails = (integration: any) => {
+    const accountData = updatedBalances[integration.id] || integration.account_data;
+    return accountData?.results || [];
   };
 
   const handleConnectNewAccount = () => {
     navigate('/open-finance');
+  };
+
+  const handleRefreshIntegration = async (integration: any) => {
+    if (!integration.item_id) return;
+    
+    setRefreshingBalance(integration.id);
+    
+    try {
+      console.log(`Atualizando saldo da integração: ${integration.nome_banco}`);
+      const updatedData = await refreshBalance(integration.item_id, true);
+      
+      if (updatedData) {
+        setUpdatedBalances(prev => ({
+          ...prev,
+          [integration.id]: updatedData
+        }));
+      }
+    } catch (error) {
+      console.error(`Erro ao atualizar saldo da integração ${integration.id}:`, error);
+    } finally {
+      setRefreshingBalance(null);
+    }
   };
 
   if (loading) {
@@ -89,9 +152,11 @@ export const AccountsTab: React.FC = () => {
         <div className="space-y-4">
           {activeIntegrations.length > 0 ? (
             activeIntegrations.map((integration) => {
-              const totalBalance = formatAccountBalance(integration.account_data);
-              const accountsCount = getAccountsCount(integration.account_data);
+              const totalBalance = formatAccountBalance(integration);
+              const accountsCount = getAccountsCount(integration);
+              const accountsDetails = getAccountsDetails(integration);
               const isActive = integration.status === 'ativo';
+              const isRefreshing = refreshingBalance === integration.id;
               
               return (
                 <div key={integration.id} className="p-4 rounded-lg border">
@@ -125,26 +190,26 @@ export const AccountsTab: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSyncData(integration.id)}
-                          disabled={syncing === integration.id}
+                          onClick={() => handleRefreshIntegration(integration)}
+                          disabled={isRefreshing || syncing === integration.id}
                         >
-                          {syncing === integration.id ? (
+                          {isRefreshing ? (
                             <RefreshCw className="h-3 w-3 animate-spin mr-1" />
                           ) : (
                             <RefreshCw className="h-3 w-3 mr-1" />
                           )}
-                          {syncing === integration.id ? 'Sincronizando...' : 'Sincronizar'}
+                          {isRefreshing ? 'Atualizando...' : 'Atualizar Saldo'}
                         </Button>
                       </div>
                     </div>
                   </div>
                   
                   {/* Detalhes das contas individuais */}
-                  {integration.account_data?.results && integration.account_data.results.length > 0 && (
+                  {accountsDetails && accountsDetails.length > 0 && (
                     <div className="mt-4 pt-4 border-t">
                       <h4 className="text-sm font-medium mb-2">Contas detalhadas:</h4>
                       <div className="grid gap-2">
-                        {integration.account_data.results.slice(0, 3).map((account: any, index: number) => (
+                        {accountsDetails.slice(0, 3).map((account: any, index: number) => (
                           <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
                             <div>
                               <span className="font-medium">{account.name}</span>
@@ -157,9 +222,9 @@ export const AccountsTab: React.FC = () => {
                             </span>
                           </div>
                         ))}
-                        {integration.account_data.results.length > 3 && (
+                        {accountsDetails.length > 3 && (
                           <div className="text-xs text-muted-foreground text-center py-1">
-                            +{integration.account_data.results.length - 3} contas adicionais
+                            +{accountsDetails.length - 3} contas adicionais
                           </div>
                         )}
                       </div>
