@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useBalanceRefresh } from './useBalanceRefresh';
 
 interface OpenFinanceMetrics {
   saldoTotal: number;
@@ -22,6 +23,7 @@ export const useOpenFinanceDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
+  const { refreshBalance } = useBalanceRefresh();
 
   const fetchOpenFinanceData = async () => {
     if (!currentEmpresa?.id) {
@@ -32,6 +34,8 @@ export const useOpenFinanceDashboard = () => {
     try {
       setLoading(true);
       setError(null);
+
+      console.log('Buscando dados do Open Finance para o dashboard...');
 
       // Buscar integrações ativas
       const { data: integracoes, error: integracoesError } = await supabase
@@ -61,17 +65,47 @@ export const useOpenFinanceDashboard = () => {
         return;
       }
 
-      // Calcular saldo total das contas conectadas
+      console.log(`Encontradas ${integracoesAtivas} integrações ativas`);
+
+      // Refresh do saldo para todas as integrações ativas
       let saldoTotal = 0;
       let ultimaAtualizacao: string | null = null;
 
       for (const integracao of integracoes || []) {
-        if (integracao.account_data && typeof integracao.account_data === 'object') {
-          const accountData = integracao.account_data as any;
-          if (accountData.results && Array.isArray(accountData.results)) {
-            saldoTotal += accountData.results.reduce((sum: number, account: any) => {
-              return sum + (account.balance || 0);
-            }, 0);
+        try {
+          if (integracao.item_id) {
+            console.log(`Atualizando saldo para integração: ${integracao.nome_banco}`);
+            
+            // Refresh do saldo via API
+            const updatedAccountData = await refreshBalance(integracao.item_id, false);
+            
+            if (updatedAccountData?.results) {
+              const integracaoSaldo = updatedAccountData.results.reduce((sum: number, account: any) => {
+                return sum + (account.balance || 0);
+              }, 0);
+              
+              saldoTotal += integracaoSaldo;
+              console.log(`Saldo da integração ${integracao.nome_banco}: ${integracaoSaldo}`);
+            } else if (integracao.account_data && typeof integracao.account_data === 'object') {
+              // Fallback para dados existentes
+              const accountData = integracao.account_data as any;
+              if (accountData.results && Array.isArray(accountData.results)) {
+                saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+                  return sum + (account.balance || 0);
+                }, 0);
+              }
+            }
+          }
+        } catch (refreshError) {
+          console.error(`Erro ao atualizar saldo da integração ${integracao.id}:`, refreshError);
+          // Usar dados existentes em caso de erro
+          if (integracao.account_data && typeof integracao.account_data === 'object') {
+            const accountData = integracao.account_data as any;
+            if (accountData.results && Array.isArray(accountData.results)) {
+              saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+                return sum + (account.balance || 0);
+              }, 0);
+            }
           }
         }
         
@@ -81,6 +115,8 @@ export const useOpenFinanceDashboard = () => {
           }
         }
       }
+
+      console.log(`Saldo total calculado: ${saldoTotal}`);
 
       // Buscar transações dos últimos 3 meses para calcular métricas
       const threeMonthsAgo = new Date();
@@ -123,7 +159,7 @@ export const useOpenFinanceDashboard = () => {
       const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;
       const alertaCritico = runwayMeses < 3;
 
-      setMetrics({
+      const metricsResult = {
         saldoTotal,
         receitaMensal,
         despesasMensais,
@@ -133,7 +169,10 @@ export const useOpenFinanceDashboard = () => {
         ultimaAtualizacao,
         integracoesAtivas,
         alertaCritico
-      });
+      };
+
+      console.log('Métricas calculadas:', metricsResult);
+      setMetrics(metricsResult);
 
     } catch (error: any) {
       console.error('Erro ao buscar dados do Open Finance:', error);

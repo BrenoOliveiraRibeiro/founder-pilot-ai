@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { pluggyApi } from '@/utils/pluggyApi';
 import { usePluggyDatabase } from './usePluggyDatabase';
 import { usePluggyTransactions } from './usePluggyTransactions';
+import { useBalanceRefresh } from './useBalanceRefresh';
 
 export const usePluggyConnectionPersistence = () => {
   const [loading, setLoading] = useState(true);
@@ -24,6 +25,8 @@ export const usePluggyConnectionPersistence = () => {
     processingTransactions,
     processAndSaveTransactions
   } = usePluggyTransactions();
+
+  const { refreshBalance } = useBalanceRefresh();
 
   // Função para processar automaticamente todas as transações de todas as páginas
   const autoProcessAllAccountsAllPages = useCallback(async (itemId: string, showToasts: boolean = true) => {
@@ -51,7 +54,7 @@ export const usePluggyConnectionPersistence = () => {
           let allAccountTransactions = [];
           let currentPage = 1;
           let hasMorePages = true;
-          const pageSize = 100; // Usar páginas maiores para eficiência
+          const pageSize = 100;
 
           // Buscar todas as páginas de transações da conta
           while (hasMorePages) {
@@ -61,7 +64,6 @@ export const usePluggyConnectionPersistence = () => {
               if (transactionsData?.results && transactionsData.results.length > 0) {
                 allAccountTransactions = [...allAccountTransactions, ...transactionsData.results];
                 
-                // Verificar se há mais páginas
                 const totalPages = Math.ceil((transactionsData.total || transactionsData.results.length) / pageSize);
                 hasMorePages = currentPage < totalPages && transactionsData.results.length === pageSize;
                 currentPage++;
@@ -100,7 +102,6 @@ export const usePluggyConnectionPersistence = () => {
 
       console.log(`Processamento completo concluído: ${totalNewTransactions} novas transações de ${totalProcessedAccounts} contas`);
 
-      // Mostrar toast apenas se solicitado
       if (showToasts) {
         if (totalNewTransactions > 0) {
           toast({
@@ -136,7 +137,6 @@ export const usePluggyConnectionPersistence = () => {
     try {
       console.log(`Iniciando processamento automático para item ${itemId}`);
       
-      // Buscar todas as contas do item
       const accountData = await pluggyApi.fetchAccountData(itemId);
       
       if (!accountData?.results || accountData.results.length === 0) {
@@ -147,12 +147,10 @@ export const usePluggyConnectionPersistence = () => {
       let totalNewTransactions = 0;
       let totalProcessedAccounts = 0;
 
-      // Processar cada conta automaticamente
       for (const account of accountData.results) {
         try {
           console.log(`Processando conta: ${account.name} (${account.id})`);
           
-          // Buscar transações da conta (última página apenas para processamento inicial)
           const transactionsData = await pluggyApi.fetchTransactions(account.id, 1, 50);
           
           if (transactionsData?.results && transactionsData.results.length > 0) {
@@ -171,7 +169,6 @@ export const usePluggyConnectionPersistence = () => {
 
       console.log(`Processamento automático concluído: ${totalNewTransactions} transações de ${totalProcessedAccounts} contas`);
 
-      // Mostrar toast apenas se solicitado e há transações novas
       if (showToasts && totalNewTransactions > 0) {
         toast({
           title: "Transações salvas automaticamente!",
@@ -202,39 +199,30 @@ export const usePluggyConnectionPersistence = () => {
       }
 
       try {
+        console.log('Carregando conexão existente...');
         const existingConnection = await loadExistingConnection();
         
-        if (existingConnection && !existingConnection.accountData && existingConnection.itemId) {
-          console.log('Buscando dados da conta via API...');
-          const accountData = await pluggyApi.fetchAccountData(existingConnection.itemId);
+        if (existingConnection && existingConnection.itemId) {
+          console.log('Conexão existente encontrada, atualizando saldo...');
           
-          if (accountData) {
-            // Atualizar dados da conta no banco
-            const { error: updateError } = await supabase
-              .from('integracoes_bancarias')
-              .update({ 
-                account_data: accountData,
-                ultimo_sincronismo: new Date().toISOString()
-              })
-              .eq('empresa_id', currentEmpresa.id)
-              .eq('item_id', existingConnection.itemId);
-
-            if (updateError) {
-              console.error('Erro ao atualizar dados da conta:', updateError);
-            }
-
-            // Atualizar estado local
-            updateConnectionData({ accountData });
-
-            // Processar TODAS as transações automaticamente quando a página carregar
-            await autoProcessAllAccountsAllPages(existingConnection.itemId, true);
+          // SEMPRE buscar dados atualizados da API ao carregar a página
+          const updatedAccountData = await refreshBalance(existingConnection.itemId, false);
+          
+          if (updatedAccountData) {
+            // Atualizar estado local com dados atualizados
+            updateConnectionData({ accountData: updatedAccountData });
+            console.log('Dados da conta atualizados com sucesso');
+          } else if (existingConnection.accountData) {
+            // Fallback para dados existentes se refresh falhar
+            console.log('Usando dados existentes como fallback');
+            updateConnectionData({ accountData: existingConnection.accountData });
           }
-        } else if (existingConnection && existingConnection.itemId) {
-          // Se já temos dados da conta, ainda assim processar todas as transações
-          await autoProcessAllAccountsAllPages(existingConnection.itemId, true);
+
+          // Processar transações automaticamente
+          await autoProcessAllAccountsAllPages(existingConnection.itemId, false);
         }
 
-        console.log('Estado da conexão Pluggy carregado com sucesso');
+        console.log('Inicialização da conexão concluída');
       } catch (error: any) {
         console.error('Erro ao carregar conexão existente:', error);
         toast({
@@ -248,18 +236,15 @@ export const usePluggyConnectionPersistence = () => {
     };
 
     initializeConnection();
-  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, autoProcessAllAccountsAllPages, toast]);
+  }, [currentEmpresa?.id, loadExistingConnection, updateConnectionData, autoProcessAllAccountsAllPages, refreshBalance, toast]);
 
-  // Função para buscar transações via API (mantém compatibilidade com a interface existente)
+  // Função para buscar transações via API
   const fetchTransactions = useCallback(async (accountId: string, page: number = 1, pageSize: number = 50) => {
     if (!connectionData?.itemId) return null;
 
     try {
       const transactionsData = await pluggyApi.fetchTransactions(accountId, page, pageSize);
-      
-      // Atualizar estado local
       updateConnectionData({ transactionsData });
-      
       return transactionsData;
     } catch (error: any) {
       console.error('Erro ao buscar transações:', error);
@@ -294,12 +279,8 @@ export const usePluggyConnectionPersistence = () => {
     bankName?: string
   ) => {
     try {
-      // Salvar conexão primeiro
       await saveConnection(itemId, accountData, connectionToken, bankName);
-      
-      // Processar TODAS as transações automaticamente
       await autoProcessAllAccountsAllPages(itemId, true);
-      
     } catch (error: any) {
       console.error('Erro ao salvar conexão com processamento automático:', error);
       toast({
@@ -310,35 +291,30 @@ export const usePluggyConnectionPersistence = () => {
     }
   }, [saveConnection, autoProcessAllAccountsAllPages, toast]);
 
-  // Sincronizar dados
+  // Sincronizar dados com refresh de saldo
   const syncData = useCallback(async () => {
     if (!connectionData?.itemId || !currentEmpresa?.id) return;
 
     try {
-      const accountData = await pluggyApi.fetchAccountData(connectionData.itemId);
-      if (accountData) {
-        updateConnectionData({ accountData });
+      console.log('Iniciando sincronização com refresh de saldo...');
+      
+      // Buscar dados atualizados da API Pluggy
+      const updatedAccountData = await refreshBalance(connectionData.itemId, false);
+      
+      if (updatedAccountData) {
+        // Atualizar estado local imediatamente
+        updateConnectionData({ accountData: updatedAccountData });
+        console.log('Estado local atualizado com novos dados da conta');
         
-        const { error } = await supabase
-          .from('integracoes_bancarias')
-          .update({ 
-            account_data: accountData,
-            ultimo_sincronismo: new Date().toISOString()
-          })
-          .eq('empresa_id', currentEmpresa.id)
-          .eq('item_id', connectionData.itemId);
-
-        if (error) {
-          throw new Error(`Erro ao atualizar sincronização: ${error.message}`);
-        }
-
         // Processar automaticamente TODAS as transações na sincronização
-        await autoProcessAllAccountsAllPages(connectionData.itemId, true);
+        await autoProcessAllAccountsAllPages(connectionData.itemId, false);
 
         toast({
           title: "Dados sincronizados",
-          description: "Os dados bancários foram atualizados com sucesso.",
+          description: "Os dados bancários e saldo foram atualizados com sucesso.",
         });
+      } else {
+        throw new Error('Não foi possível obter dados atualizados da API');
       }
     } catch (error: any) {
       console.error('Erro ao sincronizar dados:', error);
@@ -348,7 +324,7 @@ export const usePluggyConnectionPersistence = () => {
         variant: "destructive",
       });
     }
-  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, autoProcessAllAccountsAllPages, toast]);
+  }, [connectionData?.itemId, currentEmpresa?.id, updateConnectionData, autoProcessAllAccountsAllPages, refreshBalance, toast]);
 
   return {
     connectionData,
