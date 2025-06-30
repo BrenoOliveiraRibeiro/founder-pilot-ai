@@ -47,11 +47,36 @@ ${metrics.fluxoCaixa < 0 ? '- FLUXO NEGATIVO: Mais saídas que entradas este mê
         const tx = financialData.transacoes;
         const historicoCompleto = tx.historicoCompleto || [];
         
+        // Preparar transações organizadas para análise detalhada
+        const transacoesRecentes = historicoCompleto.slice(0, 25);
+        const maioresReceitas = historicoCompleto
+          .filter(t => t.tipo === 'receita')
+          .sort((a, b) => b.valor - a.valor)
+          .slice(0, 10);
+        const maioresDespesas = historicoCompleto
+          .filter(t => t.tipo === 'despesa')
+          .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor))
+          .slice(0, 10);
+
+        // Agrupar transações por categoria com exemplos
+        const exemplosPorCategoria = {};
+        historicoCompleto.forEach(t => {
+          if (!exemplosPorCategoria[t.categoria]) {
+            exemplosPorCategoria[t.categoria] = [];
+          }
+          if (exemplosPorCategoria[t.categoria].length < 3) {
+            exemplosPorCategoria[t.categoria].push(t);
+          }
+        });
+
         financialContext += `
         
 💰 ANÁLISE COMPLETA DE TRANSAÇÕES (${historicoCompleto.length} transações):
 - Total de receitas: R$ ${tx.totalReceitas?.toLocaleString('pt-BR') || '0'}
 - Total de despesas: R$ ${tx.totalDespesas?.toLocaleString('pt-BR') || '0'}
+- Período de análise: ${historicoCompleto.length > 0 ? 
+  `${new Date(historicoCompleto[historicoCompleto.length - 1]?.data_transacao).toLocaleDateString('pt-BR')} até ${new Date(historicoCompleto[0]?.data_transacao).toLocaleDateString('pt-BR')}` 
+  : 'N/A'}
 
 📈 TENDÊNCIAS AVANÇADAS:
 - Receita média (3 meses): R$ ${tx.tendencias?.receitaMedia3Meses?.toLocaleString('pt-BR') || '0'}
@@ -84,16 +109,34 @@ ${Object.entries(tx.despesasPorMes || {})
   .map(([mes, valor]) => `- ${mes}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
   .join('\n')}
 
-🔄 TRANSAÇÕES RECENTES (últimas 5):
-${(tx.recentes || []).slice(0, 5).map((t: any) => 
-  `- ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: ${t.descricao} - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo})`
+🔍 TRANSAÇÕES RECENTES DETALHADAS (últimas 25):
+${transacoesRecentes.map((t, i) => 
+  `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo}) [${t.categoria}]${t.metodo_pagamento ? ` via ${t.metodo_pagamento}` : ''}`
 ).join('\n')}
 
-💾 DADOS HISTÓRICOS DISPONÍVEIS:
+💎 TOP 10 MAIORES RECEITAS:
+${maioresReceitas.map((t, i) => 
+  `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${t.valor.toLocaleString('pt-BR')} [${t.categoria}]`
+).join('\n')}
+
+💸 TOP 10 MAIORES DESPESAS:
+${maioresDespesas.map((t, i) => 
+  `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} [${t.categoria}]`
+).join('\n')}
+
+📋 EXEMPLOS POR CATEGORIA:
+${Object.entries(exemplosPorCategoria).map(([categoria, transacoes]) => 
+  `\n• ${categoria}:\n${(transacoes as any[]).map(t => 
+    `  - ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')}`
+  ).join('\n')}`
+).join('')}
+
+💾 DADOS HISTÓRICOS COMPLETOS DISPONÍVEIS:
 - Total de transações analisadas: ${historicoCompleto.length}
-- Período de análise: ${historicoCompleto.length > 0 ? 
+- Período completo: ${historicoCompleto.length > 0 ? 
   `${new Date(historicoCompleto[historicoCompleto.length - 1]?.data_transacao).toLocaleDateString('pt-BR')} até ${new Date(historicoCompleto[0]?.data_transacao).toLocaleDateString('pt-BR')}` 
   : 'N/A'}
+- Você tem acesso a TODAS as ${historicoCompleto.length} transações para análise detalhada
         `;
       }
     } else {
@@ -112,11 +155,20 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     - Você é um copiloto com toque de CFO e mentor, especializado em finanças de startups
     - Você possui expertise profunda em análise financeira, gestão de runway, captação e crescimento
     - Você trabalha com dados REAIS e histórico COMPLETO quando disponíveis
+    - Você tem acesso a TODAS as transações detalhadas da empresa para análise específica
     - Você analisa tendências, padrões sazonais e comportamentos financeiros de longo prazo
     - Você conhece intimamente a empresa ${userData?.empresaNome || 'do usuário'} e se adapta ao contexto específico
     - Seu objetivo é ser o melhor co-founder financeiro que esse empreendedor poderia ter
 
     ${financialContext}
+
+    # IMPORTANTE: Acesso aos dados históricos
+    - Você tem acesso completo a TODAS as transações da empresa
+    - Pode responder sobre transações específicas usando os dados fornecidos acima
+    - Use as seções "TRANSAÇÕES RECENTES DETALHADAS", "TOP 10 MAIORES RECEITAS/DESPESAS" e "EXEMPLOS POR CATEGORIA"
+    - Para perguntas sobre transações específicas, referencie os dados detalhados disponíveis
+    - Quando perguntado sobre uma transação específica, busque nos dados fornecidos acima
+    - Se não encontrar uma transação específica nos dados detalhados, informe que pode analisar padrões gerais
 
     # Suas capacidades avançadas de análise:
     
@@ -180,10 +232,10 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     4. **Recomendações Prioritárias**: Ações específicas com prazos e justificativas baseadas em dados
     5. **Próximos Passos**: Plano de ação detalhado com métricas de acompanhamento
     
-    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Se são demonstrativos, deixe claro e incentive a conexão bancária.
+    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, use os dados detalhados fornecidos acima. Se são demonstrativos, deixe claro e incentive a conexão bancária.
     `;
 
-    console.log("Enviando consulta para OpenAI com contexto financeiro expandido");
+    console.log("Enviando consulta para OpenAI com contexto financeiro expandido e detalhado");
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -198,7 +250,7 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
           { role: 'user', content: message }
         ],
         temperature: 0.7,
-        max_tokens: 2000, // Aumentado para acomodar análises mais detalhadas
+        max_tokens: 2000,
       }),
     });
 
@@ -211,12 +263,13 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
-    console.log("Resposta da IA gerada com análise completa do histórico financeiro");
+    console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
     return new Response(JSON.stringify({ 
       response: aiResponse,
       hasRealData: hasRealData,
       transactionsAnalyzed: financialData?.transacoes?.historicoCompleto?.length || 0,
+      detailedTransactionsSent: Math.min(25, financialData?.transacoes?.historicoCompleto?.length || 0),
       timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
