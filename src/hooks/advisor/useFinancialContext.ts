@@ -10,13 +10,12 @@ export const useFinancialContext = (userData: AdvisorChatUserData) => {
     if (!userData.empresaId) return [];
     
     try {
-      // Buscar até 200 transações para análise completa da IA
+      // Buscar TODAS as transações para análise completa da IA
       const { data: transacoes, error } = await supabase
         .from('transacoes')
         .select('*')
         .eq('empresa_id', userData.empresaId)
-        .order('data_transacao', { ascending: false })
-        .limit(200);
+        .order('data_transacao', { ascending: false });
       
       if (error) throw error;
       return transacoes || [];
@@ -69,7 +68,7 @@ export const useFinancialContext = (userData: AdvisorChatUserData) => {
         total: allTransactions.length,
         // Manter as 10 mais recentes para apresentação rápida
         recentes: allTransactions.slice(0, 10),
-        // Histórico completo para análise da IA
+        // Histórico completo SEM LIMITE para análise da IA
         historicoCompleto: allTransactions,
         despesasPorCategoria,
         receitasPorMes,
