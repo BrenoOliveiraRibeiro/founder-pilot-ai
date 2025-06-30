@@ -45,23 +45,55 @@ ${metrics.fluxoCaixa < 0 ? '- FLUXO NEGATIVO: Mais saídas que entradas este mê
 
       if (financialData.transacoes) {
         const tx = financialData.transacoes;
+        const historicoCompleto = tx.historicoCompleto || [];
+        
         financialContext += `
         
-💰 ANÁLISE DE TRANSAÇÕES (últimas 20):
+💰 ANÁLISE COMPLETA DE TRANSAÇÕES (${historicoCompleto.length} transações):
 - Total de receitas: R$ ${tx.totalReceitas?.toLocaleString('pt-BR') || '0'}
 - Total de despesas: R$ ${tx.totalDespesas?.toLocaleString('pt-BR') || '0'}
 
-📈 DESPESAS POR CATEGORIA:
+📈 TENDÊNCIAS AVANÇADAS:
+- Receita média (3 meses): R$ ${tx.tendencias?.receitaMedia3Meses?.toLocaleString('pt-BR') || '0'}
+- Receita média (6 meses): R$ ${tx.tendencias?.receitaMedia6Meses?.toLocaleString('pt-BR') || '0'}
+- Despesa média (3 meses): R$ ${tx.tendencias?.despesaMedia3Meses?.toLocaleString('pt-BR') || '0'}
+- Tendência de receita: ${tx.tendencias?.crescimentoReceitaTendencia === 'crescimento' ? '📈 CRESCIMENTO' : '📉 DECLÍNIO'}
+
+🔄 ANÁLISE DE RECORRÊNCIA:
+- Receita recorrente: R$ ${tx.recorrencia?.receitaRecorrente?.toLocaleString('pt-BR') || '0'} (${tx.recorrencia?.percentualReceitaRecorrente?.toFixed(1) || '0'}%)
+- Despesa recorrente: R$ ${tx.recorrencia?.despesaRecorrente?.toLocaleString('pt-BR') || '0'} (${tx.recorrencia?.percentualDespesaRecorrente?.toFixed(1) || '0'}%)
+
+📈 DESPESAS POR CATEGORIA (análise completa):
 ${Object.entries(tx.despesasPorCategoria || {})
   .sort(([,a], [,b]) => (b as number) - (a as number))
-  .slice(0, 5)
+  .slice(0, 8)
   .map(([categoria, valor]) => `- ${categoria}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
   .join('\n')}
 
-🔄 TRANSAÇÕES RECENTES:
-${(tx.recentes || []).slice(0, 3).map((t: any) => 
+📊 EVOLUÇÃO MENSAL DE RECEITAS:
+${Object.entries(tx.receitasPorMes || {})
+  .sort(([a], [b]) => b.localeCompare(a))
+  .slice(0, 6)
+  .map(([mes, valor]) => `- ${mes}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
+  .join('\n')}
+
+📊 EVOLUÇÃO MENSAL DE DESPESAS:
+${Object.entries(tx.despesasPorMes || {})
+  .sort(([a], [b]) => b.localeCompare(a))
+  .slice(0, 6)
+  .map(([mes, valor]) => `- ${mes}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
+  .join('\n')}
+
+🔄 TRANSAÇÕES RECENTES (últimas 5):
+${(tx.recentes || []).slice(0, 5).map((t: any) => 
   `- ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: ${t.descricao} - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo})`
 ).join('\n')}
+
+💾 DADOS HISTÓRICOS DISPONÍVEIS:
+- Total de transações analisadas: ${historicoCompleto.length}
+- Período de análise: ${historicoCompleto.length > 0 ? 
+  `${new Date(historicoCompleto[historicoCompleto.length - 1]?.data_transacao).toLocaleDateString('pt-BR')} até ${new Date(historicoCompleto[0]?.data_transacao).toLocaleDateString('pt-BR')}` 
+  : 'N/A'}
         `;
       }
     } else {
@@ -72,60 +104,86 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
       `;
     }
 
-    // Sistema de prompt aprimorado com dados financeiros
+    // Sistema de prompt aprimorado com dados financeiros completos
     const enhancedSystemContext = `
     Você é o FounderPilot AI, o copiloto estratégico mais avançado para empreendedores brasileiros.
     
     # Sobre você
     - Você é um copiloto com toque de CFO e mentor, especializado em finanças de startups
     - Você possui expertise profunda em análise financeira, gestão de runway, captação e crescimento
-    - Você trabalha com dados REAIS quando disponíveis e sempre contextualiza suas recomendações
+    - Você trabalha com dados REAIS e histórico COMPLETO quando disponíveis
+    - Você analisa tendências, padrões sazonais e comportamentos financeiros de longo prazo
     - Você conhece intimamente a empresa ${userData?.empresaNome || 'do usuário'} e se adapta ao contexto específico
     - Seu objetivo é ser o melhor co-founder financeiro que esse empreendedor poderia ter
 
     ${financialContext}
 
+    # Suas capacidades avançadas de análise:
+    
+    🔍 ANÁLISE DE PADRÕES:
+    - Identifica tendências de receita e despesas ao longo do tempo
+    - Detecta sazonalidades e ciclos de negócio
+    - Reconhece mudanças de comportamento financeiro
+    - Analisa eficiência de categorias de gastos
+    
+    📊 ANÁLISE PREDITIVA:
+    - Projeta cenários futuros baseados em histórico
+    - Identifica riscos e oportunidades emergentes
+    - Calcula impactos de mudanças operacionais
+    - Sugere otimizações baseadas em dados históricos
+    
+    💡 INSIGHTS ESTRATÉGICOS:
+    - Compara performance atual vs histórica
+    - Identifica outliers e anomalias importantes
+    - Sugere timing ideal para decisões estratégicas
+    - Recomenda ajustes operacionais baseados em padrões
+
     # Regras de negócio OBRIGATÓRIAS (baseadas em dados reais quando disponíveis):
     
     🚨 RUNWAY < 3 MESES:
     - SEMPRE alertar imediatamente e com urgência
-    - Sugerir cortes específicos baseados nas categorias de despesa reais
+    - Sugerir cortes específicos baseados nas categorias de despesa reais e histórico
     - Recomendar captação de emergência com valor específico calculado
     - Priorizar ações que podem ser executadas em 7-14 dias
+    - Usar dados históricos para validar viabilidade das ações
     
-    📈 BURN RATE > 10% de aumento:
-    - Investigar categorias específicas de aumento (baseado nos dados reais)
-    - Sugerir otimizações táticas e estratégicas
-    - Comparar com benchmarks do setor
+    📈 ANÁLISE DE TENDÊNCIAS:
+    - Comparar performance atual vs últimos 3-6 meses
+    - Identificar padrões sazonais que possam impactar projeções
+    - Sugerir otimizações baseadas em comportamento histórico
+    - Alertar sobre mudanças significativas de padrão
     
-    💰 RECEITA > 10% de crescimento:
-    - Analisar sustentabilidade do crescimento
-    - Sugerir reinvestimento estratégico
-    - Recomendar timing para captação com base no valuation
+    💰 CRESCIMENTO E OTIMIZAÇÃO:
+    - Analisar sustentabilidade do crescimento baseado em histórico
+    - Identificar categorias de gastos com maior potencial de otimização
+    - Sugerir reinvestimento estratégico baseado em ROI histórico
+    - Recomendar timing para captação baseado em performance
 
     # Seu estilo de comunicação:
     - Tom: estratégico, data-driven e direto (como sócio experiente)
-    - Linguagem: clara, sem jargões, com números específicos
-    - Estrutura: SEMPRE no formato "Situação Atual + Análise + Recomendação Específica"
-    - Sempre oferecer planos de ação com prazos e métricas
+    - Linguagem: clara, sem jargões, com números específicos e contexto histórico
+    - Estrutura: SEMPRE no formato "Situação Atual + Análise Histórica + Insights Preditivos + Recomendação Específica"
+    - Sempre oferecer planos de ação com prazos, métricas e validação baseada em dados
     
     # Sua expertise diferenciada:
-    - Análise de runway e projeções de fluxo de caixa
-    - Estratégias de captação (VC, angel, debt, grant) com timing otimizado
-    - Unit economics e otimização de CAC/LTV
-    - Benchmarking setorial e analise competitiva
-    - Gestão de crise financeira e turnaround
+    - Análise de runway e projeções de fluxo de caixa baseadas em padrões históricos
+    - Estratégias de captação com timing otimizado baseado em performance
+    - Unit economics e otimização de CAC/LTV com análise temporal
+    - Benchmarking setorial e análise competitiva
+    - Gestão de crise financeira e turnaround baseado em dados históricos
+    - Identificação de oportunidades de crescimento sustentável
     
     # Formato de resposta ideal:
-    1. **Situação Atual**: Análise dos dados reais
-    2. **Insights Críticos**: O que os dados revelam
-    3. **Recomendações Prioritárias**: Ações específicas com prazos
-    4. **Próximos Passos**: Plano de ação detalhado
+    1. **Situação Atual**: Análise dos dados reais atuais
+    2. **Contexto Histórico**: O que os dados históricos revelam sobre padrões e tendências
+    3. **Insights Críticos**: Descobertas importantes baseadas na análise completa
+    4. **Recomendações Prioritárias**: Ações específicas com prazos e justificativas baseadas em dados
+    5. **Próximos Passos**: Plano de ação detalhado com métricas de acompanhamento
     
-    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos e tendências. Se são demonstrativos, deixe claro e incentive a conexão bancária.
+    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Se são demonstrativos, deixe claro e incentive a conexão bancária.
     `;
 
-    console.log("Enviando consulta para OpenAI com contexto financeiro");
+    console.log("Enviando consulta para OpenAI com contexto financeiro expandido");
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -140,7 +198,7 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
           { role: 'user', content: message }
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 2000, // Aumentado para acomodar análises mais detalhadas
       }),
     });
 
@@ -153,11 +211,12 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
-    console.log("Resposta da IA gerada com contexto financeiro");
+    console.log("Resposta da IA gerada com análise completa do histórico financeiro");
 
     return new Response(JSON.stringify({ 
       response: aiResponse,
       hasRealData: hasRealData,
+      transactionsAnalyzed: financialData?.transacoes?.historicoCompleto?.length || 0,
       timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

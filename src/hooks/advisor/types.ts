@@ -1,22 +1,37 @@
 
-import { Message } from "@/components/advisor/ChatMessage";
-
 export interface AdvisorChatUserData {
   empresaId?: string | null;
   empresaNome?: string | null;
   userNome?: string | null;
 }
 
+export interface TransactionData {
+  total: number;
+  recentes: any[];
+  historicoCompleto: any[]; // Novo: histórico completo para a IA
+  despesasPorCategoria: Record<string, number>;
+  receitasPorMes: Record<string, number>;
+  despesasPorMes: Record<string, number>; // Novo: análise de despesas por mês
+  totalReceitas: number;
+  totalDespesas: number;
+  // Novas métricas avançadas
+  tendencias: {
+    receitaMedia3Meses: number;
+    receitaMedia6Meses: number;
+    despesaMedia3Meses: number;
+    crescimentoReceitaTendencia: 'crescimento' | 'declinio';
+  };
+  recorrencia: {
+    receitaRecorrente: number;
+    despesaRecorrente: number;
+    percentualReceitaRecorrente: number;
+    percentualDespesaRecorrente: number;
+  };
+}
+
 export interface FinancialContext {
   metrics: any;
-  transacoes: {
-    total: number;
-    recentes: any[];
-    despesasPorCategoria: Record<string, number>;
-    receitasPorMes: Record<string, number>;
-    totalReceitas: number;
-    totalDespesas: number;
-  };
+  transacoes: TransactionData;
   alertas: {
     runwayCritico: boolean;
     burnRateAlto: boolean;
@@ -25,7 +40,7 @@ export interface FinancialContext {
 }
 
 export interface AdvisorChatReturn {
-  messages: Message[];
+  messages: any[];
   input: string;
   isLoading: boolean;
   isError: boolean;
