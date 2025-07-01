@@ -187,7 +187,7 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                         </span>
                         <ArrowRight className="h-3 w-3 mx-2" />
                         <span className="font-semibold">
-                          {formatCurrency(account.balance, account.currencyCode)}
+                          {formatCurrency(account.balance)}
                         </span>
                       </div>
                     </SelectItem>
@@ -205,7 +205,7 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                   <p className="text-sm text-gray-600 capitalize">{selectedAccount.type}</p>
                   <div className="mt-2">
                     <span className="text-2xl font-bold text-blue-600">
-                      {formatCurrency(selectedAccount.balance, selectedAccount.currencyCode)}
+                      {formatCurrency(selectedAccount.balance)}
                     </span>
                     <p className="text-sm text-gray-500">Saldo atual</p>
                   </div>
