@@ -1,6 +1,7 @@
 
 import React from "react";
 import { MetricCard } from "./MetricCard";
+import { MultiAccountBreakdown } from "./MultiAccountBreakdown";
 import { 
   AlertTriangle,
   BanknoteIcon, 
@@ -14,10 +15,12 @@ import {
 import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
+import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { formatCurrency } from "@/lib/utils";
 
 export const OpenFinanceMetricsGrid = () => {
   const { metrics, loading, error } = useOpenFinanceDashboard();
+  const { activeIntegrations } = useOpenFinanceConnections();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -41,6 +44,22 @@ export const OpenFinanceMetricsGrid = () => {
       }
     }
   };
+
+  // Preparar dados para o breakdown de múltiplas contas
+  const accountsSummary = activeIntegrations.map(integration => {
+    const accounts = integration.account_data?.results || [];
+    const totalBalance = accounts.reduce((sum: number, account: any) => sum + (account.balance || 0), 0);
+    const percentage = metrics ? (totalBalance / metrics.saldoTotal) * 100 : 0;
+    
+    return {
+      bankName: integration.nome_banco,
+      totalBalance,
+      accountCount: accounts.length,
+      percentage,
+      status: integration.status as 'ativo' | 'inativo',
+      lastSync: integration.ultimo_sincronismo
+    };
+  }).filter(account => account.totalBalance > 0);
 
   if (error) {
     return (
@@ -176,6 +195,22 @@ export const OpenFinanceMetricsGrid = () => {
         </motion.div>
       </motion.div>
 
+      {/* Breakdown de múltiplas contas - apenas se houver mais de uma conta */}
+      {accountsSummary.length > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8"
+        >
+          <MultiAccountBreakdown
+            accountsSummary={accountsSummary}
+            totalBalance={metrics.saldoTotal}
+            isLoading={loading}
+          />
+        </motion.div>
+      )}
+
       {metrics.ultimaAtualizacao && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -185,6 +220,11 @@ export const OpenFinanceMetricsGrid = () => {
         >
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
           Última sincronização: {new Date(metrics.ultimaAtualizacao).toLocaleString('pt-BR')}
+          {accountsSummary.length > 1 && (
+            <span className="ml-2 text-muted-foreground">
+              • {accountsSummary.length} bancos conectados
+            </span>
+          )}
         </motion.div>
       )}
     </>
