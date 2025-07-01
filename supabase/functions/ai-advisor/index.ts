@@ -47,32 +47,26 @@ ${metrics.fluxoCaixa < 0 ? '- FLUXO NEGATIVO: Mais saídas que entradas este mê
         const tx = financialData.transacoes;
         const historicoCompleto = tx.historicoCompleto || [];
         
-        // Agora enviamos TODAS as transações para a IA
-        const todasTransacoes = historicoCompleto;
+        // Preparar transações organizadas para análise detalhada
+        const transacoesRecentes = historicoCompleto.slice(0, 25);
         const maioresReceitas = historicoCompleto
           .filter(t => t.tipo === 'receita')
-          .sort((a, b) => b.valor - a.valor);
+          .sort((a, b) => b.valor - a.valor)
+          .slice(0, 10);
         const maioresDespesas = historicoCompleto
           .filter(t => t.tipo === 'despesa')
-          .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
+          .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor))
+          .slice(0, 10);
 
-        // Agrupar transações por categoria com TODOS os exemplos
-        const transacoesPorCategoria = {};
+        // Agrupar transações por categoria com exemplos
+        const exemplosPorCategoria = {};
         historicoCompleto.forEach(t => {
-          if (!transacoesPorCategoria[t.categoria]) {
-            transacoesPorCategoria[t.categoria] = [];
+          if (!exemplosPorCategoria[t.categoria]) {
+            exemplosPorCategoria[t.categoria] = [];
           }
-          transacoesPorCategoria[t.categoria].push(t);
-        });
-
-        // Agrupar transações por mês para análise temporal
-        const transacoesPorMes = {};
-        historicoCompleto.forEach(t => {
-          const mesAno = new Date(t.data_transacao).toISOString().slice(0, 7);
-          if (!transacoesPorMes[mesAno]) {
-            transacoesPorMes[mesAno] = [];
+          if (exemplosPorCategoria[t.categoria].length < 3) {
+            exemplosPorCategoria[t.categoria].push(t);
           }
-          transacoesPorMes[mesAno].push(t);
         });
 
         financialContext += `
@@ -97,58 +91,52 @@ ${metrics.fluxoCaixa < 0 ? '- FLUXO NEGATIVO: Mais saídas que entradas este mê
 📈 DESPESAS POR CATEGORIA (análise completa):
 ${Object.entries(tx.despesasPorCategoria || {})
   .sort(([,a], [,b]) => (b as number) - (a as number))
+  .slice(0, 8)
   .map(([categoria, valor]) => `- ${categoria}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
   .join('\n')}
 
 📊 EVOLUÇÃO MENSAL DE RECEITAS:
 ${Object.entries(tx.receitasPorMes || {})
   .sort(([a], [b]) => b.localeCompare(a))
+  .slice(0, 6)
   .map(([mes, valor]) => `- ${mes}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
   .join('\n')}
 
 📊 EVOLUÇÃO MENSAL DE DESPESAS:
 ${Object.entries(tx.despesasPorMes || {})
   .sort(([a], [b]) => b.localeCompare(a))
+  .slice(0, 6)
   .map(([mes, valor]) => `- ${mes}: R$ ${(valor as number).toLocaleString('pt-BR')}`)
   .join('\n')}
 
-🔍 HISTÓRICO COMPLETO DE TRANSAÇÕES (TODAS as ${todasTransacoes.length} transações):
-${todasTransacoes.map((t, i) => 
+🔍 TRANSAÇÕES RECENTES DETALHADAS (últimas 25):
+${transacoesRecentes.map((t, i) => 
   `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo}) [${t.categoria}]${t.metodo_pagamento ? ` via ${t.metodo_pagamento}` : ''}`
 ).join('\n')}
 
-💎 TODAS AS RECEITAS (${maioresReceitas.length} transações):
+💎 TOP 10 MAIORES RECEITAS:
 ${maioresReceitas.map((t, i) => 
   `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${t.valor.toLocaleString('pt-BR')} [${t.categoria}]`
 ).join('\n')}
 
-💸 TODAS AS DESPESAS (${maioresDespesas.length} transações):
+💸 TOP 10 MAIORES DESPESAS:
 ${maioresDespesas.map((t, i) => 
   `${i+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} [${t.categoria}]`
 ).join('\n')}
 
-📋 TRANSAÇÕES POR CATEGORIA (HISTÓRICO COMPLETO):
-${Object.entries(transacoesPorCategoria).map(([categoria, transacoes]) => 
-  `\n• ${categoria} (${(transacoes as any[]).length} transações):\n${(transacoes as any[]).map((t, idx) => 
-    `  ${idx+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo})`
+📋 EXEMPLOS POR CATEGORIA:
+${Object.entries(exemplosPorCategoria).map(([categoria, transacoes]) => 
+  `\n• ${categoria}:\n${(transacoes as any[]).map(t => 
+    `  - ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')}`
   ).join('\n')}`
 ).join('')}
 
-📅 TRANSAÇÕES POR MÊS (HISTÓRICO COMPLETO):
-${Object.entries(transacoesPorMes)
-  .sort(([a], [b]) => b.localeCompare(a))
-  .map(([mesAno, transacoes]) => 
-    `\n• ${mesAno} (${(transacoes as any[]).length} transações):\n${(transacoes as any[]).map((t, idx) => 
-      `  ${idx+1}. ${new Date(t.data_transacao).toLocaleDateString('pt-BR')}: "${t.descricao}" - R$ ${Math.abs(t.valor).toLocaleString('pt-BR')} (${t.tipo}) [${t.categoria}]`
-    ).join('\n')}`
-  ).join('')}
-
-💾 ACESSO COMPLETO AOS DADOS:
-- Você tem acesso a TODAS as ${historicoCompleto.length} transações da empresa
-- Você pode responder sobre qualquer transação específica usando os dados acima
-- Você pode analisar padrões, tendências e correlações em todo o histórico
-- Você pode buscar transações por data, categoria, valor ou descrição
-- Você tem o histórico completo organizado cronologicamente, por categoria e por mês
+💾 DADOS HISTÓRICOS COMPLETOS DISPONÍVEIS:
+- Total de transações analisadas: ${historicoCompleto.length}
+- Período completo: ${historicoCompleto.length > 0 ? 
+  `${new Date(historicoCompleto[historicoCompleto.length - 1]?.data_transacao).toLocaleDateString('pt-BR')} até ${new Date(historicoCompleto[0]?.data_transacao).toLocaleDateString('pt-BR')}` 
+  : 'N/A'}
+- Você tem acesso a TODAS as ${historicoCompleto.length} transações para análise detalhada
         `;
       }
     } else {
@@ -159,7 +147,7 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
       `;
     }
 
-    // Sistema de prompt aprimorado com acesso completo aos dados
+    // Sistema de prompt aprimorado com dados financeiros completos
     const enhancedSystemContext = `
     Você é o FounderPilot AI, o copiloto estratégico mais avançado para empreendedores brasileiros.
     
@@ -174,82 +162,80 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
 
     ${financialContext}
 
-    # IMPORTANTE: Acesso total aos dados históricos
-    - Você tem acesso completo a TODAS as transações da empresa com detalhes completos
-    - Você pode responder sobre qualquer transação específica usando os dados fornecidos acima
-    - Use as seções "HISTÓRICO COMPLETO", "TODAS AS RECEITAS/DESPESAS", "TRANSAÇÕES POR CATEGORIA" e "TRANSAÇÕES POR MÊS"
-    - Para perguntas sobre transações específicas, busque nos dados detalhados fornecidos acima
-    - Você pode analisar padrões temporais, correlações entre categorias e identificar anomalias
-    - Quando perguntado sobre uma transação específica, localize-a nos dados completos fornecidos
-    - Você tem o histórico completo organizado de múltiplas formas para facilitar sua análise
+    # IMPORTANTE: Acesso aos dados históricos
+    - Você tem acesso completo a TODAS as transações da empresa
+    - Pode responder sobre transações específicas usando os dados fornecidos acima
+    - Use as seções "TRANSAÇÕES RECENTES DETALHADAS", "TOP 10 MAIORES RECEITAS/DESPESAS" e "EXEMPLOS POR CATEGORIA"
+    - Para perguntas sobre transações específicas, referencie os dados detalhados disponíveis
+    - Quando perguntado sobre uma transação específica, busque nos dados fornecidos acima
+    - Se não encontrar uma transação específica nos dados detalhados, informe que pode analisar padrões gerais
 
     # Suas capacidades avançadas de análise:
     
-    🔍 ANÁLISE DE PADRÕES ESPECÍFICOS:
-    - Identifica transações específicas por data, valor, categoria ou descrição
-    - Detecta padrões sazonais e ciclos de negócio em todo o histórico
-    - Reconhece mudanças de comportamento financeiro ao longo do tempo
-    - Analisa correlações entre diferentes categorias de gastos
-    - Identifica outliers e anomalias em transações específicas
+    🔍 ANÁLISE DE PADRÕES:
+    - Identifica tendências de receita e despesas ao longo do tempo
+    - Detecta sazonalidades e ciclos de negócio
+    - Reconhece mudanças de comportamento financeiro
+    - Analisa eficiência de categorias de gastos
     
-    📊 ANÁLISE PREDITIVA BASEADA EM HISTÓRICO COMPLETO:
-    - Projeta cenários futuros baseados em todo o histórico disponível
-    - Identifica riscos e oportunidades emergentes com base em padrões históricos
-    - Calcula impactos de mudanças operacionais usando dados reais
-    - Sugere otimizações baseadas em análise completa do histórico
+    📊 ANÁLISE PREDITIVA:
+    - Projeta cenários futuros baseados em histórico
+    - Identifica riscos e oportunidades emergentes
+    - Calcula impactos de mudanças operacionais
+    - Sugere otimizações baseadas em dados históricos
     
-    💡 INSIGHTS ESTRATÉGICOS COM DADOS COMPLETOS:
-    - Compara performance atual vs histórica completa
-    - Identifica tendências de longo prazo em categorias específicas
-    - Sugere timing ideal para decisões estratégicas baseado em padrões históricos
-    - Recomenda ajustes operacionais baseados em análise detalhada de todas as transações
+    💡 INSIGHTS ESTRATÉGICOS:
+    - Compara performance atual vs histórica
+    - Identifica outliers e anomalias importantes
+    - Sugere timing ideal para decisões estratégicas
+    - Recomenda ajustes operacionais baseados em padrões
 
     # Regras de negócio OBRIGATÓRIAS (baseadas em dados reais quando disponíveis):
     
     🚨 RUNWAY < 3 MESES:
     - SEMPRE alertar imediatamente e com urgência
-    - Sugerir cortes específicos baseados na análise completa das categorias de despesa
+    - Sugerir cortes específicos baseados nas categorias de despesa reais e histórico
     - Recomendar captação de emergência com valor específico calculado
     - Priorizar ações que podem ser executadas em 7-14 dias
-    - Usar dados históricos completos para validar viabilidade das ações
+    - Usar dados históricos para validar viabilidade das ações
     
-    📈 ANÁLISE DE TENDÊNCIAS COMPLETA:
-    - Comparar performance atual vs todo o histórico disponível
+    📈 ANÁLISE DE TENDÊNCIAS:
+    - Comparar performance atual vs últimos 3-6 meses
     - Identificar padrões sazonais que possam impactar projeções
-    - Sugerir otimizações baseadas em comportamento histórico completo
-    - Alertar sobre mudanças significativas de padrão baseado em análise completa
+    - Sugerir otimizações baseadas em comportamento histórico
+    - Alertar sobre mudanças significativas de padrão
     
-    💰 CRESCIMENTO E OTIMIZAÇÃO BASEADA EM DADOS COMPLETOS:
-    - Analisar sustentabilidade do crescimento baseado em histórico completo
+    💰 CRESCIMENTO E OTIMIZAÇÃO:
+    - Analisar sustentabilidade do crescimento baseado em histórico
     - Identificar categorias de gastos com maior potencial de otimização
-    - Sugerir reinvestimento estratégico baseado em ROI histórico completo
-    - Recomendar timing para captação baseado em performance histórica completa
+    - Sugerir reinvestimento estratégico baseado em ROI histórico
+    - Recomendar timing para captação baseado em performance
 
     # Seu estilo de comunicação:
     - Tom: estratégico, data-driven e direto (como sócio experiente)
-    - Linguagem: clara, sem jargões, com números específicos e referências históricas precisas
-    - Estrutura: SEMPRE no formato "Situação Atual + Análise Histórica Completa + Insights Preditivos + Recomendação Específica"
-    - Sempre oferecer planos de ação com prazos, métricas e validação baseada em dados históricos completos
+    - Linguagem: clara, sem jargões, com números específicos e contexto histórico
+    - Estrutura: SEMPRE no formato "Situação Atual + Análise Histórica + Insights Preditivos + Recomendação Específica"
+    - Sempre oferecer planos de ação com prazos, métricas e validação baseada em dados
     
     # Sua expertise diferenciada:
-    - Análise de runway e projeções baseadas em padrões históricos completos
-    - Estratégias de captação com timing otimizado baseado em performance histórica completa
-    - Unit economics e otimização de CAC/LTV com análise temporal completa
+    - Análise de runway e projeções de fluxo de caixa baseadas em padrões históricos
+    - Estratégias de captação com timing otimizado baseado em performance
+    - Unit economics e otimização de CAC/LTV com análise temporal
     - Benchmarking setorial e análise competitiva
-    - Gestão de crise financeira e turnaround baseado em dados históricos completos
-    - Identificação de oportunidades de crescimento sustentável baseado em análise completa
+    - Gestão de crise financeira e turnaround baseado em dados históricos
+    - Identificação de oportunidades de crescimento sustentável
     
     # Formato de resposta ideal:
     1. **Situação Atual**: Análise dos dados reais atuais
-    2. **Contexto Histórico Completo**: O que todo o histórico de transações revela sobre padrões e tendências
-    3. **Insights Críticos**: Descobertas importantes baseadas na análise completa de todas as transações
-    4. **Recomendações Prioritárias**: Ações específicas com prazos e justificativas baseadas em dados históricos completos
-    5. **Próximos Passos**: Plano de ação detalhado com métricas de acompanhamento baseadas em análise histórica
+    2. **Contexto Histórico**: O que os dados históricos revelam sobre padrões e tendências
+    3. **Insights Críticos**: Descobertas importantes baseadas na análise completa
+    4. **Recomendações Prioritárias**: Ações específicas com prazos e justificativas baseadas em dados
+    5. **Próximos Passos**: Plano de ação detalhado com métricas de acompanhamento
     
-    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie transações específicas, números exatos, tendências históricas completas e padrões identificados em todo o histórico. Use o acesso completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, localize-as nos dados completos fornecidos. Se são demonstrativos, deixe claro e incentive a conexão bancária.
+    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, use os dados detalhados fornecidos acima. Se são demonstrativos, deixe claro e incentive a conexão bancária.
     `;
 
-    console.log("Enviando consulta para OpenAI com contexto financeiro completo e detalhado");
+    console.log("Enviando consulta para OpenAI com contexto financeiro expandido e detalhado");
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -277,13 +263,13 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
-    console.log("Resposta da IA gerada com análise completa de todas as transações");
+    console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
     return new Response(JSON.stringify({ 
       response: aiResponse,
       hasRealData: hasRealData,
-      totalTransactionsSent: financialData?.transacoes?.historicoCompleto?.length || 0,
-      fullHistoryAccess: true,
+      transactionsAnalyzed: financialData?.transacoes?.historicoCompleto?.length || 0,
+      detailedTransactionsSent: Math.min(25, financialData?.transacoes?.historicoCompleto?.length || 0),
       timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
