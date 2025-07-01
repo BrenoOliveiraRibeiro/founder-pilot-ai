@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Trash2, RefreshCw, Plus, Building2, CreditCard, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Trash2, RefreshCw, Plus, Building2, CreditCard, ArrowRight, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { MultiplePluggyConnection } from '@/hooks/useMultiplePluggyDatabase';
 
@@ -29,10 +29,43 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
   onAddNewBank,
   syncing = false
 }) => {
+  // Debug logging for balance issues
+  React.useEffect(() => {
+    if (allAccountData?.results) {
+      console.log('🔍 DEBUG: Dados das contas recebidos:', {
+        totalAccounts: allAccountData.results.length,
+        accounts: allAccountData.results.map((acc: any) => ({
+          id: acc.id,
+          name: acc.name,
+          bankName: acc.bankName,
+          balance: acc.balance,
+          type: acc.type,
+          currencyCode: acc.currencyCode
+        }))
+      });
+
+      // Verificar especificamente a Caixa Econômica
+      const caixaAccounts = allAccountData.results.filter((acc: any) => 
+        acc.bankName?.toLowerCase().includes('caixa') || 
+        acc.name?.toLowerCase().includes('caixa')
+      );
+      
+      if (caixaAccounts.length > 0) {
+        console.log('🏦 DEBUG: Contas da Caixa Econômica encontradas:', caixaAccounts);
+      }
+    }
+  }, [allAccountData]);
+
   const totalBalance = allAccountData?.results?.reduce(
-    (sum: number, account: any) => sum + (account.balance || 0), 
+    (sum: number, account: any) => {
+      const balance = account.balance || 0;
+      console.log(`💰 Somando conta ${account.name} (${account.bankName}): ${balance}`);
+      return sum + balance;
+    }, 
     0
   ) || 0;
+
+  console.log('💰 DEBUG: Saldo total calculado:', totalBalance);
 
   const selectedAccount = allAccountData?.results?.find(
     (account: any) => account.id === selectedAccountId
@@ -46,8 +79,36 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
 
   const { totalAccounts, bankNames } = getConnectionStats();
 
+  const handleRefreshConnection = async (itemId: string, bankName: string) => {
+    console.log(`🔄 Sincronizando especificamente: ${bankName} (${itemId})`);
+    // Trigger sync for specific connection - this will be handled by parent component
+    onSyncAll(); // For now, sync all, but we could make this more specific
+  };
+
   return (
     <div className="space-y-6">
+      {/* Debug Info Card - só mostra em desenvolvimento */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-orange-800 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Debug Info (Dev Mode)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xs text-orange-700 space-y-1">
+              <p>Total de conexões: {connections.length}</p>
+              <p>Total de contas: {totalAccounts}</p>
+              <p>Saldo total calculado: {formatCurrency(totalBalance)}</p>
+              {selectedAccount && (
+                <p>Conta selecionada: {selectedAccount.name} - {formatCurrency(selectedAccount.balance)}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Resumo das Conexões */}
       <Card>
         <CardHeader className="pb-3">
@@ -111,7 +172,7 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
         </CardContent>
       </Card>
 
-      {/* Lista de Conexões Individuais */}
+      {/* Lista de Conexões Individuais com Refresh Individual */}
       {connections.length > 0 && (
         <Card>
           <CardHeader>
@@ -125,9 +186,15 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                 ) || [];
                 
                 const connectionBalance = connectionAccounts.reduce(
-                  (sum: number, account: any) => sum + (account.balance || 0), 
+                  (sum: number, account: any) => {
+                    const balance = account.balance || 0;
+                    console.log(`🏦 ${connection.bankName} - Conta ${account.name}: ${balance}`);
+                    return sum + balance;
+                  }, 
                   0
                 );
+
+                console.log(`🏦 ${connection.bankName} - Saldo total da conexão: ${connectionBalance}`);
 
                 return (
                   <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -139,6 +206,14 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                           {connectionAccounts.length} conta{connectionAccounts.length !== 1 ? 's' : ''} • 
                           {formatCurrency(connectionBalance)}
                         </p>
+                        {/* Debug info for Caixa */}
+                        {connection.bankName.toLowerCase().includes('caixa') && (
+                          <p className="text-xs text-orange-600">
+                            Debug: {connectionAccounts.map(acc => 
+                              `${acc.name}(${formatCurrency(acc.balance)})`
+                            ).join(', ')}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -148,6 +223,15 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                           'Nunca sincronizado'
                         }
                       </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRefreshConnection(connection.itemId, connection.bankName)}
+                        disabled={syncing}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -165,7 +249,7 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
         </Card>
       )}
 
-      {/* Seletor de Conta */}
+      {/* Seletor de Conta com Debug */}
       {allAccountData?.results && allAccountData.results.length > 0 && (
         <Card>
           <CardHeader>
@@ -209,6 +293,16 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
                     </span>
                     <p className="text-sm text-gray-500">Saldo atual</p>
                   </div>
+                  {/* Debug info específico da conta selecionada */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                      <p><strong>Debug:</strong></p>
+                      <p>ID: {selectedAccount.id}</p>
+                      <p>Item ID: {selectedAccount.itemId}</p>
+                      <p>Balance (raw): {selectedAccount.balance}</p>
+                      <p>Currency: {selectedAccount.currencyCode || 'BRL'}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

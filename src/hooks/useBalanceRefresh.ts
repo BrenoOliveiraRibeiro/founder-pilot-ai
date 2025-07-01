@@ -16,7 +16,7 @@ export const useBalanceRefresh = () => {
     }
 
     try {
-      console.log(`Iniciando refresh de saldo para item: ${itemId}`);
+      console.log(`🔄 Iniciando refresh de saldo para item: ${itemId}`);
       
       // Buscar dados atualizados da API Pluggy
       const accountData = await pluggyApi.fetchAccountData(itemId);
@@ -26,7 +26,33 @@ export const useBalanceRefresh = () => {
         return null;
       }
 
-      console.log('Dados da conta obtidos:', accountData);
+      console.log('📊 Dados da conta obtidos da API:', {
+        itemId,
+        totalAccounts: accountData.results?.length || 0,
+        accounts: accountData.results?.map((acc: any) => ({
+          id: acc.id,
+          name: acc.name,
+          balance: acc.balance,
+          type: acc.type
+        }))
+      });
+
+      // Encontrar qual banco é para logging específico
+      const { data: existingIntegration } = await supabase
+        .from('integracoes_bancarias')
+        .select('nome_banco')
+        .eq('empresa_id', currentEmpresa.id)
+        .eq('item_id', itemId)
+        .single();
+
+      if (existingIntegration) {
+        console.log(`🏦 Atualizando dados do banco: ${existingIntegration.nome_banco}`);
+        
+        // Log específico para Caixa Econômica
+        if (existingIntegration.nome_banco.toLowerCase().includes('caixa')) {
+          console.log('🔍 CAIXA ECONÔMICA - Dados recebidos da API:', accountData);
+        }
+      }
 
       // Atualizar no banco de dados
       const { error: updateError } = await supabase
@@ -39,19 +65,21 @@ export const useBalanceRefresh = () => {
         .eq('item_id', itemId);
 
       if (updateError) {
-        console.error('Erro ao atualizar dados no banco:', updateError);
+        console.error('❌ Erro ao atualizar dados no banco:', updateError);
         throw new Error(`Falha ao salvar dados atualizados: ${updateError.message}`);
       }
 
-      console.log('Dados de conta atualizados no banco com sucesso');
+      console.log('✅ Dados de conta atualizados no banco com sucesso');
 
       if (showToast) {
         const totalBalance = accountData.results?.reduce((sum: number, account: any) => {
           return sum + (account.balance || 0);
         }, 0) || 0;
 
+        const bankName = existingIntegration?.nome_banco || 'Banco';
+
         toast({
-          title: "Saldo atualizado",
+          title: `${bankName} atualizado`,
           description: `Saldo total: ${new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
@@ -61,7 +89,7 @@ export const useBalanceRefresh = () => {
 
       return accountData;
     } catch (error: any) {
-      console.error('Erro no refresh de saldo:', error);
+      console.error('❌ Erro no refresh de saldo:', error);
       
       if (showToast) {
         toast({
