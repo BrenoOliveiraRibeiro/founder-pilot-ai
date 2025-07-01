@@ -3,18 +3,18 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
-import { useMultiplePluggyConnectionPersistence } from "@/hooks/useMultiplePluggyConnectionPersistence";
+import { usePluggyConnectionPersistence } from "@/hooks/usePluggyConnectionPersistence";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
-import { MultipleConnectionsManager } from "@/components/open-finance/MultipleConnectionsManager";
 
 declare global {
   interface Window {
@@ -23,7 +23,10 @@ declare global {
 }
 
 const OpenFinance = () => {
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [transactionsData, setTransactionsData] = useState<any>(null);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
   
@@ -37,8 +40,8 @@ const OpenFinance = () => {
 
   const {
     activeIntegrations,
-    loading: legacyLoading,
-    syncing: legacySyncing,
+    loading,
+    syncing,
     handleSyncData,
     formatDate
   } = useOpenFinanceConnections();
@@ -51,30 +54,24 @@ const OpenFinance = () => {
   const { currentEmpresa, loading: authLoading } = useAuth();
 
   const {
-    loading,
-    hasConnections,
-    totalConnections,
+    connectionData,
+    loading: connectionLoading,
     processingTransactions,
-    connections,
-    allAccountData,
-    selectedAccountId,
-    setSelectedAccountId,
-    getSelectedAccount,
-    transactionsData,
-    fetchTransactions,
     saveConnection,
     clearConnection,
-    clearAllConnections,
-    syncAllConnections,
-    processAndSaveTransactions
-  } = useMultiplePluggyConnectionPersistence();
+    syncData,
+    fetchTransactions,
+    fetchAccountData,
+    processAndSaveTransactions,
+    autoProcessAllAccountsAllPages
+  } = usePluggyConnectionPersistence();
 
   useEffect(() => {
-    console.log("OpenFinance component updated - Multiple connections mode");
+    console.log("OpenFinance component mounted/updated");
     console.log("Current empresa:", currentEmpresa);
-    console.log("Total connections:", totalConnections);
-    console.log("Has connections:", hasConnections);
-  }, [currentEmpresa, totalConnections, hasConnections]);
+    console.log("Auth loading:", authLoading);
+    console.log("Connection data:", connectionData);
+  }, [currentEmpresa, authLoading, connectionData]);
 
   useEffect(() => {
     if (window.PluggyConnect && !scriptLoadedRef.current) {
@@ -116,6 +113,15 @@ const OpenFinance = () => {
     }
   }, [toast]);
 
+  // Auto-selecionar primeira conta quando dados estão disponíveis
+  useEffect(() => {
+    if (connectionData?.accountData?.results && connectionData.accountData.results.length > 0 && !selectedAccountId) {
+      const firstAccountId = connectionData.accountData.results[0].id;
+      setSelectedAccountId(firstAccountId);
+      handleAccountSelection(firstAccountId);
+    }
+  }, [connectionData?.accountData, selectedAccountId]);
+
   const formatCurrency = (amount: number, currencyCode: string) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -127,6 +133,11 @@ const OpenFinance = () => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  const getSelectedAccount = () => {
+    if (!connectionData?.accountData?.results || !selectedAccountId) return null;
+    return connectionData.accountData.results.find((account: any) => account.id === selectedAccountId);
+  };
+
   const handleAccountSelection = async (accountId: string) => {
     setSelectedAccountId(accountId);
     setCurrentPage(1);
@@ -134,9 +145,14 @@ const OpenFinance = () => {
   };
 
   const loadTransactions = async (accountId: string, page: number) => {
+    setIsLoadingTransactions(true);
+    
     try {
       const data = await fetchTransactions(accountId, page, pageSize);
       if (data) {
+        setTransactionsData(data);
+        
+        // Calcular total de páginas baseado no total de resultados
         const total = data.total || data.results?.length || 0;
         setTotalPages(Math.ceil(total / pageSize));
       }
@@ -147,6 +163,8 @@ const OpenFinance = () => {
         description: "Erro ao buscar transações da conta selecionada.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingTransactions(false);
     }
   };
 
@@ -157,8 +175,46 @@ const OpenFinance = () => {
     }
   };
 
+  // Nova função para salvar TODAS as transações de TODAS as páginas
+  const handleSaveAllTransactions = async () => {
+    if (!connectionData?.itemId) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma conexão bancária encontrada.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('Iniciando salvamento completo de todas as transações...');
+
+    try {
+      const result = await autoProcessAllAccountsAllPages(connectionData.itemId, false);
+
+      if (result && result.totalNewTransactions > 0) {
+        toast({
+          title: "Todas as transações processadas!",
+          description: `${result.totalNewTransactions} novas transações foram salvas de ${result.totalProcessedAccounts} conta${result.totalProcessedAccounts !== 1 ? 's' : ''}.`,
+        });
+      } else {
+        toast({
+          title: "Verificação completa realizada",
+          description: "Todas as transações já estão salvas no sistema.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving all transactions:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar todas as transações.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Nova função específica para salvar transações da página atual
   const handleSaveCurrentPageTransactions = async () => {
-    if (!selectedAccountId || !transactionsData) {
+    if (!connectionData?.itemId || !selectedAccountId || !transactionsData) {
       toast({
         title: "Erro",
         description: "Dados insuficientes para salvar transações.",
@@ -167,22 +223,16 @@ const OpenFinance = () => {
       return;
     }
 
-    const selectedAccount = getSelectedAccount();
-    if (!selectedAccount) {
-      toast({
-        title: "Erro",
-        description: "Conta selecionada não encontrada.",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log('Iniciando salvamento de transações da página atual...');
 
     try {
       const result = await processAndSaveTransactions(
-        selectedAccount.itemId,
+        connectionData.itemId,
         selectedAccountId,
         transactionsData
       );
+
+      console.log('Resultado do salvamento da página atual:', result);
 
       if (result.success) {
         if (result.newTransactions && result.newTransactions > 0) {
@@ -273,31 +323,30 @@ const OpenFinance = () => {
           const receivedItemId = itemData.item.id;
           
           try {
-            const response = await pluggyAuth.makeAuthenticatedRequest(
-              `https://api.pluggy.ai/accounts?itemId=${receivedItemId}`,
-              {
-                method: 'GET',
-                headers: { accept: 'application/json' }
-              }
-            );
+            const accountData = await fetchAccountData(receivedItemId);
             
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const accountData = await response.json();
-            
-            await saveConnection(
-              receivedItemId, 
-              accountData, 
-              tokenData.accessToken,
-              itemData.item.connector?.name || 'Banco Conectado'
-            );
+            if (accountData) {
+              // saveConnection agora inclui processamento automático completo de transações
+              await saveConnection(
+                receivedItemId, 
+                accountData, 
+                tokenData.accessToken,
+                itemData.item.connector?.name || 'Banco Conectado'
+              );
 
-            toast({
-              title: "Nova conexão estabelecida!",
-              description: `${itemData.item.connector?.name || 'Banco'} foi conectado com sucesso. Agora você tem ${totalConnections + 1} banco(s) conectado(s).`,
-            });
+              if (accountData.results && accountData.results.length > 0) {
+                const firstAccountId = accountData.results[0].id;
+                setSelectedAccountId(firstAccountId);
+                
+                // Apenas buscar transações para visualização (já foram salvas automaticamente)
+                await loadTransactions(firstAccountId, 1);
+                
+                toast({
+                  title: "Conexão estabelecida!",
+                  description: "Conexão realizada e todas as transações foram salvas automaticamente.",
+                });
+              }
+            }
           } catch (error: any) {
             console.error('Erro ao processar conexão:', error);
             toast({
@@ -338,21 +387,21 @@ const OpenFinance = () => {
   };
 
   // Se estiver carregando conexão, mostrar loading
-  if (loading) {
+  if (connectionLoading) {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto py-8">
           <div className="flex items-center justify-center">
             <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-            <span>Carregando conexões...</span>
+            <span>Carregando conexão...</span>
           </div>
         </div>
       </AppLayout>
     );
   }
 
-  // Se já tem conexões, mostrar interface com múltiplas conexões
-  if (hasConnections) {
+  // Se já está conectado, mostrar interface conectada
+  if (connectionData?.isConnected) {
     const selectedAccount = getSelectedAccount();
     
     return (
@@ -364,44 +413,90 @@ const OpenFinance = () => {
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Open Finance Conectado</h1>
-                <p className="text-gray-600">
-                  {totalConnections} banco{totalConnections !== 1 ? 's' : ''} conectado{totalConnections !== 1 ? 's' : ''} • 
-                  {allAccountData?.results?.length || 0} conta{(allAccountData?.results?.length || 0) !== 1 ? 's' : ''} disponíve{(allAccountData?.results?.length || 0) !== 1 ? 'is' : 'l'}
-                </p>
-                {processingTransactions && (
+                <h1 className="text-2xl font-bold text-gray-900">Conta Conectada</h1>
+                <p className="text-gray-600">Dados bancários sincronizados via Pluggy OpenFinance</p>
+                {(processingTransactions || isLoadingTransactions) && (
                   <p className="text-blue-600 text-sm">
-                    Processando transações...
+                    {processingTransactions ? 'Processando transações...' : 'Carregando transações...'}
                   </p>
                 )}
+              </div>
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" onClick={syncData}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sincronizar
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearConnection}>
+                  Desconectar
+                </Button>
               </div>
             </div>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Gerenciador de Múltiplas Conexões */}
+            {/* Account Selection and Info */}
             <div className="lg:col-span-1">
-              <MultipleConnectionsManager
-                connections={connections}
-                allAccountData={allAccountData}
-                selectedAccountId={selectedAccountId}
-                onAccountSelect={handleAccountSelection}
-                onSyncAll={syncAllConnections}
-                onClearConnection={clearConnection}
-                onAddNewBank={handlePluggyConnect}
-                syncing={processingTransactions}
-              />
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Selecionar Conta</h2>
+                
+                {connectionData.accountData?.results && connectionData.accountData.results.length > 0 && (
+                  <div className="mb-6">
+                    <Select value={selectedAccountId} onValueChange={handleAccountSelection}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Escolha uma conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {connectionData.accountData.results.map((account: any) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name} - {account.type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedAccount && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h3 className="font-medium text-gray-900">{selectedAccount.name}</h3>
+                      <p className="text-sm text-gray-600 capitalize">{selectedAccount.type}</p>
+                      <div className="mt-2">
+                        <span className="text-2xl font-bold text-blue-600">
+                          {formatCurrency(selectedAccount.balance, selectedAccount.currencyCode)}
+                        </span>
+                        <p className="text-sm text-gray-500">Saldo atual</p>
+                      </div>
+                    </div>
+
+                    {/* Botão para salvar todas as transações */}
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleSaveAllTransactions}
+                        className="w-full"
+                        disabled={processingTransactions}
+                        variant="default"
+                      >
+                        {processingTransactions ? 'Processando...' : 'Salvar Todas as Transações'}
+                      </Button>
+                      <p className="text-xs text-gray-500 text-center">
+                        Salva todas as transações de todas as contas e páginas
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </Card>
             </div>
 
-            {/* Transações */}
+            {/* Transactions */}
             <div className="lg:col-span-2">
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Transações</h2>
                   <div className="flex gap-2">
-                    {processingTransactions && (
+                    {(isLoadingTransactions || processingTransactions) && (
                       <span className="text-sm text-gray-500">
-                        Processando...
+                        {processingTransactions ? 'Processando...' : 'Carregando...'}
                       </span>
                     )}
                     {transactionsData?.results && selectedAccountId && (
@@ -513,18 +608,15 @@ const OpenFinance = () => {
                     <div className="text-center text-sm text-gray-500">
                       Página {currentPage} de {totalPages} • 
                       Mostrando {transactionsData.results.length} de {transactionsData.total || transactionsData.results.length} transações
-                      {selectedAccount && (
-                        <span className="ml-2">• Conta: <strong>{selectedAccount.name}</strong> ({selectedAccount.bankName})</span>
-                      )}
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">
-                      {selectedAccountId ? 'Nenhuma transação encontrada para a conta selecionada' : 'Selecione uma conta para ver as transações'}
+                      {isLoadingTransactions ? 'Carregando transações...' : 'Nenhuma transação encontrada'}
                     </p>
-                    {selectedAccountId && (
+                    {selectedAccountId && !isLoadingTransactions && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -544,7 +636,6 @@ const OpenFinance = () => {
     );
   }
 
-  // Interface para conectar primeiro banco (estado inicial)
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto py-8">
@@ -614,7 +705,7 @@ const OpenFinance = () => {
           <ActiveIntegrationsCard 
             integrations={activeIntegrations}
             handleSync={handleSyncData}
-            syncing={legacySyncing}
+            syncing={syncing}
             formatDate={formatDate}
           />
         )}
@@ -677,7 +768,7 @@ const OpenFinance = () => {
                 disabled={isConnecting || !isScriptLoaded}
               >
                 <span className="flex items-center">
-                  {isConnecting ? 'Conectando...' : 'Conectar Primeiro Banco'}
+                  {isConnecting ? 'Conectando...' : 'Abrir Widget Pluggy Connect'}
                   {!isConnecting && <RefreshCw className="h-4 w-4 ml-2 transition-transform group-hover:rotate-180" />}
                 </span>
               </Button>
