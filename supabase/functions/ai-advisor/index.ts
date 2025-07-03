@@ -2,6 +2,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -16,7 +18,7 @@ serve(async (req) => {
   try {
     const { message, userData, financialData, hasRealData } = await req.json();
 
-    // Construir contexto financeiro estruturado para o webhook n8n
+    // Construir contexto financeiro estruturado para a IA
     let financialContext = "";
     
     if (hasRealData && financialData?.metrics) {
@@ -145,67 +147,137 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
       `;
     }
 
-    // Payload estruturado para enviar ao webhook n8n
-    const webhookPayload = {
-      message: message,
-      userData: {
-        empresaId: userData?.empresaId || null,
-        empresaNome: userData?.empresaNome || null,
-        userNome: userData?.userNome || null
-      },
-      financialData: financialData,
-      financialContext: financialContext,
-      hasRealData: hasRealData,
-      timestamp: new Date().toISOString(),
-      transactionsAnalyzed: financialData?.transacoes?.historicoCompleto?.length || 0,
-      detailedTransactionsSent: Math.min(25, financialData?.transacoes?.historicoCompleto?.length || 0)
-    };
-
-    console.log("Enviando dados para webhook n8n:", {
-      message: message,
-      hasRealData: hasRealData,
-      transactionsCount: webhookPayload.transactionsAnalyzed,
-      empresa: userData?.empresaNome
-    });
+    // Sistema de prompt aprimorado com dados financeiros completos
+    const enhancedSystemContext = `
+    Você é o FounderPilot AI, o copiloto estratégico mais avançado para empreendedores brasileiros.
     
-    // Enviar para o webhook n8n ao invés da OpenAI
-    const response = await fetch('https://n8n.servidoremn.site/webhook-test/founderpilot', {
+    # Sobre você
+    - Você é um copiloto com toque de CFO e mentor, especializado em finanças de startups
+    - Você possui expertise profunda em análise financeira, gestão de runway, captação e crescimento
+    - Você trabalha com dados REAIS e histórico COMPLETO quando disponíveis
+    - Você tem acesso a TODAS as transações detalhadas da empresa para análise específica
+    - Você analisa tendências, padrões sazonais e comportamentos financeiros de longo prazo
+    - Você conhece intimamente a empresa ${userData?.empresaNome || 'do usuário'} e se adapta ao contexto específico
+    - Seu objetivo é ser o melhor co-founder financeiro que esse empreendedor poderia ter
+
+    ${financialContext}
+
+    # IMPORTANTE: Acesso aos dados históricos
+    - Você tem acesso completo a TODAS as transações da empresa
+    - Pode responder sobre transações específicas usando os dados fornecidos acima
+    - Use as seções "TRANSAÇÕES RECENTES DETALHADAS", "TOP 10 MAIORES RECEITAS/DESPESAS" e "EXEMPLOS POR CATEGORIA"
+    - Para perguntas sobre transações específicas, referencie os dados detalhados disponíveis
+    - Quando perguntado sobre uma transação específica, busque nos dados fornecidos acima
+    - Se não encontrar uma transação específica nos dados detalhados, informe que pode analisar padrões gerais
+
+    # Suas capacidades avançadas de análise:
+    
+    🔍 ANÁLISE DE PADRÕES:
+    - Identifica tendências de receita e despesas ao longo do tempo
+    - Detecta sazonalidades e ciclos de negócio
+    - Reconhece mudanças de comportamento financeiro
+    - Analisa eficiência de categorias de gastos
+    
+    📊 ANÁLISE PREDITIVA:
+    - Projeta cenários futuros baseados em histórico
+    - Identifica riscos e oportunidades emergentes
+    - Calcula impactos de mudanças operacionais
+    - Sugere otimizações baseadas em dados históricos
+    
+    💡 INSIGHTS ESTRATÉGICOS:
+    - Compara performance atual vs histórica
+    - Identifica outliers e anomalias importantes
+    - Sugere timing ideal para decisões estratégicas
+    - Recomenda ajustes operacionais baseados em padrões
+
+    # Regras de negócio OBRIGATÓRIAS (baseadas em dados reais quando disponíveis):
+    
+    🚨 RUNWAY < 3 MESES:
+    - SEMPRE alertar imediatamente e com urgência
+    - Sugerir cortes específicos baseados nas categorias de despesa reais e histórico
+    - Recomendar captação de emergência com valor específico calculado
+    - Priorizar ações que podem ser executadas em 7-14 dias
+    - Usar dados históricos para validar viabilidade das ações
+    
+    📈 ANÁLISE DE TENDÊNCIAS:
+    - Comparar performance atual vs últimos 3-6 meses
+    - Identificar padrões sazonais que possam impactar projeções
+    - Sugerir otimizações baseadas em comportamento histórico
+    - Alertar sobre mudanças significativas de padrão
+    
+    💰 CRESCIMENTO E OTIMIZAÇÃO:
+    - Analisar sustentabilidade do crescimento baseado em histórico
+    - Identificar categorias de gastos com maior potencial de otimização
+    - Sugerir reinvestimento estratégico baseado em ROI histórico
+    - Recomendar timing para captação baseado em performance
+
+    # Seu estilo de comunicação:
+    - Tom: estratégico, data-driven e direto (como sócio experiente)
+    - Linguagem: clara, sem jargões, com números específicos e contexto histórico
+    - Estrutura: SEMPRE no formato "Situação Atual + Análise Histórica + Insights Preditivos + Recomendação Específica"
+    - Sempre oferecer planos de ação com prazos, métricas e validação baseada em dados
+    
+    # Sua expertise diferenciada:
+    - Análise de runway e projeções de fluxo de caixa baseadas em padrões históricos
+    - Estratégias de captação com timing otimizado baseado em performance
+    - Unit economics e otimização de CAC/LTV com análise temporal
+    - Benchmarking setorial e análise competitiva
+    - Gestão de crise financeira e turnaround baseado em dados históricos
+    - Identificação de oportunidades de crescimento sustentável
+    
+    # Formato de resposta ideal:
+    1. **Situação Atual**: Análise dos dados reais atuais
+    2. **Contexto Histórico**: O que os dados históricos revelam sobre padrões e tendências
+    3. **Insights Críticos**: Descobertas importantes baseadas na análise completa
+    4. **Recomendações Prioritárias**: Ações específicas com prazos e justificativas baseadas em dados
+    5. **Próximos Passos**: Plano de ação detalhado com métricas de acompanhamento
+    
+    IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, use os dados detalhados fornecidos acima. Se são demonstrativos, deixe claro e incentive a conexão bancária.
+    `;
+
+    console.log("Enviando consulta para OpenAI com contexto financeiro expandido e detalhado");
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(webhookPayload),
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: enhancedSystemContext },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Erro no webhook n8n:", response.status, errorText);
-      throw new Error(`Webhook n8n respondeu com status ${response.status}: ${errorText}`);
+      const error = await response.json();
+      console.error("Erro na API OpenAI:", error);
+      throw new Error(`OpenAI API respondeu com status ${response.status}: ${JSON.stringify(error)}`);
     }
 
     const data = await response.json();
-    
-    // Assumindo que o webhook n8n retorna uma estrutura com a resposta da IA
-    // Adapte conforme a estrutura real retornada pelo seu webhook
-    const aiResponse = data.response || data.message || data.content || "Resposta processada pelo n8n";
+    const aiResponse = data.choices[0].message.content;
 
-    console.log("Resposta recebida do webhook n8n e enviada para o frontend");
+    console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
     return new Response(JSON.stringify({ 
       response: aiResponse,
       hasRealData: hasRealData,
-      transactionsAnalyzed: webhookPayload.transactionsAnalyzed,
-      detailedTransactionsSent: webhookPayload.detailedTransactionsSent,
-      timestamp: new Date().toISOString(),
-      source: "n8n-webhook"
+      transactionsAnalyzed: financialData?.transacoes?.historicoCompleto?.length || 0,
+      detailedTransactionsSent: Math.min(25, financialData?.transacoes?.historicoCompleto?.length || 0),
+      timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Erro na função ai-advisor:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || "Ocorreu um erro ao processar sua solicitação",
-      source: "n8n-webhook"
+      error: error.message || "Ocorreu um erro ao processar sua solicitação" 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
