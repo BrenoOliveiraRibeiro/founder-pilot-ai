@@ -244,7 +244,7 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: enhancedSystemContext },
           { role: 'user', content: message }
