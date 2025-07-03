@@ -235,32 +235,87 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, use os dados detalhados fornecidos acima. Se são demonstrativos, deixe claro e incentive a conexão bancária.
     `;
 
-    console.log("Enviando dados para webhook n8n FounderPilot");
+    console.log("Tentando webhook n8n FounderPilot primeiro...");
     
     const webhookUrl = 'https://n8n.servidoremn.site/webhook-test/founderpilot';
+    let aiResponse = null;
     
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: message,
-        userData: userData,
-        financialData: financialContext,
-        hasRealData: hasRealData,
-        systemContext: enhancedSystemContext,
-        timestamp: new Date().toISOString()
-      }),
-    });
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          userData: userData,
+          financialData: financialContext,
+          hasRealData: hasRealData,
+          systemContext: enhancedSystemContext,
+          timestamp: new Date().toISOString()
+        }),
+      });
 
-    if (!response.ok) {
-      console.error("Erro no webhook n8n:", response.status, response.statusText);
-      throw new Error(`Webhook n8n respondeu com status ${response.status}`);
+      console.log("Status do webhook n8n:", response.status);
+      
+      if (!response.ok) {
+        console.error("Erro HTTP no webhook n8n:", response.status, response.statusText);
+        throw new Error(`Webhook retornou status ${response.status}`);
+      }
+
+      const responseText = await response.text();
+      console.log("Resposta raw do webhook n8n:", responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log("JSON parseado do webhook:", data);
+      } catch (jsonError) {
+        console.error("Erro ao parsear JSON do webhook:", jsonError);
+        throw new Error("Resposta do webhook não é JSON válido");
+      }
+
+      // Tentar extrair a resposta de diferentes estruturas possíveis
+      aiResponse = data.response || data.message || data.output || data.result || data.content;
+      
+      if (!aiResponse) {
+        console.error("Nenhum campo de resposta encontrado no webhook. Estrutura:", Object.keys(data));
+        throw new Error("Webhook não retornou campo de resposta esperado");
+      }
+
+      console.log("Resposta extraída do webhook n8n com sucesso");
+      
+    } catch (webhookError) {
+      console.error("Webhook n8n falhou, usando OpenAI como fallback:", webhookError);
+      
+      // Fallback para OpenAI
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: enhancedSystemContext },
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        const error = await openaiResponse.json();
+        console.error("Erro na API OpenAI (fallback):", error);
+        throw new Error(`OpenAI API falhou: ${openaiResponse.status}`);
+      }
+
+      const openaiData = await openaiResponse.json();
+      aiResponse = openaiData.choices[0].message.content;
+      console.log("Resposta gerada via OpenAI (fallback)");
     }
-
-    const data = await response.json();
-    const aiResponse = data.response || data.message || "Resposta recebida do webhook n8n";
 
     console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
