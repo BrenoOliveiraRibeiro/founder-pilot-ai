@@ -235,33 +235,32 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
     IMPORTANTE: Se os dados são reais (hasRealData=true), sempre referencie números específicos, tendências históricas e padrões identificados. Use o histórico completo para validar recomendações e identificar oportunidades. Quando perguntado sobre transações específicas, use os dados detalhados fornecidos acima. Se são demonstrativos, deixe claro e incentive a conexão bancária.
     `;
 
-    console.log("Enviando consulta para OpenAI com contexto financeiro expandido e detalhado");
+    console.log("Enviando dados para webhook n8n FounderPilot");
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const webhookUrl = 'https://n8n.servidoremn.site/webhook-test/founderpilot';
+    
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: enhancedSystemContext },
-          { role: 'user', content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        message: message,
+        userData: userData,
+        financialData: financialContext,
+        hasRealData: hasRealData,
+        systemContext: enhancedSystemContext,
+        timestamp: new Date().toISOString()
       }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error("Erro na API OpenAI:", error);
-      throw new Error(`OpenAI API respondeu com status ${response.status}: ${JSON.stringify(error)}`);
+      console.error("Erro no webhook n8n:", response.status, response.statusText);
+      throw new Error(`Webhook n8n respondeu com status ${response.status}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.response || data.message || "Resposta recebida do webhook n8n";
 
     console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
