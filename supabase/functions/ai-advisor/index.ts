@@ -259,9 +259,9 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
       throw new Error(`Webhook n8n respondeu com status ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log("Webhook n8n response data:", JSON.stringify(data, null, 2));
-    const aiResponse = data;
+    const teste = await response.json();
+    console.log("Webhook n8n response data:", JSON.stringify(teste, null, 2));
+    const aiResponse = teste;
 
     console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
