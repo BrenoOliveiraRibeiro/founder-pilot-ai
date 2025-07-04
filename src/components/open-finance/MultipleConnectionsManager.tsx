@@ -59,27 +59,7 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
       {/* Resumo das Conexões */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Suas Conexões Open Finance</CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onSyncAll}
-                disabled={syncing}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                Sincronizar Tudo
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={onAddNewBank}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Conectar Banco
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-lg">Suas Conexões Open Finance</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4">

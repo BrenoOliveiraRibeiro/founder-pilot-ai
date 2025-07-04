@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from "@/components/layouts/AppLayout";
-import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw } from "lucide-react";
+import { Info, Bug, AlertCircle, Shield, CreditCard, TrendingUp, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw, Plus } from "lucide-react";
 import { useOpenFinanceConnections } from "@/hooks/useOpenFinanceConnections";
 import { useOpenFinanceConnection } from "@/hooks/useOpenFinanceConnection";
 import { useMultiplePluggyConnectionPersistence } from "@/hooks/useMultiplePluggyConnectionPersistence";
@@ -363,21 +363,41 @@ const OpenFinance = () => {
       <AppLayout>
         <div className="max-w-6xl mx-auto py-8">
           <div className="mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Open Finance Conectado</h1>
-                <p className="text-gray-600">
-                  {totalConnections} banco{totalConnections !== 1 ? 's' : ''} conectado{totalConnections !== 1 ? 's' : ''} • 
-                  {allAccountData?.results?.length || 0} conta{(allAccountData?.results?.length || 0) !== 1 ? 's' : ''} disponíve{(allAccountData?.results?.length || 0) !== 1 ? 'is' : 'l'}
-                </p>
-                {processingTransactions && (
-                  <p className="text-blue-600 text-sm">
-                    Processando transações...
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Open Finance Conectado</h1>
+                  <p className="text-gray-600">
+                    {totalConnections} banco{totalConnections !== 1 ? 's' : ''} conectado{totalConnections !== 1 ? 's' : ''} • 
+                    {allAccountData?.results?.length || 0} conta{(allAccountData?.results?.length || 0) !== 1 ? 's' : ''} disponíve{(allAccountData?.results?.length || 0) !== 1 ? 'is' : 'l'}
                   </p>
-                )}
+                  {processingTransactions && (
+                    <p className="text-blue-600 text-sm">
+                      Processando transações...
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={syncAllConnections}
+                  disabled={processingTransactions}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${processingTransactions ? 'animate-spin' : ''}`} />
+                  Sincronizar Tudo
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handlePluggyConnect}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Conectar Banco
+                </Button>
               </div>
             </div>
           </div>
