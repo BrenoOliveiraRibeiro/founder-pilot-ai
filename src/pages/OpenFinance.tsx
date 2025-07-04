@@ -382,9 +382,9 @@ const OpenFinance = () => {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-6 xl:gap-8">
+          <div className="grid lg:grid-cols-3 gap-6">
             {/* Gerenciador de Múltiplas Conexões */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1">
               <MultipleConnectionsManager
                 connections={connections}
                 allAccountData={allAccountData}
