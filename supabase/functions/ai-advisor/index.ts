@@ -261,7 +261,14 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
 
     const data = await response.json();
     console.log("Webhook n8n response data:", JSON.stringify(data, null, 2));
-    const aiResponse = data.output;
+    
+    // Extract AI response from array or object format
+    const aiResponse = Array.isArray(data) ? data[0]?.output : data.output;
+    
+    if (!aiResponse || typeof aiResponse !== 'string') {
+      console.error("Invalid AI response format:", aiResponse);
+      throw new Error("Resposta inválida do webhook n8n");
+    }
 
     console.log("Resposta da IA gerada com análise completa e detalhada do histórico financeiro");
 
