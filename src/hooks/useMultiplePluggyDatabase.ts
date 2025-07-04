@@ -1,9 +1,10 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { pluggyConnectionSchema, type PluggyConnection } from '@/schemas/validationSchemas';
+import { useBalanceRefresh } from '@/hooks/useBalanceRefresh';
 
 export interface MultiplePluggyConnection {
   id: string;
@@ -18,8 +19,12 @@ export interface MultiplePluggyConnection {
 export const useMultiplePluggyDatabase = () => {
   const [connections, setConnections] = useState<MultiplePluggyConnection[]>([]);
   const [allAccountData, setAllAccountData] = useState<any>(null);
+  const [refreshingBalance, setRefreshingBalance] = useState<string | null>(null);
+  const [updatedBalances, setUpdatedBalances] = useState<Record<string, any>>({});
+  const [lastRefreshTime, setLastRefreshTime] = useState<Record<string, Date>>({});
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
+  const { refreshBalance } = useBalanceRefresh();
 
   const loadAllConnections = useCallback(async () => {
     if (!currentEmpresa?.id) {
@@ -63,9 +68,12 @@ export const useMultiplePluggyDatabase = () => {
         };
 
         formattedConnections.forEach(connection => {
-          if (connection.accountData?.results) {
+          // Usar dados atualizados se disponível, senão usar cache
+          const accountData = updatedBalances[connection.id] || connection.accountData;
+          
+          if (accountData?.results) {
             // Adicionar informação do banco a cada conta
-            const accountsWithBankInfo = connection.accountData.results.map((account: any) => ({
+            const accountsWithBankInfo = accountData.results.map((account: any) => ({
               ...account,
               bankName: connection.bankName,
               itemId: connection.itemId
@@ -100,7 +108,7 @@ export const useMultiplePluggyDatabase = () => {
       });
       return [];
     }
-  }, [currentEmpresa?.id, toast]);
+  }, [currentEmpresa?.id, toast, updatedBalances]);
 
   const saveConnection = useCallback(async (
     itemId: string, 
@@ -198,6 +206,113 @@ export const useMultiplePluggyDatabase = () => {
     }
   }, [currentEmpresa?.id, loadAllConnections, toast]);
 
+  const refreshConnectionBalance = useCallback(async (connection: MultiplePluggyConnection, showToast: boolean = false) => {
+    if (!connection.itemId) return null;
+    
+    const updatedData = await refreshBalance(
+      connection.itemId, 
+      showToast,
+      (data) => {
+        // Callback executado imediatamente quando dados são atualizados
+        setUpdatedBalances(prev => ({
+          ...prev,
+          [connection.id]: data
+        }));
+        setLastRefreshTime(prev => ({
+          ...prev,
+          [connection.id]: new Date()
+        }));
+      }
+    );
+    
+    return updatedData;
+  }, [refreshBalance]);
+
+  const refreshAllBalances = useCallback(async (showToast: boolean = false) => {
+    if (connections.length === 0) return;
+    
+    console.log('Atualizando todos os saldos das conexões...');
+    
+    const refreshPromises = connections.map(async (connection) => {
+      try {
+        await refreshConnectionBalance(connection, false);
+      } catch (error) {
+        console.error(`Erro ao atualizar saldo da conexão ${connection.id}:`, error);
+      }
+    });
+    
+    await Promise.allSettled(refreshPromises);
+    
+    if (showToast) {
+      toast({
+        title: "Saldos atualizados",
+        description: "Todos os saldos foram atualizados com sucesso.",
+      });
+    }
+    
+    // Recarregar conexões para sincronizar dados
+    setTimeout(() => {
+      loadAllConnections();
+    }, 1000);
+  }, [connections, refreshConnectionBalance, toast, loadAllConnections]);
+
+  const refreshSingleConnection = useCallback(async (connection: MultiplePluggyConnection) => {
+    if (!connection.itemId) return;
+    
+    setRefreshingBalance(connection.id);
+    
+    try {
+      console.log(`Atualizando saldo da conexão: ${connection.bankName}`);
+      await refreshConnectionBalance(connection, true);
+      
+      // Após refresh bem-sucedido, recarregar conexões
+      setTimeout(() => {
+        loadAllConnections();
+      }, 500);
+    } catch (error) {
+      console.error(`Erro ao atualizar saldo da conexão ${connection.id}:`, error);
+    } finally {
+      setRefreshingBalance(null);
+    }
+  }, [refreshConnectionBalance, loadAllConnections]);
+
+  // Auto-refresh dos saldos ao carregar as conexões
+  useEffect(() => {
+    const refreshBalancesAfterLoad = async () => {
+      if (connections.length === 0) return;
+      
+      console.log('Auto-refresh inicial dos saldos das conexões...');
+      
+      const refreshPromises = connections.map(async (connection) => {
+        if (connection.itemId) {
+          try {
+            await refreshConnectionBalance(connection, false);
+          } catch (error) {
+            console.error(`Erro no auto-refresh da conexão ${connection.id}:`, error);
+          }
+        }
+      });
+      
+      await Promise.allSettled(refreshPromises);
+    };
+
+    if (connections.length > 0 && Object.keys(updatedBalances).length === 0) {
+      refreshBalancesAfterLoad();
+    }
+  }, [connections, refreshConnectionBalance, updatedBalances]);
+
+  // Auto-refresh periódico a cada 5 minutos
+  useEffect(() => {
+    if (connections.length === 0) return;
+
+    const interval = setInterval(() => {
+      console.log('Auto-refresh periódico dos saldos...');
+      refreshAllBalances(false);
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(interval);
+  }, [connections, refreshAllBalances]);
+
   const clearAllConnections = useCallback(async () => {
     if (!currentEmpresa?.id) return;
 
@@ -230,9 +345,14 @@ export const useMultiplePluggyDatabase = () => {
     allAccountData,
     hasConnections: connections.length > 0,
     totalConnections: connections.length,
+    refreshingBalance,
+    updatedBalances,
+    lastRefreshTime,
     loadAllConnections,
     saveConnection,
     clearConnection,
-    clearAllConnections
+    clearAllConnections,
+    refreshAllBalances,
+    refreshSingleConnection
   };
 };

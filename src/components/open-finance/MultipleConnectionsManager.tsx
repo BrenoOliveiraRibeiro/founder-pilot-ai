@@ -12,10 +12,14 @@ interface MultipleConnectionsManagerProps {
   connections: MultiplePluggyConnection[];
   allAccountData: any;
   selectedAccountId: string;
+  refreshingBalance?: string | null;
+  updatedBalances?: Record<string, any>;
+  lastRefreshTime?: Record<string, Date>;
   onAccountSelect: (accountId: string) => void;
   onSyncAll: () => void;
   onClearConnection: (itemId: string) => void;
   onAddNewBank: () => void;
+  onRefreshConnection?: (connection: MultiplePluggyConnection) => void;
   syncing?: boolean;
 }
 
@@ -23,10 +27,14 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
   connections,
   allAccountData,
   selectedAccountId,
+  refreshingBalance,
+  updatedBalances = {},
+  lastRefreshTime = {},
   onAccountSelect,
   onSyncAll,
   onClearConnection,
   onAddNewBank,
+  onRefreshConnection,
   syncing = false
 }) => {
   const totalBalance = allAccountData?.results?.reduce(
@@ -120,34 +128,81 @@ export const MultipleConnectionsManager: React.FC<MultipleConnectionsManagerProp
           <CardContent>
             <div className="space-y-3">
               {connections.map((connection) => {
-                const connectionAccounts = allAccountData?.results?.filter(
-                  (account: any) => account.itemId === connection.itemId
-                ) || [];
+                // Usar dados atualizados se disponível, senão usar cache
+                const accountData = updatedBalances[connection.id] || (
+                  allAccountData?.results?.filter(
+                    (account: any) => account.itemId === connection.itemId
+                  )
+                );
+                
+                const connectionAccounts = Array.isArray(accountData) 
+                  ? accountData 
+                  : (accountData?.results || []);
                 
                 const connectionBalance = connectionAccounts.reduce(
                   (sum: number, account: any) => sum + (account.balance || 0), 
                   0
                 );
 
+                const isRefreshing = refreshingBalance === connection.id;
+                const lastRefresh = lastRefreshTime[connection.id];
+                const hasRecentUpdate = updatedBalances[connection.id];
+
+                const getLastUpdateText = () => {
+                  if (lastRefresh) {
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now.getTime() - lastRefresh.getTime()) / (1000 * 60));
+                    if (diffMinutes < 1) {
+                      return "Atualizado agora";
+                    } else if (diffMinutes < 60) {
+                      return `Atualizado há ${diffMinutes}min`;
+                    } else {
+                      const hours = Math.floor(diffMinutes / 60);
+                      return `Atualizado há ${hours}h`;
+                    }
+                  }
+                  return connection.lastSync ? 
+                    `Sync: ${new Date(connection.lastSync).toLocaleDateString('pt-BR')}` :
+                    'Nunca sincronizado';
+                };
+
                 return (
                   <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <div className="relative">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        {hasRecentUpdate && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                      </div>
                       <div>
                         <p className="font-medium">{connection.bankName}</p>
                         <p className="text-sm text-gray-600">
                           {connectionAccounts.length} conta{connectionAccounts.length !== 1 ? 's' : ''} • 
                           {formatCurrency(connectionBalance)}
                         </p>
+                        <p className="text-xs text-gray-500">
+                          {getLastUpdateText()}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {connection.lastSync ? 
-                          `Sync: ${new Date(connection.lastSync).toLocaleDateString('pt-BR')}` :
-                          'Nunca sincronizado'
-                        }
-                      </Badge>
+                      {onRefreshConnection && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onRefreshConnection(connection)}
+                          disabled={isRefreshing}
+                          className="text-xs"
+                        >
+                          {isRefreshing ? (
+                            <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                          )}
+                          {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

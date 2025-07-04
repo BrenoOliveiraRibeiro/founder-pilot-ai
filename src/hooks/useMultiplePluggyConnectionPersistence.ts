@@ -19,10 +19,15 @@ export const useMultiplePluggyConnectionPersistence = () => {
     allAccountData,
     hasConnections,
     totalConnections,
+    refreshingBalance,
+    updatedBalances,
+    lastRefreshTime,
     loadAllConnections,
     saveConnection,
     clearConnection,
-    clearAllConnections
+    clearAllConnections,
+    refreshAllBalances,
+    refreshSingleConnection
   } = useMultiplePluggyDatabase();
 
   const {
@@ -170,6 +175,9 @@ export const useMultiplePluggyConnectionPersistence = () => {
     hasConnections,
     totalConnections,
     processingTransactions,
+    refreshingBalance,
+    updatedBalances,
+    lastRefreshTime,
     
     // Dados das conexões
     connections,
@@ -189,6 +197,8 @@ export const useMultiplePluggyConnectionPersistence = () => {
     clearConnection,
     clearAllConnections,
     syncAllConnections,
+    refreshAllBalances,
+    refreshSingleConnection,
     processAndSaveTransactions
   };
 };

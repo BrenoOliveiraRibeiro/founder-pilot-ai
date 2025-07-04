@@ -55,6 +55,9 @@ const OpenFinance = () => {
     hasConnections,
     totalConnections,
     processingTransactions,
+    refreshingBalance,
+    updatedBalances,
+    lastRefreshTime,
     connections,
     allAccountData,
     selectedAccountId,
@@ -66,6 +69,7 @@ const OpenFinance = () => {
     clearConnection,
     clearAllConnections,
     syncAllConnections,
+    refreshSingleConnection,
     processAndSaveTransactions
   } = useMultiplePluggyConnectionPersistence();
 
@@ -385,10 +389,14 @@ const OpenFinance = () => {
                 connections={connections}
                 allAccountData={allAccountData}
                 selectedAccountId={selectedAccountId}
+                refreshingBalance={refreshingBalance}
+                updatedBalances={updatedBalances}
+                lastRefreshTime={lastRefreshTime}
                 onAccountSelect={handleAccountSelection}
                 onSyncAll={syncAllConnections}
                 onClearConnection={clearConnection}
                 onAddNewBank={handlePluggyConnect}
+                onRefreshConnection={refreshSingleConnection}
                 syncing={processingTransactions}
               />
             </div>
