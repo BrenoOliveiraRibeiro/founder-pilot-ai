@@ -7,6 +7,7 @@ import { RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 interface AccountCardProps {
   integration: any;
   updatedBalances: Record<string, any>;
+  lastRefreshTime?: Record<string, Date>;
   refreshingBalance: string | null;
   syncing: string | null;
   onRefresh: (integration: any) => void;
@@ -16,6 +17,7 @@ interface AccountCardProps {
 export const AccountCard: React.FC<AccountCardProps> = ({
   integration,
   updatedBalances,
+  lastRefreshTime = {},
   refreshingBalance,
   syncing,
   onRefresh,
@@ -46,6 +48,23 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   const accountsDetails = getAccountsDetails(integration);
   const isActive = integration.status === 'ativo';
   const isRefreshing = refreshingBalance === integration.id;
+  const lastRefresh = lastRefreshTime[integration.id];
+  const hasRecentUpdate = updatedBalances[integration.id];
+
+  const getLastUpdateText = () => {
+    if (lastRefresh) {
+      const now = new Date();
+      const diffMinutes = Math.floor((now.getTime() - lastRefresh.getTime()) / (1000 * 60));
+      if (diffMinutes < 1) {
+        return "Atualizado agora";
+      } else if (diffMinutes < 60) {
+        return `Atualizado há ${diffMinutes}min`;
+      } else {
+        return formatDate(integration.ultimo_sincronismo);
+      }
+    }
+    return formatDate(integration.ultimo_sincronismo);
+  };
 
   return (
     <div className="p-4 rounded-lg border">
@@ -66,9 +85,12 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             <p className="text-sm text-muted-foreground">
               {integration.tipo_conexao} • {accountsCount} conta{accountsCount !== 1 ? 's' : ''}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Última sincronização: {formatDate(integration.ultimo_sincronismo)}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+              <span>Última sincronização: {getLastUpdateText()}</span>
+              {hasRecentUpdate && (
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Saldo atualizado recentemente"></span>
+              )}
+            </div>
           </div>
         </div>
         <div className="text-right">

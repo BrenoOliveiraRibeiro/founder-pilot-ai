@@ -9,7 +9,7 @@ export const useBalanceRefresh = () => {
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
-  const refreshBalance = useCallback(async (itemId: string, showToast: boolean = false) => {
+  const refreshBalance = useCallback(async (itemId: string, showToast: boolean = false, onSuccess?: (data: any) => void) => {
     if (!currentEmpresa?.id || !itemId) {
       console.log('Empresa ou itemId não disponível para refresh');
       return null;
@@ -44,6 +44,11 @@ export const useBalanceRefresh = () => {
       }
 
       console.log('Dados de conta atualizados no banco com sucesso');
+
+      // Callback para atualizar estado local imediatamente
+      if (onSuccess) {
+        onSuccess(accountData);
+      }
 
       if (showToast) {
         const totalBalance = accountData.results?.reduce((sum: number, account: any) => {

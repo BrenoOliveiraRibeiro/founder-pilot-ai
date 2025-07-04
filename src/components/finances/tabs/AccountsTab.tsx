@@ -17,6 +17,7 @@ export const AccountsTab: React.FC = () => {
     syncing,
     refreshingBalance,
     updatedBalances,
+    lastRefreshTime,
     formatDate,
     handleRefreshIntegration
   } = useAccountsData();
@@ -54,6 +55,7 @@ export const AccountsTab: React.FC = () => {
           <AccountsList
             activeIntegrations={activeIntegrations}
             updatedBalances={updatedBalances}
+            lastRefreshTime={lastRefreshTime}
             refreshingBalance={refreshingBalance}
             syncing={syncing}
             onRefresh={handleRefreshIntegration}
