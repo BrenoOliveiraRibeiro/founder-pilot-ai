@@ -237,7 +237,7 @@ A empresa ${userData?.empresaNome || 'do usuário'} ainda não possui contas ban
 
     console.log("Enviando dados para webhook n8n FounderPilot");
     
-    const webhookUrl = 'https://n8n.servidoremn.site/webhook-test/founderpilot';
+    const webhookUrl = 'https://n8n.servidoremn.site/webhook/founderpilot';
     
     const response = await fetch(webhookUrl, {
       method: 'POST',
