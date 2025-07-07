@@ -7,9 +7,13 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Transacao } from "@/integrations/supabase/models";
+import { useTransactionsRefresh } from "@/hooks/useTransactionsRefresh";
 
 export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
+  
+  // Ativar refresh automático de transações
+  useTransactionsRefresh();
 
   // Buscar as 10 últimas transações do Supabase
   const { data: transactions = [], isLoading: loading } = useQuery({
