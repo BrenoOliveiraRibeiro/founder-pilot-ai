@@ -22,7 +22,7 @@ const Index = () => {
     // Simular menos tempo de carregamento da animação em desenvolvimento
     const timer = setTimeout(() => {
       setShowIntro(false);
-    }, 1500); //oi
+    }, 1500);
     
     return () => clearTimeout(timer);
   }, []);
