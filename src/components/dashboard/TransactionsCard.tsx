@@ -7,15 +7,9 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Transacao } from "@/integrations/supabase/models";
-import { useTransactionsRefresh } from "@/hooks/useTransactionsRefresh";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 
 export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
-  
-  // Hook para sincronização automática de transações
-  const { refreshTransactions, isSyncing } = useTransactionsRefresh();
 
   // Buscar as 10 últimas transações do Supabase
   const { data: transactions = [], isLoading: loading } = useQuery({
@@ -68,26 +62,9 @@ export const TransactionsCard = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-xl">Transações Recentes</CardTitle>
-            <CardDescription>
-              Últimas 10 transações salvas
-              {isSyncing && (
-                <span className="text-primary ml-2">• Sincronizando...</span>
-              )}
-            </CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshTransactions}
-            disabled={isSyncing}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+        <div>
+          <CardTitle className="text-xl">Transações Recentes</CardTitle>
+          <CardDescription>Últimas 10 transações salvas</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
