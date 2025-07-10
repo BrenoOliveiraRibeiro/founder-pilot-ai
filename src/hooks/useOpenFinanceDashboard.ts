@@ -140,8 +140,37 @@ export const useOpenFinanceDashboard = () => {
         return dataTransacao.getMonth() === mesAtual && dataTransacao.getFullYear() === anoAtual;
       }) || [];
 
+      // Função para identificar receita operacional real
+      const isRealRevenue = (transacao: any) => {
+        const desc = transacao.descricao?.toLowerCase() || '';
+        const categoria = transacao.categoria?.toLowerCase() || '';
+        
+        // Excluir estornos, reembolsos e créditos óbvios
+        if (desc.includes('estorno') || desc.includes('reembolso') || desc.includes('crédito') || 
+            desc.includes('refund') || desc.includes('devolução')) {
+          return false;
+        }
+        
+        // Incluir categorias que claramente são receita operacional
+        const revenueCategories = [
+          'pix recebido', 'boleto', 'transferência recebida', 'pagamento recebido',
+          'venda', 'faturamento', 'recebimento'
+        ];
+        
+        if (revenueCategories.some(cat => categoria.includes(cat) || desc.includes(cat))) {
+          return true;
+        }
+        
+        // Para valores maiores que R$ 100, considerar como receita real (assumindo que estornos são valores menores)
+        if (transacao.valor >= 100) {
+          return true;
+        }
+        
+        return false;
+      };
+
       const receitaMensal = transacoesMesAtual
-        .filter(tx => tx.tipo === 'receita')
+        .filter(tx => tx.tipo === 'receita' && isRealRevenue(tx))
         .reduce((sum, tx) => sum + tx.valor, 0);
 
       const despesasMensais = transacoesMesAtual
