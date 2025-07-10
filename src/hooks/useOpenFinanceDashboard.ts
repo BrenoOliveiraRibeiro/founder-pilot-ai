@@ -142,7 +142,7 @@ export const useOpenFinanceDashboard = () => {
 
       const receitaMensal = transacoesMesAtual
         .filter(tx => tx.tipo === 'receita')
-        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
+        .reduce((sum, tx) => sum + tx.valor, 0);
 
       const despesasMensais = transacoesMesAtual
         .filter(tx => tx.tipo === 'despesa')
