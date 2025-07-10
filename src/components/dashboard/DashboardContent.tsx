@@ -5,7 +5,7 @@ import { OpenFinanceMetricsGrid } from "./OpenFinanceMetricsGrid";
 import { MetricsGrid } from "./MetricsGrid";
 import { TransactionsCard } from "./TransactionsCard";
 import { InsightsCard } from "./InsightsCard";
-import { SyncMonitor } from "./SyncMonitor";
+
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 
 export const DashboardContent = () => {
@@ -31,7 +31,6 @@ export const DashboardContent = () => {
         </div>
         <div className="lg:col-span-4 space-y-6">
           <InsightsCard />
-          {hasOpenFinanceData && <SyncMonitor />}
         </div>
       </div>
     </div>

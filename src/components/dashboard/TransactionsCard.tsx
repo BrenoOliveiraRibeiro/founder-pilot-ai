@@ -114,13 +114,13 @@ export const TransactionsCard = () => {
                   </div>
                 </div>
                 <div className={`text-sm font-medium ${
-                  tx.valor > 0 ? "text-success" : "text-destructive"
+                  tx.tipo === 'receita' ? "text-green-600" : "text-red-600"
                 }`}>
-                  {tx.valor > 0 ? "+" : ""}
+                  {tx.tipo === 'receita' ? "+" : ""}
                   {new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'BRL'
-                  }).format(tx.valor)}
+                  }).format(Math.abs(tx.valor))}
                 </div>
               </motion.div>
             ))}
