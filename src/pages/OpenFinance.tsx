@@ -70,8 +70,7 @@ const OpenFinance = () => {
     clearAllConnections,
     syncAllConnections,
     refreshSingleConnection,
-    processAndSaveTransactions,
-    saveAllTransactionsFromAllAccounts
+    processAndSaveTransactions
   } = useMultiplePluggyConnectionPersistence();
 
   useEffect(() => {
@@ -383,15 +382,6 @@ const OpenFinance = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={saveAllTransactionsFromAllAccounts}
-                  disabled={processingTransactions}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${processingTransactions ? 'animate-spin' : ''}`} />
-                  Salvar Todas as Transações
-                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 

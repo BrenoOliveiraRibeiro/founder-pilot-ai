@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useBalanceRefresh } from './useBalanceRefresh';
+import { useAutoSync } from './useAutoSync';
 
 interface OpenFinanceMetrics {
   saldoTotal: number;
@@ -24,6 +25,7 @@ export const useOpenFinanceDashboard = () => {
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
   const { refreshBalance } = useBalanceRefresh();
+  const { performAutoSync } = useAutoSync();
 
   const fetchOpenFinanceData = async () => {
     if (!currentEmpresa?.id) {
@@ -130,19 +132,98 @@ export const useOpenFinanceDashboard = () => {
 
       if (transacoesError) throw transacoesError;
 
-      // Calcular métricas baseadas nas transações
+      // Se não há transações no Supabase, forçar sincronização das integrações bancárias
+      if (!transacoes || transacoes.length === 0) {
+        console.log('Nenhuma transação encontrada no Supabase, forçando sincronização...');
+        
+        for (const integracao of integracoes || []) {
+          try {
+            console.log(`Sincronizando dados para integração: ${integracao.nome_banco}`);
+            
+            const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
+              body: {
+                action: 'sync_data',
+                empresa_id: currentEmpresa.id,
+                integration_id: integracao.id,
+                sandbox: (integracao.detalhes as any)?.sandbox || true
+              }
+            });
+
+            if (syncError) {
+              console.error(`Erro na sincronização da integração ${integracao.id}:`, syncError);
+            } else {
+              console.log(`Sincronização da integração ${integracao.nome_banco} concluída:`, syncResult);
+            }
+          } catch (syncError) {
+            console.error(`Erro ao sincronizar integração ${integracao.id}:`, syncError);
+          }
+        }
+        
+        // Recarregar transações após sincronização
+        const { data: transacoesAtualizadas, error: transacoesErrorAtualizado } = await supabase
+          .from('transacoes')
+          .select('*')
+          .eq('empresa_id', currentEmpresa.id)
+          .gte('data_transacao', threeMonthsAgo.toISOString().split('T')[0]);
+
+        if (!transacoesErrorAtualizado && transacoesAtualizadas) {
+          console.log(`Transações recarregadas após sincronização: ${transacoesAtualizadas.length}`);
+        }
+      }
+
+      // Calcular métricas baseadas nas transações (usar transações atualizadas se disponível)
+      const transacoesParaCalculo = transacoes || [];
       const hoje = new Date();
       const mesAtual = hoje.getMonth();
       const anoAtual = hoje.getFullYear();
 
-      const transacoesMesAtual = transacoes?.filter(tx => {
+      const transacoesMesAtual = transacoesParaCalculo.filter(tx => {
         const dataTransacao = new Date(tx.data_transacao);
         return dataTransacao.getMonth() === mesAtual && dataTransacao.getFullYear() === anoAtual;
-      }) || [];
+      });
+
+      console.log(`Transações encontradas para julho ${anoAtual}: ${transacoesMesAtual.length}`);
+      if (transacoesMesAtual.length > 0) {
+        console.log('Transações do mês atual:', transacoesMesAtual.map(tx => ({
+          descricao: tx.descricao,
+          valor: tx.valor,
+          tipo: tx.tipo,
+          data: tx.data_transacao
+        })));
+      }
+
+      // Função para identificar receita operacional real
+      const isRealRevenue = (transacao: any) => {
+        const desc = transacao.descricao?.toLowerCase() || '';
+        const categoria = transacao.categoria?.toLowerCase() || '';
+        
+        // Excluir estornos, reembolsos e créditos óbvios
+        if (desc.includes('estorno') || desc.includes('reembolso') || desc.includes('crédito') || 
+            desc.includes('refund') || desc.includes('devolução')) {
+          return false;
+        }
+        
+        // Incluir categorias que claramente são receita operacional
+        const revenueCategories = [
+          'pix recebido', 'boleto', 'transferência recebida', 'pagamento recebido',
+          'venda', 'faturamento', 'recebimento'
+        ];
+        
+        if (revenueCategories.some(cat => categoria.includes(cat) || desc.includes(cat))) {
+          return true;
+        }
+        
+        // Para valores maiores que R$ 100, considerar como receita real (assumindo que estornos são valores menores)
+        if (transacao.valor >= 100) {
+          return true;
+        }
+        
+        return false;
+      };
 
       const receitaMensal = transacoesMesAtual
-        .filter(tx => tx.tipo === 'receita')
-        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
+        .filter(tx => tx.tipo === 'receita' && isRealRevenue(tx))
+        .reduce((sum, tx) => sum + tx.valor, 0);
 
       const despesasMensais = transacoesMesAtual
         .filter(tx => tx.tipo === 'despesa')
@@ -151,9 +232,11 @@ export const useOpenFinanceDashboard = () => {
       const fluxoCaixa = receitaMensal - despesasMensais;
 
       // Calcular burn rate médio dos últimos 3 meses
-      const burnRate = Math.abs((transacoes || [])
+      const burnRate = Math.abs(transacoesParaCalculo
         .filter(tx => tx.tipo === 'despesa')
         .reduce((sum, tx) => sum + tx.valor, 0)) / 3;
+
+      console.log(`Métricas calculadas - Receita mensal: R$ ${receitaMensal}, Despesas: R$ ${despesasMensais}, Burn rate: R$ ${burnRate}`);
 
       // Calcular runway
       const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;

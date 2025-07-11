@@ -92,17 +92,43 @@ export async function processFinancialData(
     }
     
     // Preparar transações formatadas para inserção
-    const transacoesFormatadas = allTransactions.map(tx => ({
-      empresa_id: empresaId,
-      descricao: tx.description || 'Transação',
-      valor: tx.amount,
-      data_transacao: tx.date,
-      categoria: tx.category || 'Outros',
-      tipo: tx.amount > 0 ? 'receita' : 'despesa',
-      metodo_pagamento: tx.type || 'Transferência',
-      recorrente: false
-      // transaction_hash será gerado automaticamente pelo trigger
-    }));
+    const transacoesFormatadas = allTransactions.map(tx => {
+      // Melhorar classificação de categoria baseada na descrição e tipo
+      let categoria = tx.category || 'Outros';
+      let metodo_pagamento = tx.type || 'Transferência';
+      
+      const descricao = (tx.description || 'Transação').toLowerCase();
+      
+      // Classificação mais inteligente baseada na descrição
+      if (descricao.includes('pix') && tx.amount > 0) {
+        categoria = 'Transfer - PIX';
+        metodo_pagamento = 'PIX';
+      } else if (descricao.includes('salario') || descricao.includes('salary')) {
+        categoria = 'Salário';
+        metodo_pagamento = 'Transferência';
+      } else if (descricao.includes('ted') || descricao.includes('doc')) {
+        metodo_pagamento = tx.amount > 0 ? 'TED/DOC Recebido' : 'TED/DOC Enviado';
+      }
+      
+      return {
+        empresa_id: empresaId,
+        descricao: tx.description || 'Transação',
+        valor: tx.amount,
+        data_transacao: tx.date,
+        categoria: categoria,
+        tipo: tx.amount > 0 ? 'receita' : 'despesa',
+        metodo_pagamento: metodo_pagamento,
+        recorrente: false
+        // transaction_hash será gerado automaticamente pelo trigger
+      };
+    });
+    
+    console.log(`Transações formatadas para inserção: ${transacoesFormatadas.length}`);
+    console.log('Receitas encontradas:', transacoesFormatadas.filter(tx => tx.tipo === 'receita').map(tx => ({
+      descricao: tx.descricao,
+      valor: tx.valor,
+      data: tx.data_transacao
+    })));
     
     console.log(`Tentando inserir ${transacoesFormatadas.length} transações`);
     
