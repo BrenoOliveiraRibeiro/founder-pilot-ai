@@ -5,7 +5,6 @@ import { OpenFinanceMetricsGrid } from "./OpenFinanceMetricsGrid";
 import { MetricsGrid } from "./MetricsGrid";
 import { TransactionsCard } from "./TransactionsCard";
 import { InsightsCard } from "./InsightsCard";
-
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 
 export const DashboardContent = () => {

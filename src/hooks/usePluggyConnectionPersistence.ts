@@ -218,28 +218,8 @@ export const usePluggyConnectionPersistence = () => {
             updateConnectionData({ accountData: existingConnection.accountData });
           }
 
-        // Chamar sincronização automática via edge function para garantir consistência
-        try {
-          console.log('Iniciando sincronização automática via edge function...');
-          const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
-            body: {
-              action: 'sync_data',
-              empresa_id: currentEmpresa.id,
-              sandbox: true
-            }
-          });
-
-          if (syncError) {
-            console.error('Erro na sincronização automática:', syncError);
-          } else {
-            console.log('Sincronização automática concluída:', syncResult);
-          }
-        } catch (syncError) {
-          console.error('Erro ao chamar sincronização automática:', syncError);
-        }
-
-        // Processar transações automaticamente como fallback
-        await autoProcessAllAccountsAllPages(existingConnection.itemId, false);
+          // Processar transações automaticamente
+          await autoProcessAllAccountsAllPages(existingConnection.itemId, false);
         }
 
         console.log('Inicialização da conexão concluída');

@@ -1,22 +1,18 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Transacao } from "@/integrations/supabase/models";
-import { RefreshCw, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export const TransactionsCard = () => {
   const { currentEmpresa } = useAuth();
-  const queryClient = useQueryClient();
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Buscar as 10 últimas transações do Supabase
-  const { data: transactions = [], isLoading: loading, refetch } = useQuery({
+  const { data: transactions = [], isLoading: loading } = useQuery({
     queryKey: ['recent-transactions', currentEmpresa?.id],
     queryFn: async () => {
       if (!currentEmpresa?.id) return [];
@@ -33,50 +29,10 @@ export const TransactionsCard = () => {
         return [];
       }
 
-      setLastUpdated(new Date());
       return data as Transacao[];
     },
     enabled: !!currentEmpresa?.id,
-    refetchInterval: 30000, // Auto-refetch every 30 seconds
   });
-
-  // Real-time subscription for transactions
-  useEffect(() => {
-    if (!currentEmpresa?.id) return;
-
-    console.log('Setting up real-time subscription for transactions...');
-    
-    const channel = supabase
-      .channel('transactions-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'transacoes',
-          filter: `empresa_id=eq.${currentEmpresa.id}`
-        },
-        (payload) => {
-          console.log('Real-time transaction change detected:', payload);
-          
-          // Invalidate and refetch the transactions query
-          queryClient.invalidateQueries({ 
-            queryKey: ['recent-transactions', currentEmpresa.id] 
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('Cleaning up real-time subscription for transactions');
-      supabase.removeChannel(channel);
-    };
-  }, [currentEmpresa?.id, queryClient]);
-
-  // Manual refresh function
-  const handleManualRefresh = async () => {
-    await refetch();
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -106,34 +62,9 @@ export const TransactionsCard = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-xl">Transações Recentes</CardTitle>
-            <CardDescription className="flex items-center gap-2">
-              Últimas 10 transações salvas
-              {lastUpdated && (
-                <>
-                  <span className="h-1 w-1 bg-muted-foreground rounded-full"></span>
-                  <Clock className="h-3 w-3" />
-                  <span className="text-xs">
-                    Atualizado {lastUpdated.toLocaleTimeString('pt-BR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
-                </>
-              )}
-            </CardDescription>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={loading}
-            className="h-8 w-8 p-0"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+        <div>
+          <CardTitle className="text-xl">Transações Recentes</CardTitle>
+          <CardDescription>Últimas 10 transações salvas</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -183,13 +114,13 @@ export const TransactionsCard = () => {
                   </div>
                 </div>
                 <div className={`text-sm font-medium ${
-                  tx.tipo === 'receita' ? "text-green-600" : "text-red-600"
+                  tx.valor > 0 ? "text-success" : "text-destructive"
                 }`}>
-                  {tx.tipo === 'receita' ? "+" : ""}
+                  {tx.valor > 0 ? "+" : ""}
                   {new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'BRL'
-                  }).format(Math.abs(tx.valor))}
+                  }).format(tx.valor)}
                 </div>
               </motion.div>
             ))}

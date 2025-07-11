@@ -6,7 +6,6 @@ import { pluggyApi } from '@/utils/pluggyApi';
 import { useMultiplePluggyDatabase } from './useMultiplePluggyDatabase';
 import { usePluggyTransactions } from './usePluggyTransactions';
 import { useBalanceRefresh } from './useBalanceRefresh';
-import { useQueryClient } from '@tanstack/react-query';
 
 export const useMultiplePluggyConnectionPersistence = () => {
   const [loading, setLoading] = useState(true);
@@ -14,7 +13,6 @@ export const useMultiplePluggyConnectionPersistence = () => {
   const [transactionsData, setTransactionsData] = useState<any>(null);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const {
     connections,

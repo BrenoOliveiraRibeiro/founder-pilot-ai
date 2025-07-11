@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface ProcessedTransactionsResult {
   success: boolean;
@@ -19,7 +18,6 @@ export const usePluggyTransactions = () => {
   const [lastSyncTimestamps, setLastSyncTimestamps] = useState<Record<string, number>>({});
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const processAndSaveTransactions = useCallback(async (
     itemId: string, 
@@ -98,13 +96,6 @@ export const usePluggyTransactions = () => {
       // Atualizar cache de sincronização
       setLastSyncTimestamps(prev => ({ ...prev, [cacheKey]: now }));
 
-      // Invalidate transactions cache when new transactions are saved
-      if (data?.newTransactions > 0) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['recent-transactions', currentEmpresa.id] 
-        });
-      }
-
       console.log("Transações processadas automaticamente:", data);
       
       // Mostrar toast apenas se houver transações novas
@@ -142,7 +133,7 @@ export const usePluggyTransactions = () => {
     } finally {
       setProcessingTransactions(false);
     }
-  }, [currentEmpresa?.id, processingTransactions, lastSyncTimestamps, toast, queryClient]);
+  }, [currentEmpresa?.id, processingTransactions, lastSyncTimestamps, toast]);
 
   return {
     processingTransactions,

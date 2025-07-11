@@ -15,7 +15,6 @@ import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { MultipleConnectionsManager } from "@/components/open-finance/MultipleConnectionsManager";
-import { useQueryClient } from '@tanstack/react-query';
 
 declare global {
   interface Window {
@@ -27,7 +26,6 @@ const OpenFinance = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   // Use ref to track the current instance
   const pluggyConnectInstanceRef = useRef<any>(null);
@@ -81,57 +79,6 @@ const OpenFinance = () => {
     console.log("Total connections:", totalConnections);
     console.log("Has connections:", hasConnections);
   }, [currentEmpresa, totalConnections, hasConnections]);
-
-  // Auto-save all transactions when page loads
-  useEffect(() => {
-    const autoSaveAllTransactions = async () => {
-      if (!hasConnections || !allAccountData?.results || processingTransactions) {
-        return;
-      }
-
-      console.log("Auto-saving all transactions on page load...");
-      
-      try {
-        for (const account of allAccountData.results) {
-          const connection = connections.find(conn => 
-            conn.accountData?.results?.some((acc: any) => acc.id === account.id)
-          );
-          
-          if (!connection) continue;
-
-          // Fetch all transactions for this account (not paginated)
-          const transactionData = await fetchTransactions(account.id, 1, 1000); // Get up to 1000 transactions
-          
-          if (transactionData?.results && transactionData.results.length > 0) {
-            const result = await processAndSaveTransactions(
-              connection.itemId,
-              account.id,
-              transactionData
-            );
-            
-            console.log(`Auto-saved transactions for account ${account.id}:`, result);
-          }
-        }
-        
-        // Invalidate the recent transactions cache after auto-save
-        queryClient.invalidateQueries({ 
-          queryKey: ['recent-transactions', currentEmpresa?.id] 
-        });
-        
-        toast({
-          title: "Transações sincronizadas",
-          description: "Todas as transações foram automaticamente sincronizadas.",
-        });
-      } catch (error) {
-        console.error('Error auto-saving transactions:', error);
-      }
-    };
-
-    // Only run once when component mounts and has connections
-    if (hasConnections && !processingTransactions) {
-      autoSaveAllTransactions();
-    }
-  }, [hasConnections, allAccountData, connections]); // Remove processingTransactions from deps to avoid re-runs
 
   useEffect(() => {
     if (window.PluggyConnect && !scriptLoadedRef.current) {
@@ -242,11 +189,6 @@ const OpenFinance = () => {
       );
 
       if (result.success) {
-        // Invalidate the recent transactions cache
-        queryClient.invalidateQueries({ 
-          queryKey: ['recent-transactions', currentEmpresa?.id] 
-        });
-        
         if (result.newTransactions && result.newTransactions > 0) {
           toast({
             title: "Transações processadas!",

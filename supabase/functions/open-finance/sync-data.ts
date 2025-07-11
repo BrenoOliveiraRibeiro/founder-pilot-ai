@@ -11,19 +11,16 @@ export async function syncData(
   supabase: any, 
   corsHeaders: Record<string, string>
 ) {
-  console.log(`[SYNC] Iniciando sincronização para empresa ${empresaId}, integração: ${integrationId || 'todas'}, sandbox: ${sandbox}`);
+  console.log(`Sincronizando dados da empresa ${empresaId}`);
   
   try {
     // Get API key
-    console.log('[SYNC] Obtendo token da API Pluggy...');
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
     if (!tokenResult.success) {
-      console.error('[SYNC] Falha na autenticação:', tokenResult.error);
       throw new Error(`Falha na autenticação com a API Pluggy: ${tokenResult.error.message}`);
     }
     
-    console.log('[SYNC] Token obtido com sucesso');
     const apiKey = tokenResult.data.apiKey;
     
     // If integration_id is provided, sync only that integration
@@ -40,23 +37,20 @@ export async function syncData(
         throw new Error(`Integração não encontrada: ${integracaoError.message}`);
       }
       
-      console.log(`[SYNC] Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}, item_id: ${integracao.detalhes?.item_id || integracao.item_id}`);
+      console.log(`Sincronizando integração específica: ${integracao.id}, ${integracao.nome_banco}`);
       
       // Use processFinancialData para sincronização consistente
-      console.log('[SYNC] Chamando processFinancialData...');
       const result = await processFinancialData(
         empresaId, 
-        integracao.detalhes?.item_id || integracao.item_id, 
+        integracao.detalhes.item_id || integracao.item_id, 
         null, // accountId será determinado automaticamente
         null, // transactionsData será buscado da API
         apiKey,
         pluggyClientId, 
         pluggyClientSecret, 
-        integracao.detalhes?.sandbox || sandbox, 
+        integracao.detalhes.sandbox || sandbox, 
         supabase
       );
-      
-      console.log(`[SYNC] Resultado do processFinancialData:`, result);
       
       // Update sync timestamp
       await supabase
@@ -96,70 +90,38 @@ export async function syncData(
         );
       }
       
-      console.log(`[SYNC] Encontradas ${integracoes.length} integrações ativas para sincronização`);
+      console.log(`Encontradas ${integracoes.length} integrações ativas`);
       
       let totalNewTransactions = 0;
       let totalDuplicates = 0;
       let totalProcessed = 0;
-      let failedIntegrations = 0;
       
       // For each integration, use processFinancialData consistently
       for (const integracao of integracoes) {
         try {
-          console.log(`[SYNC] Processando integração: ${integracao.nome_banco} (${integracao.id}), item_id: ${integracao.detalhes?.item_id || integracao.item_id}`);
+          console.log(`Processando integração: ${integracao.nome_banco} (${integracao.id})`);
           
           const result = await processFinancialData(
             empresaId, 
-            integracao.detalhes?.item_id || integracao.item_id, 
+            integracao.detalhes.item_id || integracao.item_id, 
             null, // accountId será determinado automaticamente
             null, // transactionsData será buscado da API
             apiKey,
             pluggyClientId, 
             pluggyClientSecret, 
-            integracao.detalhes?.sandbox || sandbox, 
+            integracao.detalhes.sandbox || sandbox, 
             supabase
           );
-          
-          console.log(`[SYNC] Resultado da integração ${integracao.nome_banco}:`, result);
           
           totalNewTransactions += result.newTransactions || 0;
           totalDuplicates += result.duplicates || 0;
           totalProcessed += result.total || 0;
           
-          console.log(`[SYNC] Integração ${integracao.nome_banco}: ${result.newTransactions} novas, ${result.duplicates} duplicatas`);
+          console.log(`Integração ${integracao.nome_banco}: ${result.newTransactions} novas, ${result.duplicates} duplicatas`);
         } catch (error) {
-          console.error(`[SYNC] Erro ao sincronizar integração ${integracao.id}:`, error);
-          failedIntegrations++;
-          
-          // Tentar novamente após 2 segundos
-          try {
-            console.log(`[SYNC] Tentativa de retry para integração ${integracao.id}...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            const retryResult = await processFinancialData(
-              empresaId, 
-              integracao.detalhes?.item_id || integracao.item_id, 
-              null,
-              null,
-              apiKey,
-              pluggyClientId, 
-              pluggyClientSecret, 
-              integracao.detalhes?.sandbox || sandbox, 
-              supabase
-            );
-            
-            console.log(`[SYNC] Retry bem-sucedido para ${integracao.nome_banco}:`, retryResult);
-            totalNewTransactions += retryResult.newTransactions || 0;
-            totalDuplicates += retryResult.duplicates || 0;
-            totalProcessed += retryResult.total || 0;
-            failedIntegrations--; // Remove da contagem de falhas
-          } catch (retryError) {
-            console.error(`[SYNC] Retry falhou para integração ${integracao.id}:`, retryError);
-          }
+          console.error(`Erro ao sincronizar integração ${integracao.id}:`, error);
         }
       }
-      
-      console.log(`[SYNC] Resumo da sincronização: ${totalNewTransactions} novas, ${totalDuplicates} duplicatas, ${failedIntegrations} falhas`);
       
       // Update sync timestamp for all integrations
       await supabase

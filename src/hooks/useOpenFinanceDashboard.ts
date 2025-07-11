@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useBalanceRefresh } from './useBalanceRefresh';
-import { useAutoSync } from './useAutoSync';
 
 interface OpenFinanceMetrics {
   saldoTotal: number;
@@ -25,7 +24,6 @@ export const useOpenFinanceDashboard = () => {
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
   const { refreshBalance } = useBalanceRefresh();
-  const { performAutoSync } = useAutoSync();
 
   const fetchOpenFinanceData = async () => {
     if (!currentEmpresa?.id) {
@@ -132,88 +130,19 @@ export const useOpenFinanceDashboard = () => {
 
       if (transacoesError) throw transacoesError;
 
-      // Se não há transações no Supabase, buscar dados diretamente do Pluggy
-      let transacoesParaCalculo = transacoes || [];
-      let usingPluggyFallback = false;
-      
-      if (!transacoes || transacoes.length === 0) {
-        console.log('[DASHBOARD] Nenhuma transação encontrada no Supabase, buscando dados do Pluggy...');
-        
-        try {
-          // Buscar dados diretamente do Pluggy como fallback
-          const pluggyTransactions = await fetchPluggyTransactions(integracoes);
-          
-          if (pluggyTransactions.length > 0) {
-            console.log(`[DASHBOARD] Usando ${pluggyTransactions.length} transações do Pluggy como fallback`);
-            transacoesParaCalculo = pluggyTransactions;
-            usingPluggyFallback = true;
-            
-            // Tentar sincronização em background (sem bloquear a UI)
-            performAutoSync().catch(error => {
-              console.error('[DASHBOARD] Erro na sincronização em background:', error);
-            });
-          }
-        } catch (pluggyError) {
-          console.error('[DASHBOARD] Erro ao buscar dados do Pluggy:', pluggyError);
-        }
-      }
-
-      // Calcular métricas baseadas nas transações (já definidas acima)
+      // Calcular métricas baseadas nas transações
       const hoje = new Date();
       const mesAtual = hoje.getMonth();
       const anoAtual = hoje.getFullYear();
-      
-      if (usingPluggyFallback) {
-        console.log('[DASHBOARD] Usando dados do Pluggy para cálculos');
-      }
 
-      const transacoesMesAtual = transacoesParaCalculo.filter(tx => {
+      const transacoesMesAtual = transacoes?.filter(tx => {
         const dataTransacao = new Date(tx.data_transacao);
         return dataTransacao.getMonth() === mesAtual && dataTransacao.getFullYear() === anoAtual;
-      });
-
-      console.log(`Transações encontradas para julho ${anoAtual}: ${transacoesMesAtual.length}`);
-      if (transacoesMesAtual.length > 0) {
-        console.log('Transações do mês atual:', transacoesMesAtual.map(tx => ({
-          descricao: tx.descricao,
-          valor: tx.valor,
-          tipo: tx.tipo,
-          data: tx.data_transacao
-        })));
-      }
-
-      // Função para identificar receita operacional real
-      const isRealRevenue = (transacao: any) => {
-        const desc = transacao.descricao?.toLowerCase() || '';
-        const categoria = transacao.categoria?.toLowerCase() || '';
-        
-        // Excluir estornos, reembolsos e créditos óbvios
-        if (desc.includes('estorno') || desc.includes('reembolso') || desc.includes('crédito') || 
-            desc.includes('refund') || desc.includes('devolução')) {
-          return false;
-        }
-        
-        // Incluir categorias que claramente são receita operacional
-        const revenueCategories = [
-          'pix recebido', 'boleto', 'transferência recebida', 'pagamento recebido',
-          'venda', 'faturamento', 'recebimento'
-        ];
-        
-        if (revenueCategories.some(cat => categoria.includes(cat) || desc.includes(cat))) {
-          return true;
-        }
-        
-        // Para valores maiores que R$ 100, considerar como receita real (assumindo que estornos são valores menores)
-        if (transacao.valor >= 100) {
-          return true;
-        }
-        
-        return false;
-      };
+      }) || [];
 
       const receitaMensal = transacoesMesAtual
-        .filter(tx => tx.tipo === 'receita' && isRealRevenue(tx))
-        .reduce((sum, tx) => sum + tx.valor, 0);
+        .filter(tx => tx.tipo === 'receita')
+        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
 
       const despesasMensais = transacoesMesAtual
         .filter(tx => tx.tipo === 'despesa')
@@ -222,11 +151,9 @@ export const useOpenFinanceDashboard = () => {
       const fluxoCaixa = receitaMensal - despesasMensais;
 
       // Calcular burn rate médio dos últimos 3 meses
-      const burnRate = Math.abs(transacoesParaCalculo
+      const burnRate = Math.abs((transacoes || [])
         .filter(tx => tx.tipo === 'despesa')
         .reduce((sum, tx) => sum + tx.valor, 0)) / 3;
-
-      console.log(`Métricas calculadas - Receita mensal: R$ ${receitaMensal}, Despesas: R$ ${despesasMensais}, Burn rate: R$ ${burnRate}`);
 
       // Calcular runway
       const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;
@@ -244,19 +171,8 @@ export const useOpenFinanceDashboard = () => {
         alertaCritico
       };
 
-      console.log('[DASHBOARD] Métricas calculadas:', metricsResult);
-      console.log(`[DASHBOARD] Fonte dos dados: ${usingPluggyFallback ? 'Pluggy (fallback)' : 'Supabase'}`);
-      
+      console.log('Métricas calculadas:', metricsResult);
       setMetrics(metricsResult);
-      
-      // Mostrar notificação se usando fallback
-      if (usingPluggyFallback) {
-        toast({
-          title: "Dados em tempo real",
-          description: "Exibindo dados atuais do banco. Sincronização em background...",
-          variant: "default"
-        });
-      }
 
     } catch (error: any) {
       console.error('Erro ao buscar dados do Open Finance:', error);
@@ -275,39 +191,6 @@ export const useOpenFinanceDashboard = () => {
   useEffect(() => {
     fetchOpenFinanceData();
   }, [currentEmpresa?.id]);
-
-  // Função para buscar transações diretamente do Pluggy
-  const fetchPluggyTransactions = async (integracoes: any[]) => {
-    const allTransactions: any[] = [];
-    
-    for (const integracao of integracoes) {
-      try {
-        if (!integracao.item_id && !integracao.detalhes?.item_id) {
-          console.log(`[PLUGGY] Pulando integração sem item_id: ${integracao.nome_banco}`);
-          continue;
-        }
-        
-        console.log(`[PLUGGY] Buscando transações para ${integracao.nome_banco}...`);
-        
-        // Simular busca do Pluggy - aqui você chamaria a API real
-        const response = await fetch(`https://api.pluggy.ai/accounts?itemId=${integracao.item_id || integracao.detalhes?.item_id}`, {
-          headers: {
-            'X-API-KEY': 'your_api_key' // Substituir pela chave real
-          }
-        });
-        
-        if (response.ok) {
-          const accountsData = await response.json();
-          // Processar transações dos accounts...
-          console.log(`[PLUGGY] Dados obtidos para ${integracao.nome_banco}`);
-        }
-      } catch (error) {
-        console.error(`[PLUGGY] Erro ao buscar dados de ${integracao.nome_banco}:`, error);
-      }
-    }
-    
-    return allTransactions;
-  };
 
   return {
     metrics,

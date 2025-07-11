@@ -92,61 +92,17 @@ export async function processFinancialData(
     }
     
     // Preparar transações formatadas para inserção
-    const transacoesFormatadas = allTransactions.map(tx => {
-      // Melhorar classificação de categoria baseada na descrição e tipo
-      let categoria = tx.category || 'Outros';
-      let metodo_pagamento = tx.type || 'Transferência';
-      
-      const descricao = (tx.description || 'Transação').toLowerCase();
-      
-      // Classificação mais inteligente baseada na descrição e valor
-      if (descricao.includes('pix')) {
-        categoria = tx.amount > 0 ? 'Transfer - PIX' : 'PIX Enviado';
-        metodo_pagamento = 'PIX';
-      } else if (descricao.includes('salario') || descricao.includes('salary') || descricao.includes('folha')) {
-        categoria = 'Salário';
-        metodo_pagamento = 'Transferência';
-      } else if (descricao.includes('ted') || descricao.includes('doc')) {
-        metodo_pagamento = tx.amount > 0 ? 'TED/DOC Recebido' : 'TED/DOC Enviado';
-        categoria = tx.amount > 0 ? 'Receita' : 'Transferência';
-      } else if (tx.amount > 0) {
-        // Para valores positivos sem categoria específica, classificar como receita
-        categoria = categoria === 'Outros' ? 'Receita' : categoria;
-      }
-      
-      const tipoTransacao = tx.amount > 0 ? 'receita' : 'despesa';
-      
-      return {
-        empresa_id: empresaId,
-        descricao: tx.description || 'Transação',
-        valor: Math.abs(tx.amount), // Sempre valor absoluto
-        data_transacao: tx.date,
-        categoria: categoria,
-        tipo: tipoTransacao,
-        metodo_pagamento: metodo_pagamento,
-        recorrente: false
-        // transaction_hash será gerado automaticamente pelo trigger
-      };
-    });
-    
-    console.log(`[FINANCIAL] Transações formatadas para inserção: ${transacoesFormatadas.length}`);
-    
-    const receitas = transacoesFormatadas.filter(tx => tx.tipo === 'receita');
-    const despesas = transacoesFormatadas.filter(tx => tx.tipo === 'despesa');
-    
-    console.log('[FINANCIAL] Receitas encontradas:', receitas.map(tx => ({
-      descricao: tx.descricao,
-      valor: tx.valor,
-      data: tx.data_transacao,
-      categoria: tx.categoria
-    })));
-    
-    console.log('[FINANCIAL] Despesas encontradas:', despesas.map(tx => ({
-      descricao: tx.descricao,
-      valor: tx.valor,
-      data: tx.data_transacao,
-      categoria: tx.categoria
-    })));
+    const transacoesFormatadas = allTransactions.map(tx => ({
+      empresa_id: empresaId,
+      descricao: tx.description || 'Transação',
+      valor: tx.amount,
+      data_transacao: tx.date,
+      categoria: tx.category || 'Outros',
+      tipo: tx.amount > 0 ? 'receita' : 'despesa',
+      metodo_pagamento: tx.type || 'Transferência',
+      recorrente: false
+      // transaction_hash será gerado automaticamente pelo trigger
+    }));
     
     console.log(`Tentando inserir ${transacoesFormatadas.length} transações`);
     
@@ -160,7 +116,7 @@ export async function processFinancialData(
       const batch = transacoesFormatadas.slice(i, i + batchSize);
       
       try {
-        console.log(`[FINANCIAL] Processando lote ${Math.floor(i / batchSize) + 1} de ${Math.ceil(transacoesFormatadas.length / batchSize)}: ${batch.length} transações`);
+        console.log(`Processando lote ${Math.floor(i / batchSize) + 1} de ${Math.ceil(transacoesFormatadas.length / batchSize)}: ${batch.length} transações`);
         
         const { data, error } = await supabaseClient
           .from("transacoes")
@@ -168,40 +124,10 @@ export async function processFinancialData(
           .select('id');
         
         if (error) {
-          console.error(`[FINANCIAL] Erro no lote ${Math.floor(i / batchSize) + 1}:`, error);
-          
           // Se há erro de constraint (duplicata), processar individualmente para contar
           if (error.code === '23505') {
-            console.log(`[FINANCIAL] Lote com duplicatas detectadas, processando individualmente...`);
+            console.log(`Lote com duplicatas detectadas, processando individualmente...`);
             
-            for (const tx of batch) {
-              try {
-                console.log(`[FINANCIAL] Inserindo transação individual: ${tx.descricao} - ${tx.tipo} - R$ ${tx.valor}`);
-                
-                const { data: singleData, error: singleError } = await supabaseClient
-                  .from("transacoes")
-                  .insert([tx])
-                  .select('id');
-                
-                if (singleError) {
-                  if (singleError.code === '23505') {
-                    console.log(`[FINANCIAL] Transação duplicada ignorada: ${tx.descricao}`);
-                    duplicateCount++;
-                  } else {
-                    console.error('[FINANCIAL] Erro inesperado ao inserir transação:', singleError, 'Transação:', tx);
-                  }
-                } else {
-                  console.log(`[FINANCIAL] Transação inserida com sucesso: ${tx.descricao} - ${tx.tipo} - R$ ${tx.valor}`);
-                  insertedCount++;
-                }
-              } catch (singleTxError) {
-                console.error('[FINANCIAL] Erro individual crítico:', singleTxError);
-                duplicateCount++;
-              }
-            }
-          } else {
-            console.error(`[FINANCIAL] Erro não relacionado a duplicatas no lote:`, error);
-            // Tentar inserir individualmente mesmo com outros erros
             for (const tx of batch) {
               try {
                 const { error: singleError } = await supabaseClient
@@ -210,22 +136,27 @@ export async function processFinancialData(
                   .select('id');
                 
                 if (singleError) {
-                  console.error(`[FINANCIAL] Erro individual na transação:`, singleError, 'Transação:', tx);
                   if (singleError.code === '23505') {
                     duplicateCount++;
+                  } else {
+                    console.error('Erro inesperado ao inserir transação:', singleError);
                   }
                 } else {
                   insertedCount++;
                 }
               } catch (singleTxError) {
-                console.error('[FINANCIAL] Erro individual crítico:', singleTxError);
+                console.error('Erro individual:', singleTxError);
+                duplicateCount++;
               }
             }
+          } else {
+            console.error(`Erro não relacionado a duplicatas no lote:`, error);
+            throw error;
           }
         } else {
           const batchInserted = data ? data.length : 0;
           insertedCount += batchInserted;
-          console.log(`[FINANCIAL] Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações inseridas com sucesso`);
+          console.log(`Lote ${Math.floor(i / batchSize) + 1}: ${batchInserted} transações inseridas com sucesso`);
         }
       } catch (batchError) {
         console.error(`Erro crítico no lote ${Math.floor(i / batchSize) + 1}:`, batchError);
