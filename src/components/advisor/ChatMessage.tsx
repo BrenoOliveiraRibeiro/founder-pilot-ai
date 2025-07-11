@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 export interface Message {
   id: string;
@@ -43,7 +44,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <span className="text-xs sm:text-sm font-medium text-primary/70">AI Advisor</span>
           </div>
         )}
-        <div className="whitespace-pre-wrap break-words text-sm">{message.content}</div>
+        <div className="break-words text-sm">
+          {isUser ? (
+            <span className="whitespace-pre-wrap">{message.content}</span>
+          ) : (
+            <MarkdownRenderer content={message.content} />
+          )}
+        </div>
         <div className={cn(
           "text-[10px] sm:text-xs mt-2 opacity-70",
           isUser ? "text-right" : "text-left"
