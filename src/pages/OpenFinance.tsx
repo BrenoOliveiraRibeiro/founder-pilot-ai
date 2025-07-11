@@ -15,6 +15,7 @@ import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { MultipleConnectionsManager } from "@/components/open-finance/MultipleConnectionsManager";
+import { useQueryClient } from '@tanstack/react-query';
 
 declare global {
   interface Window {
@@ -26,6 +27,7 @@ const OpenFinance = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Use ref to track the current instance
   const pluggyConnectInstanceRef = useRef<any>(null);
@@ -110,6 +112,11 @@ const OpenFinance = () => {
             console.log(`Auto-saved transactions for account ${account.id}:`, result);
           }
         }
+        
+        // Invalidate the recent transactions cache after auto-save
+        queryClient.invalidateQueries({ 
+          queryKey: ['recent-transactions', currentEmpresa?.id] 
+        });
         
         toast({
           title: "Transações sincronizadas",
@@ -235,6 +242,11 @@ const OpenFinance = () => {
       );
 
       if (result.success) {
+        // Invalidate the recent transactions cache
+        queryClient.invalidateQueries({ 
+          queryKey: ['recent-transactions', currentEmpresa?.id] 
+        });
+        
         if (result.newTransactions && result.newTransactions > 0) {
           toast({
             title: "Transações processadas!",
