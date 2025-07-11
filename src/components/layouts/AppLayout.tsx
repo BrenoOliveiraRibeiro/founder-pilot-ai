@@ -6,6 +6,7 @@ import { FloatingAIButton } from "../shared/FloatingAIButton";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTransactionsSync } from "@/hooks/useTransactionsSync";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
+  
+  // Initialize global transactions synchronization
+  useTransactionsSync();
 
   // Page transition effect
   useEffect(() => {
