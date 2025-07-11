@@ -84,12 +84,57 @@ const OpenFinance = () => {
 
   // Auto-save all transactions when page loads
   useEffect(() => {
+    const fetchAllTransactionsPaginated = async (accountId: string, connection: any) => {
+      let allTransactions: any[] = [];
+      let currentPage = 1;
+      const maxPageSize = 500; // Pluggy API limit
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        try {
+          const pageData = await fetchTransactions(accountId, currentPage, maxPageSize);
+          
+          if (pageData?.results && pageData.results.length > 0) {
+            allTransactions = [...allTransactions, ...pageData.results];
+            
+            // Check if there are more pages
+            const totalPages = Math.ceil((pageData.total || pageData.results.length) / maxPageSize);
+            hasMorePages = currentPage < totalPages && pageData.results.length === maxPageSize;
+            currentPage++;
+          } else {
+            hasMorePages = false;
+          }
+          
+          // Avoid hitting rate limits
+          if (hasMorePages) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        } catch (error: any) {
+          console.error(`Error fetching page ${currentPage} for account ${accountId}:`, error);
+          
+          // If it's a pageSize error, we'll break the loop to avoid infinite errors
+          if (error.message?.includes('pageSize must not be greater than 500')) {
+            console.log('PageSize error detected, stopping pagination');
+            hasMorePages = false;
+          } else {
+            throw error; // Re-throw other errors
+          }
+        }
+      }
+
+      return {
+        results: allTransactions,
+        total: allTransactions.length
+      };
+    };
+
     const autoSaveAllTransactions = async () => {
       if (!hasConnections || !allAccountData?.results || processingTransactions) {
         return;
       }
 
       console.log("Auto-saving all transactions on page load...");
+      let savedTransactionsCount = 0;
       
       try {
         for (const account of allAccountData.results) {
@@ -99,15 +144,19 @@ const OpenFinance = () => {
           
           if (!connection) continue;
 
-          // Fetch all transactions for this account (not paginated)
-          const transactionData = await fetchTransactions(account.id, 1, 1000); // Get up to 1000 transactions
+          // Fetch all transactions for this account using pagination
+          const allTransactionData = await fetchAllTransactionsPaginated(account.id, connection);
           
-          if (transactionData?.results && transactionData.results.length > 0) {
+          if (allTransactionData?.results && allTransactionData.results.length > 0) {
             const result = await processAndSaveTransactions(
               connection.itemId,
               account.id,
-              transactionData
+              allTransactionData
             );
+            
+            if (result.success && result.newTransactions) {
+              savedTransactionsCount += result.newTransactions;
+            }
             
             console.log(`Auto-saved transactions for account ${account.id}:`, result);
           }
@@ -118,12 +167,23 @@ const OpenFinance = () => {
           queryKey: ['recent-transactions', currentEmpresa?.id] 
         });
         
-        toast({
-          title: "Transações sincronizadas",
-          description: "Todas as transações foram automaticamente sincronizadas.",
-        });
-      } catch (error) {
+        if (savedTransactionsCount > 0) {
+          toast({
+            title: "Transações sincronizadas",
+            description: `${savedTransactionsCount} novas transações foram automaticamente sincronizadas.`,
+          });
+        }
+      } catch (error: any) {
         console.error('Error auto-saving transactions:', error);
+        
+        // Only show error toast if it's not a known pageSize issue
+        if (!error.message?.includes('pageSize must not be greater than 500')) {
+          toast({
+            title: "Erro na sincronização",
+            description: "Algumas transações podem não ter sido sincronizadas. Tente sincronizar manualmente.",
+            variant: "destructive",
+          });
+        }
       }
     };
 

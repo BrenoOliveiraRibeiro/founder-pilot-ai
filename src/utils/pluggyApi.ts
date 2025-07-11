@@ -65,8 +65,15 @@ export const pluggyApi = {
 
   async fetchTransactions(accountId: string, page: number = 1, pageSize: number = 50) {
     try {
+      // Validate pageSize to prevent API errors
+      const validPageSize = Math.min(Math.max(pageSize, 1), 500); // Ensure pageSize is between 1 and 500
+      
+      if (pageSize > 500) {
+        console.warn(`PageSize ${pageSize} exceeds maximum limit. Using 500 instead.`);
+      }
+      
       const response = await pluggyAuth.makeAuthenticatedRequest(
-        `https://api.pluggy.ai/transactions?accountId=${accountId}&page=${page}&pageSize=${pageSize}`,
+        `https://api.pluggy.ai/transactions?accountId=${accountId}&page=${page}&pageSize=${validPageSize}`,
         {
           method: 'GET',
           headers: { accept: 'application/json' }
@@ -79,7 +86,7 @@ export const pluggyApi = {
       }
       
       const data = await response.json();
-      console.log(`Transações carregadas (página ${page}):`, data);
+      console.log(`Transações carregadas (página ${page}, pageSize: ${validPageSize}):`, data);
       return data;
     } catch (error: any) {
       console.error('Erro ao buscar transações:', error);
