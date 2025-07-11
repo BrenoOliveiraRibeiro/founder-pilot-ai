@@ -141,6 +141,112 @@ export const useMultiplePluggyConnectionPersistence = () => {
     }
   }, [connections, hasConnections, currentEmpresa?.id, refreshBalance, loadAllConnections, totalConnections, toast]);
 
+  // Função para buscar todas as transações de uma conta
+  const fetchAllAccountTransactions = useCallback(async (accountId: string) => {
+    const allTransactions = [];
+    let page = 1;
+    let hasMorePages = true;
+    
+    while (hasMorePages) {
+      try {
+        const transactionsData = await pluggyApi.fetchTransactions(accountId, page, 500);
+        
+        if (transactionsData?.results && transactionsData.results.length > 0) {
+          allTransactions.push(...transactionsData.results);
+          
+          // Verificar se há mais páginas
+          const totalPages = Math.ceil((transactionsData.total || 0) / 500);
+          hasMorePages = page < totalPages;
+          page++;
+        } else {
+          hasMorePages = false;
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar transações da página ${page}:`, error);
+        hasMorePages = false;
+      }
+    }
+    
+    return {
+      results: allTransactions,
+      total: allTransactions.length
+    };
+  }, []);
+
+  // Função para salvar todas as transações de todas as contas automaticamente
+  const saveAllTransactionsFromAllAccounts = useCallback(async () => {
+    if (!hasConnections || !currentEmpresa?.id) {
+      console.log('Nenhuma conexão disponível ou empresa não encontrada');
+      return;
+    }
+
+    try {
+      console.log('Iniciando salvamento automático de todas as transações...');
+      
+      let totalNewTransactions = 0;
+      let totalProcessedAccounts = 0;
+      
+      for (const connection of connections) {
+        try {
+          // Buscar dados atualizados da conexão
+          const accountData = await pluggyApi.fetchAccountData(connection.itemId);
+          
+          if (accountData?.results) {
+            for (const account of accountData.results) {
+              try {
+                console.log(`Processando todas as transações da conta ${account.id}...`);
+                
+                // Buscar TODAS as transações da conta
+                const allTransactionsData = await fetchAllAccountTransactions(account.id);
+                
+                if (allTransactionsData.results.length > 0) {
+                  const result = await processAndSaveTransactions(
+                    connection.itemId,
+                    account.id,
+                    allTransactionsData
+                  );
+                  
+                  if (result.success && result.newTransactions) {
+                    totalNewTransactions += result.newTransactions;
+                  }
+                }
+                
+                totalProcessedAccounts++;
+              } catch (error) {
+                console.error(`Erro ao processar conta ${account.id}:`, error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Erro ao processar conexão ${connection.bankName}:`, error);
+        }
+      }
+      
+      // Mostrar resultado final
+      if (totalNewTransactions > 0) {
+        toast({
+          title: "Transações salvas automaticamente",
+          description: `${totalNewTransactions} novas transações foram processadas de ${totalProcessedAccounts} conta(s).`,
+        });
+      } else {
+        toast({
+          title: "Sincronização concluída",
+          description: `Todas as transações de ${totalProcessedAccounts} conta(s) já estão atualizadas.`,
+        });
+      }
+      
+      console.log(`Processamento concluído: ${totalNewTransactions} novas transações de ${totalProcessedAccounts} contas`);
+      
+    } catch (error: any) {
+      console.error('Erro no salvamento automático:', error);
+      toast({
+        title: "Erro no salvamento automático",
+        description: error.message || "Não foi possível processar todas as transações.",
+        variant: "destructive",
+      });
+    }
+  }, [connections, hasConnections, currentEmpresa?.id, fetchAllAccountTransactions, processAndSaveTransactions, toast]);
+
   const saveConnectionWithAutoProcess = useCallback(async (
     itemId: string,
     accountData: any,
@@ -150,13 +256,15 @@ export const useMultiplePluggyConnectionPersistence = () => {
     try {
       await saveConnection(itemId, accountData, connectionToken, bankName);
       
-      // Processar transações da nova conexão
+      // Processar TODAS as transações da nova conexão
       if (accountData?.results) {
         for (const account of accountData.results) {
           try {
-            const transactionsData = await pluggyApi.fetchTransactions(account.id, 1, 50);
-            if (transactionsData?.results) {
-              await processAndSaveTransactions(itemId, account.id, transactionsData);
+            console.log(`Processando todas as transações da nova conta ${account.id}...`);
+            const allTransactionsData = await fetchAllAccountTransactions(account.id);
+            
+            if (allTransactionsData.results.length > 0) {
+              await processAndSaveTransactions(itemId, account.id, allTransactionsData);
             }
           } catch (error) {
             console.error(`Erro ao processar transações da conta ${account.id}:`, error);
@@ -167,7 +275,7 @@ export const useMultiplePluggyConnectionPersistence = () => {
       console.error('Erro ao salvar conexão com processamento automático:', error);
       throw error;
     }
-  }, [saveConnection, processAndSaveTransactions]);
+  }, [saveConnection, processAndSaveTransactions, fetchAllAccountTransactions]);
 
   return {
     // Estados básicos
@@ -199,6 +307,7 @@ export const useMultiplePluggyConnectionPersistence = () => {
     syncAllConnections,
     refreshAllBalances,
     refreshSingleConnection,
-    processAndSaveTransactions
+    processAndSaveTransactions,
+    saveAllTransactionsFromAllAccounts
   };
 };
