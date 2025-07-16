@@ -9,6 +9,7 @@ import { FriendlyLoadingMessage } from "../ui/friendly-loading-message";
 import { motion } from "framer-motion";
 import { FounderPilotLogo } from "../shared/FounderPilotLogo";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
+import { ExportDialog } from "../shared/ExportDialog";
 
 export const DashboardHeader = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -119,14 +120,18 @@ export const DashboardHeader = () => {
           </div>
         </motion.div>
         <motion.div className="flex items-center gap-2" variants={itemVariants}>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="hidden sm:flex hover-lift micro-feedback focus-ring"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+          <ExportDialog 
+            trigger={
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hidden sm:flex hover-lift micro-feedback focus-ring"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            }
+          />
           <Button 
             variant="secondary" 
             size="sm" 

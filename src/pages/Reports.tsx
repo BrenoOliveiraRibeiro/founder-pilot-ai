@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ExportDialog } from "@/components/shared/ExportDialog";
 
 const ReportsPage = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -44,10 +45,14 @@ const ReportsPage = () => {
               />
             </PopoverContent>
           </Popover>
-          <Button variant="default" className="gap-2">
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
+          <ExportDialog 
+            trigger={
+              <Button variant="default" className="gap-2">
+                <Download className="h-4 w-4" />
+                Exportar
+              </Button>
+            }
+          />
         </div>
       </div>
 
