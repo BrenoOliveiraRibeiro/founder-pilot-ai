@@ -25,37 +25,36 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   onRefresh,
   formatDate
 }) => {
-  const formatAccountBalance = (integration: any) => {
-    const accountData = updatedBalances[integration.id] || integration.account_data;
-    
-    if (!accountData?.results) return 0;
-    
-    return accountData.results.reduce((total: number, account: any) => {
-      return total + (account.balance || 0);
-    }, 0);
-  };
-
   const getCreditInfo = (integration: any) => {
     const accountData = updatedBalances[integration.id] || integration.account_data;
     
     if (!accountData?.results) return { totalLimit: 0, usedLimit: 0, availableLimit: 0 };
     
     const creditAccounts = accountData.results.filter((account: any) => 
-      isCreditAccount(account.type)
+      isCreditAccount(account.type, account.subtype)
     );
     
     const totalLimit = creditAccounts.reduce((sum: number, account: any) => 
       sum + (account.credit_limit || 0), 0
     );
     
-    const usedLimit = creditAccounts.reduce((sum: number, account: any) => 
-      sum + Math.abs(account.balance || 0), 0
+    const availableLimit = creditAccounts.reduce((sum: number, account: any) => 
+      sum + (account.available_credit_limit || account.available_credit || 0), 0
     );
+    
+    const usedLimit = totalLimit - availableLimit;
+    
+    console.log(`[ACCOUNT CARD] Credit info for ${integration.nome_banco}:`, {
+      totalLimit,
+      availableLimit,
+      usedLimit,
+      creditAccounts
+    });
     
     return {
       totalLimit,
       usedLimit,
-      availableLimit: totalLimit - usedLimit
+      availableLimit
     };
   };
 
@@ -64,8 +63,19 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     
     if (!accountData?.results) return { debit: [], credit: [] };
     
-    const debit = accountData.results.filter((account: any) => isDebitAccount(account.type));
-    const credit = accountData.results.filter((account: any) => isCreditAccount(account.type));
+    const debit = accountData.results.filter((account: any) => 
+      isDebitAccount(account.type, account.subtype)
+    );
+    const credit = accountData.results.filter((account: any) => 
+      isCreditAccount(account.type, account.subtype)
+    );
+    
+    console.log(`[ACCOUNT CARD] Account breakdown for ${integration.nome_banco}:`, {
+      debit: debit.length,
+      credit: credit.length,
+      debitAccounts: debit,
+      creditAccounts: credit
+    });
     
     return { debit, credit };
   };
@@ -80,7 +90,6 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     return accountData?.results || [];
   };
 
-  const totalBalance = formatAccountBalance(integration);
   const accountsCount = getAccountsCount(integration);
   const accountsDetails = getAccountsDetails(integration);
   const creditInfo = getCreditInfo(integration);
@@ -198,7 +207,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                     <div>
                       <span className="font-medium">{account.name}</span>
                       <Badge variant="secondary" className="ml-2 text-xs">
-                        {formatAccountType(account.type)}
+                        {formatAccountType(account.type, account.subtype)}
                       </Badge>
                     </div>
                     <span className="font-medium text-green-600">
@@ -224,10 +233,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
               </h4>
               <div className="grid gap-2">
                 {accountTypeBreakdown.credit.slice(0, 2).map((account: any, index: number) => {
-                  const usedAmount = Math.abs(account.balance || 0);
                   const limit = account.credit_limit || 0;
-                  const available = limit - usedAmount;
-                  const usagePercentage = limit > 0 ? (usedAmount / limit) * 100 : 0;
+                  const available = account.available_credit_limit || account.available_credit || 0;
+                  const used = limit - available;
+                  const usagePercentage = limit > 0 ? (used / limit) * 100 : 0;
                   
                   return (
                     <div key={`credit-${index}`} className="text-sm p-2 bg-blue-50 rounded border border-blue-200">
@@ -235,7 +244,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                         <div>
                           <span className="font-medium">{account.name}</span>
                           <Badge variant="secondary" className="ml-2 text-xs">
-                            {formatAccountType(account.type)}
+                            {formatAccountType(account.type, account.subtype)}
                           </Badge>
                         </div>
                         <span className="font-medium text-blue-600">
@@ -243,7 +252,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                         </span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Usado: {formatCurrency(usedAmount)}</span>
+                        <span>Usado: {formatCurrency(used)}</span>
                         <span>Limite: {formatCurrency(limit)}</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">

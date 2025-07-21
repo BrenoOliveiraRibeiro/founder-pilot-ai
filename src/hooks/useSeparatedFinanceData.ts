@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,7 @@ export const useSeparatedFinanceData = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log(`[SEPARATED FINANCE] Iniciando fetch para empresa: ${currentEmpresa.id}`);
 
       // Buscar integrações ativas
       const { data: integracoes, error: integracoesError } = await supabase
@@ -58,8 +60,10 @@ export const useSeparatedFinanceData = () => {
       if (integracoesError) throw integracoesError;
 
       const integracoesAtivas = integracoes?.length || 0;
+      console.log(`[SEPARATED FINANCE] ${integracoesAtivas} integrações ativas encontradas`);
 
       if (integracoesAtivas === 0) {
+        console.log('[SEPARATED FINANCE] Nenhuma integração ativa, retornando dados zero');
         setMetrics({
           realCashBalance: 0,
           runwayMonths: 0,
@@ -90,10 +94,13 @@ export const useSeparatedFinanceData = () => {
       let ultimaAtualizacao: string | null = null;
 
       for (const integracao of integracoes || []) {
+        console.log(`[SEPARATED FINANCE] Processando integração: ${integracao.nome_banco} (${integracao.id})`);
+        
         try {
           if (integracao.item_id) {
             // Refresh do saldo via API
             const updatedAccountData = await refreshBalance(integracao.item_id, false);
+            console.log(`[SEPARATED FINANCE] Dados atualizados via API:`, updatedAccountData);
             
             if (updatedAccountData?.results) {
               allAccounts = [...allAccounts, ...updatedAccountData.results];
@@ -101,16 +108,18 @@ export const useSeparatedFinanceData = () => {
               // Fallback para dados existentes
               const accountData = integracao.account_data as any;
               if (accountData.results && Array.isArray(accountData.results)) {
+                console.log(`[SEPARATED FINANCE] Usando dados existentes:`, accountData.results);
                 allAccounts = [...allAccounts, ...accountData.results];
               }
             }
           }
         } catch (refreshError) {
-          console.error(`Erro ao atualizar saldo da integração ${integracao.id}:`, refreshError);
+          console.error(`[SEPARATED FINANCE] Erro ao atualizar saldo da integração ${integracao.id}:`, refreshError);
           // Usar dados existentes em caso de erro
           if (integracao.account_data && typeof integracao.account_data === 'object') {
             const accountData = integracao.account_data as any;
             if (accountData.results && Array.isArray(accountData.results)) {
+              console.log(`[SEPARATED FINANCE] Usando dados existentes após erro:`, accountData.results);
               allAccounts = [...allAccounts, ...accountData.results];
             }
           }
@@ -122,6 +131,8 @@ export const useSeparatedFinanceData = () => {
           }
         }
       }
+
+      console.log(`[SEPARATED FINANCE] Total de ${allAccounts.length} contas processadas:`, allAccounts);
 
       // Separar contas por tipo
       const separated = separateAccountsByType(allAccounts);
@@ -138,6 +149,8 @@ export const useSeparatedFinanceData = () => {
 
       if (transacoesError) throw transacoesError;
 
+      console.log(`[SEPARATED FINANCE] ${transacoes?.length || 0} transações encontradas nos últimos 3 meses`);
+
       // Calcular métricas baseadas nas transações
       const hoje = new Date();
       const mesAtual = hoje.getMonth();
@@ -148,24 +161,41 @@ export const useSeparatedFinanceData = () => {
         return dataTransacao.getMonth() === mesAtual && dataTransacao.getFullYear() === anoAtual;
       });
 
+      console.log(`[SEPARATED FINANCE] ${transacoesMesAtual.length} transações no mês atual`);
+
+      // Calcular receitas e despesas do mês atual
       const receitaMensal = transacoesMesAtual
-        .filter(tx => tx.tipo === 'receita')
-        .reduce((sum, tx) => sum + tx.valor, 0);
+        .filter(tx => {
+          const isReceita = tx.tipo === 'receita' || tx.valor > 0;
+          console.log(`[TRANSACTION] ${tx.descricao}: ${tx.valor} - ${isReceita ? 'RECEITA' : 'DESPESA'}`);
+          return isReceita;
+        })
+        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
 
       const despesasMensais = transacoesMesAtual
-        .filter(tx => tx.tipo === 'despesa')
+        .filter(tx => {
+          const isDespesa = tx.tipo === 'despesa' || tx.valor < 0;
+          return isDespesa;
+        })
         .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
+
+      console.log(`[SEPARATED FINANCE] Receita mensal: ${receitaMensal}, Despesas mensais: ${despesasMensais}`);
 
       const fluxoCaixa = receitaMensal - despesasMensais;
 
-      // Calcular burn rate médio dos últimos 3 meses
-      const burnRate = Math.abs((transacoes || [])
-        .filter(tx => tx.tipo === 'despesa')
-        .reduce((sum, tx) => sum + tx.valor, 0)) / 3;
+      // Calcular burn rate médio dos últimos 3 meses (apenas despesas)
+      const despesasUltimos3Meses = (transacoes || [])
+        .filter(tx => tx.tipo === 'despesa' || tx.valor < 0)
+        .reduce((sum, tx) => sum + Math.abs(tx.valor), 0);
+
+      const burnRate = despesasUltimos3Meses / 3;
+      console.log(`[SEPARATED FINANCE] Burn rate médio (3 meses): ${burnRate}`);
 
       // Calcular runway usando APENAS o saldo de caixa real (sem crédito)
       const runwayMonths = burnRate > 0 ? separated.realCashBalance / burnRate : 0;
       const alertaCritico = runwayMonths < 3;
+
+      console.log(`[SEPARATED FINANCE] Runway calculado: ${runwayMonths} meses (crítico: ${alertaCritico})`);
 
       // Métricas de crédito
       const utilizationPercentage = getCreditUtilizationPercentage(
@@ -204,7 +234,7 @@ export const useSeparatedFinanceData = () => {
         isCriticalCreditUsage
       };
 
-      console.log('[SEPARATED FINANCE] Métricas calculadas:', result);
+      console.log('[SEPARATED FINANCE] Métricas finais calculadas:', result);
       setMetrics(result);
 
     } catch (error: any) {
