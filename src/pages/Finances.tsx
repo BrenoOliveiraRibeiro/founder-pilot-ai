@@ -4,41 +4,50 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FinanceHeader } from "@/components/finances/FinanceHeader";
 import { RunwayAlert } from "@/components/shared/RunwayAlert";
-import { FinanceMetricsGrid } from "@/components/finances/FinanceMetricsGrid";
+import { SeparatedFinanceMetricsGrid } from "@/components/finances/SeparatedFinanceMetricsGrid";
+import { CreditMetricsGrid } from "@/components/finances/CreditMetricsGrid";
 import { FinanceOverviewTab } from "@/components/finances/tabs/FinanceOverviewTab";
 import { CashFlowTab } from "@/components/finances/tabs/CashFlowTab";
 import { ExpensesTab } from "@/components/finances/tabs/ExpensesTab";
 import { AccountsTab } from "@/components/finances/tabs/AccountsTab";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
-import { useTransactionsMetrics } from "@/hooks/useTransactionsMetrics";
+import { useSeparatedFinanceData } from "@/hooks/useSeparatedFinanceData";
 
 const FinancesPage = () => {
   const { currentEmpresa } = useAuth();
-  const { metrics: openFinanceMetrics } = useOpenFinanceDashboard();
-  const { saldoCaixa, saidasMesAtual } = useTransactionsMetrics();
+  const { metrics: separatedMetrics, loading } = useSeparatedFinanceData();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Calcular runway usando os mesmos dados das outras páginas
-  const hasOpenFinanceData = openFinanceMetrics && openFinanceMetrics.integracoesAtivas > 0;
-  const hasTransactionData = saldoCaixa > 0 || saidasMesAtual > 0;
+  const runwayMonths = separatedMetrics?.runwayMonths || 0;
+  const hasRealData = separatedMetrics && separatedMetrics.integracoesAtivas > 0;
 
-  let runwayMonths = 0;
-  let hasRealData = false;
-
-  if (hasOpenFinanceData) {
-    runwayMonths = openFinanceMetrics.runwayMeses;
-    hasRealData = true;
-  } else if (hasTransactionData && saidasMesAtual > 0) {
-    runwayMonths = saldoCaixa / saidasMesAtual;
-    hasRealData = true;
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dados financeiros...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
     <AppLayout>
       <FinanceHeader selectedDate={selectedDate} onDateChange={setSelectedDate} />
       <RunwayAlert runwayMonths={runwayMonths} hasRealData={hasRealData} className="mb-6" />
-      <FinanceMetricsGrid selectedDate={selectedDate} />
+      
+      {separatedMetrics && (
+        <>
+          <SeparatedFinanceMetricsGrid metrics={separatedMetrics} />
+          <CreditMetricsGrid 
+            creditMetrics={separatedMetrics.creditMetrics} 
+            isCriticalUsage={separatedMetrics.isCriticalCreditUsage} 
+          />
+        </>
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList className="mb-4">
