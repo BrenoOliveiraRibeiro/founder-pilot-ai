@@ -90,9 +90,9 @@ export const OpenFinanceMetricsGrid = () => {
           <Alert className="mb-4">
             <Zap className="h-4 w-4" />
             <AlertTitle>Conecte suas contas bancárias</AlertTitle>
-            <AlertDescription>
-              Para ver métricas dinâmicas e precisas, conecte suas contas bancárias via Open Finance.
-            </AlertDescription>
+             <AlertDescription>
+               Para ver métricas dinâmicas e precisas de suas contas de débito, conecte seus bancos via Open Finance.
+             </AlertDescription>
           </Alert>
         </motion.div>
       )}
@@ -105,11 +105,11 @@ export const OpenFinanceMetricsGrid = () => {
       >
         <motion.div variants={itemVariants}>
           <MetricCard
-            title="Saldo Total"
+            title="Saldo em Caixa"
             value={formatCurrency(metrics.saldoTotal)}
-            description={`${metrics.integracoesAtivas} contas conectadas`}
+            description={`${metrics.integracoesAtivas} bancos conectados`}
             icon={<DollarSign className="h-5 w-5 text-primary" />}
-            tooltip="Saldo total em todas as contas bancárias conectadas via Open Finance"
+            tooltip="Saldo real em caixa - apenas contas de débito (corrente/poupança)"
             loading={loading}
             className="border-primary/20 bg-primary/5"
           />

@@ -51,13 +51,17 @@ export const useBalanceRefresh = () => {
       }
 
       if (showToast) {
-        const totalBalance = accountData.results?.reduce((sum: number, account: any) => {
+        // Calcular saldo apenas de contas de débito (BANK)
+        const debitAccounts = accountData.results?.filter((account: any) => account.type === 'BANK') || [];
+        const totalBalance = debitAccounts.reduce((sum: number, account: any) => {
           return sum + (account.balance || 0);
-        }, 0) || 0;
+        }, 0);
+
+        console.log(`Saldo atualizado - Total de contas: ${accountData.results?.length || 0}, Contas de débito: ${debitAccounts.length}, Saldo: ${totalBalance}`);
 
         toast({
           title: "Saldo atualizado",
-          description: `Saldo total: ${new Intl.NumberFormat('pt-BR', {
+          description: `Saldo em contas de débito: ${new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
           }).format(totalBalance)}`,

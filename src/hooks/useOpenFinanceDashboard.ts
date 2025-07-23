@@ -69,9 +69,11 @@ export const useOpenFinanceDashboard = () => {
 
       console.log(`Encontradas ${integracoesAtivas} integrações ativas`);
 
-      // Refresh do saldo para todas as integrações ativas
+      // Refresh do saldo para todas as integrações ativas - APENAS CONTAS DE DÉBITO
       let saldoTotal = 0;
       let ultimaAtualizacao: string | null = null;
+
+      console.log('[OPEN FINANCE] Processando apenas contas de débito (type: BANK)');
 
       for (const integracao of integracoes || []) {
         try {
@@ -82,17 +84,23 @@ export const useOpenFinanceDashboard = () => {
             const updatedAccountData = await refreshBalance(integracao.item_id, false);
             
             if (updatedAccountData?.results) {
-              const integracaoSaldo = updatedAccountData.results.reduce((sum: number, account: any) => {
+              // Filtrar apenas contas de débito (BANK)
+              const debitAccounts = updatedAccountData.results.filter((account: any) => account.type === 'BANK');
+              console.log(`[${integracao.nome_banco}] Contas encontradas: ${updatedAccountData.results.length}, Contas de débito: ${debitAccounts.length}`);
+              
+              const integracaoSaldo = debitAccounts.reduce((sum: number, account: any) => {
+                console.log(`[${integracao.nome_banco}] Conta ${account.name} (${account.type}): ${account.balance}`);
                 return sum + (account.balance || 0);
               }, 0);
               
               saldoTotal += integracaoSaldo;
-              console.log(`Saldo da integração ${integracao.nome_banco}: ${integracaoSaldo}`);
+              console.log(`Saldo de contas de débito da integração ${integracao.nome_banco}: ${integracaoSaldo}`);
             } else if (integracao.account_data && typeof integracao.account_data === 'object') {
-              // Fallback para dados existentes
+              // Fallback para dados existentes - também filtrar apenas débito
               const accountData = integracao.account_data as any;
               if (accountData.results && Array.isArray(accountData.results)) {
-                saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+                const debitAccounts = accountData.results.filter((account: any) => account.type === 'BANK');
+                saldoTotal += debitAccounts.reduce((sum: number, account: any) => {
                   return sum + (account.balance || 0);
                 }, 0);
               }
@@ -100,11 +108,12 @@ export const useOpenFinanceDashboard = () => {
           }
         } catch (refreshError) {
           console.error(`Erro ao atualizar saldo da integração ${integracao.id}:`, refreshError);
-          // Usar dados existentes em caso de erro
+          // Usar dados existentes em caso de erro - também filtrar apenas débito
           if (integracao.account_data && typeof integracao.account_data === 'object') {
             const accountData = integracao.account_data as any;
             if (accountData.results && Array.isArray(accountData.results)) {
-              saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+              const debitAccounts = accountData.results.filter((account: any) => account.type === 'BANK');
+              saldoTotal += debitAccounts.reduce((sum: number, account: any) => {
                 return sum + (account.balance || 0);
               }, 0);
             }
