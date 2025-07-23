@@ -1,10 +1,8 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { RefreshCw, CheckCircle, AlertCircle, CreditCard, Wallet } from "lucide-react";
-import { isDebitAccount, isCreditAccount, formatAccountType } from "@/utils/accountSeparation";
+import { RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 
 interface AccountCardProps {
   integration: any;
@@ -25,59 +23,14 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   onRefresh,
   formatDate
 }) => {
-  const getCreditInfo = (integration: any) => {
+  const formatAccountBalance = (integration: any) => {
     const accountData = updatedBalances[integration.id] || integration.account_data;
     
-    if (!accountData?.results) return { totalLimit: 0, usedLimit: 0, availableLimit: 0 };
+    if (!accountData?.results) return 0;
     
-    const creditAccounts = accountData.results.filter((account: any) => 
-      isCreditAccount(account.type, account.subtype)
-    );
-    
-    const totalLimit = creditAccounts.reduce((sum: number, account: any) => 
-      sum + (account.credit_limit || 0), 0
-    );
-    
-    const availableLimit = creditAccounts.reduce((sum: number, account: any) => 
-      sum + (account.available_credit_limit || account.available_credit || 0), 0
-    );
-    
-    const usedLimit = totalLimit - availableLimit;
-    
-    console.log(`[ACCOUNT CARD] Credit info for ${integration.nome_banco}:`, {
-      totalLimit,
-      availableLimit,
-      usedLimit,
-      creditAccounts
-    });
-    
-    return {
-      totalLimit,
-      usedLimit,
-      availableLimit
-    };
-  };
-
-  const getAccountTypeBreakdown = (integration: any) => {
-    const accountData = updatedBalances[integration.id] || integration.account_data;
-    
-    if (!accountData?.results) return { debit: [], credit: [] };
-    
-    const debit = accountData.results.filter((account: any) => 
-      isDebitAccount(account.type, account.subtype)
-    );
-    const credit = accountData.results.filter((account: any) => 
-      isCreditAccount(account.type, account.subtype)
-    );
-    
-    console.log(`[ACCOUNT CARD] Account breakdown for ${integration.nome_banco}:`, {
-      debit: debit.length,
-      credit: credit.length,
-      debitAccounts: debit,
-      creditAccounts: credit
-    });
-    
-    return { debit, credit };
+    return accountData.results.reduce((total: number, account: any) => {
+      return total + (account.balance || 0);
+    }, 0);
   };
 
   const getAccountsCount = (integration: any) => {
@@ -90,17 +43,13 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     return accountData?.results || [];
   };
 
+  const totalBalance = formatAccountBalance(integration);
   const accountsCount = getAccountsCount(integration);
   const accountsDetails = getAccountsDetails(integration);
-  const creditInfo = getCreditInfo(integration);
-  const accountTypeBreakdown = getAccountTypeBreakdown(integration);
   const isActive = integration.status === 'ativo';
   const isRefreshing = refreshingBalance === integration.id;
   const lastRefresh = lastRefreshTime[integration.id];
   const hasRecentUpdate = updatedBalances[integration.id];
-  
-  const hasDebitAccounts = accountTypeBreakdown.debit.length > 0;
-  const hasCreditAccounts = accountTypeBreakdown.credit.length > 0;
 
   const getLastUpdateText = () => {
     if (lastRefresh) {
@@ -145,34 +94,8 @@ export const AccountCard: React.FC<AccountCardProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <div className="space-y-2">
-            {hasDebitAccounts && (
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-green-600" />
-                <div>
-                  <div className="font-bold text-green-600">
-                    {formatCurrency(
-                      accountTypeBreakdown.debit.reduce((sum: number, acc: any) => sum + (acc.balance || 0), 0)
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Saldo Real</div>
-                </div>
-              </div>
-            )}
-            
-            {hasCreditAccounts && (
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-blue-600" />
-                <div>
-                  <div className="font-bold text-blue-600">
-                    {formatCurrency(creditInfo.availableLimit)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Limite Disponível
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="font-bold text-lg">
+            {formatCurrency(totalBalance)}
           </div>
           <div className="flex items-center space-x-2 mt-2">
             <Button
@@ -193,88 +116,28 @@ export const AccountCard: React.FC<AccountCardProps> = ({
       </div>
       
       {accountsDetails && accountsDetails.length > 0 && (
-        <div className="mt-4 pt-4 border-t space-y-3">
-          {/* Contas de Débito */}
-          {hasDebitAccounts && (
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-green-600" />
-                Contas de Débito ({accountTypeBreakdown.debit.length})
-              </h4>
-              <div className="grid gap-2">
-                {accountTypeBreakdown.debit.slice(0, 2).map((account: any, index: number) => (
-                  <div key={`debit-${index}`} className="flex justify-between items-center text-sm p-2 bg-green-50 rounded border border-green-200">
-                    <div>
-                      <span className="font-medium">{account.name}</span>
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {formatAccountType(account.type, account.subtype)}
-                      </Badge>
-                    </div>
-                    <span className="font-medium text-green-600">
-                      {formatCurrency(account.balance || 0)}
-                    </span>
-                  </div>
-                ))}
-                {accountTypeBreakdown.debit.length > 2 && (
-                  <div className="text-xs text-muted-foreground text-center py-1">
-                    +{accountTypeBreakdown.debit.length - 2} contas adicionais
-                  </div>
-                )}
+        <div className="mt-4 pt-4 border-t">
+          <h4 className="text-sm font-medium mb-2">Contas detalhadas:</h4>
+          <div className="grid gap-2">
+            {accountsDetails.slice(0, 3).map((account: any, index: number) => (
+              <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
+                <div>
+                  <span className="font-medium">{account.name}</span>
+                  <span className="text-muted-foreground ml-2 capitalize">
+                    ({account.type})
+                  </span>
+                </div>
+                <span className="font-medium">
+                  {formatCurrency(account.balance || 0)}
+                </span>
               </div>
-            </div>
-          )}
-
-          {/* Contas de Crédito */}
-          {hasCreditAccounts && (
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-blue-600" />
-                Cartões de Crédito ({accountTypeBreakdown.credit.length})
-              </h4>
-              <div className="grid gap-2">
-                {accountTypeBreakdown.credit.slice(0, 2).map((account: any, index: number) => {
-                  const limit = account.credit_limit || 0;
-                  const available = account.available_credit_limit || account.available_credit || 0;
-                  const used = limit - available;
-                  const usagePercentage = limit > 0 ? (used / limit) * 100 : 0;
-                  
-                  return (
-                    <div key={`credit-${index}`} className="text-sm p-2 bg-blue-50 rounded border border-blue-200">
-                      <div className="flex justify-between items-center mb-1">
-                        <div>
-                          <span className="font-medium">{account.name}</span>
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {formatAccountType(account.type, account.subtype)}
-                          </Badge>
-                        </div>
-                        <span className="font-medium text-blue-600">
-                          {formatCurrency(available)} disponível
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Usado: {formatCurrency(used)}</span>
-                        <span>Limite: {formatCurrency(limit)}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div 
-                          className={`h-1.5 rounded-full ${
-                            usagePercentage > 80 ? 'bg-red-500' : 
-                            usagePercentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                {accountTypeBreakdown.credit.length > 2 && (
-                  <div className="text-xs text-muted-foreground text-center py-1">
-                    +{accountTypeBreakdown.credit.length - 2} cartões adicionais
-                  </div>
-                )}
+            ))}
+            {accountsDetails.length > 3 && (
+              <div className="text-xs text-muted-foreground text-center py-1">
+                +{accountsDetails.length - 3} contas adicionais
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
