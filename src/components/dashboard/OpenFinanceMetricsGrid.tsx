@@ -15,9 +15,10 @@ import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { formatCurrency } from "@/lib/utils";
+import { DataSourceIndicator } from "./DataSourceIndicator";
 
 export const OpenFinanceMetricsGrid = () => {
-  const { metrics, loading, error } = useOpenFinanceDashboard();
+  const { metrics, loading, error, handleReconnection } = useOpenFinanceDashboard();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -64,6 +65,17 @@ export const OpenFinanceMetricsGrid = () => {
 
   return (
     <>
+      {/* Indicador de fonte dos dados */}
+      {metrics && (
+        <DataSourceIndicator
+          isUsingFallback={metrics.isUsingTransactionFallback}
+          connectionStatus={metrics.connectionStatus}
+          onReconnect={handleReconnection}
+          numTransactions={metrics.totalTransactions}
+          lastSyncDate={metrics.ultimaAtualizacao}
+        />
+      )}
+
       {metrics.alertaCritico && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -107,9 +119,17 @@ export const OpenFinanceMetricsGrid = () => {
           <MetricCard
             title="Saldo em Caixa"
             value={formatCurrency(metrics.saldoTotal)}
-            description={`${metrics.integracoesAtivas} bancos conectados`}
+            description={
+              metrics.isUsingTransactionFallback 
+                ? `Calculado via ${metrics.totalTransactions} transações` 
+                : `${metrics.integracoesAtivas} bancos conectados`
+            }
             icon={<DollarSign className="h-5 w-5 text-primary" />}
-            tooltip="Saldo real em caixa - apenas contas de débito (corrente/poupança)"
+            tooltip={
+              metrics.isUsingTransactionFallback
+                ? "Saldo calculado baseado no histórico de transações (conexões bancárias podem estar expiradas)"
+                : "Saldo real em caixa - apenas contas de débito (corrente/poupança)"
+            }
             loading={loading}
             className="border-primary/20 bg-primary/5"
           />
