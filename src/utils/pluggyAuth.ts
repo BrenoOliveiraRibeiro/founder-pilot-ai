@@ -49,29 +49,23 @@ class PluggyAuth {
 
   private async performTokenRefresh(): Promise<string> {
     try {
-      const options = {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          clientId: '9874a45e-3a75-425e-a451-26b3d99c7dc2',
-          clientSecret: '9c93ac24-0829-4822-8320-c946070f8c49'
-        })
-      };
-
-      console.log('Requesting auth token from Pluggy...');
-      const response = await fetch('https://api.pluggy.ai/auth', options);
+      // Use Supabase Edge Function for secure authentication
+      const { supabase } = await import('@/integrations/supabase/client');
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('Requesting auth token via Edge Function...');
+      const { data, error } = await supabase.functions.invoke('open-finance', {
+        body: { 
+          action: 'get_token',
+          sandbox: true // Can be made configurable
+        }
+      });
+      
+      if (error) {
+        throw new Error(`Supabase function error: ${error.message}`);
       }
       
-      const data: AuthResponse = await response.json();
-      
-      if (!data.apiKey) {
-        throw new Error('No API key received from Pluggy');
+      if (!data?.success || !data?.apiKey) {
+        throw new Error('No API key received from authentication service');
       }
       
       console.log('New auth token received successfully');
