@@ -28,25 +28,19 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     
     if (!accountData?.results) return 0;
     
-    // Filtrar apenas contas de débito (BANK) para o saldo total
-    const debitAccounts = accountData.results.filter((account: any) => account.type === 'BANK');
-    
-    return debitAccounts.reduce((total: number, account: any) => {
+    return accountData.results.reduce((total: number, account: any) => {
       return total + (account.balance || 0);
     }, 0);
   };
 
   const getAccountsCount = (integration: any) => {
     const accountData = updatedBalances[integration.id] || integration.account_data;
-    // Contar apenas contas de débito (BANK)
-    const debitAccounts = accountData?.results?.filter((account: any) => account.type === 'BANK') || [];
-    return debitAccounts.length;
+    return accountData?.results?.length || 0;
   };
 
   const getAccountsDetails = (integration: any) => {
     const accountData = updatedBalances[integration.id] || integration.account_data;
-    // Retornar apenas contas de débito (BANK)
-    return accountData?.results?.filter((account: any) => account.type === 'BANK') || [];
+    return accountData?.results || [];
   };
 
   const totalBalance = formatAccountBalance(integration);
@@ -89,7 +83,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {integration.tipo_conexao} • {accountsCount} conta{accountsCount !== 1 ? 's' : ''} de débito
+              {integration.tipo_conexao} • {accountsCount} conta{accountsCount !== 1 ? 's' : ''}
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <span>Última sincronização: {getLastUpdateText()}</span>
@@ -123,7 +117,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
       
       {accountsDetails && accountsDetails.length > 0 && (
         <div className="mt-4 pt-4 border-t">
-          <h4 className="text-sm font-medium mb-2">Contas de débito:</h4>
+          <h4 className="text-sm font-medium mb-2">Contas detalhadas:</h4>
           <div className="grid gap-2">
             {accountsDetails.slice(0, 3).map((account: any, index: number) => (
               <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">

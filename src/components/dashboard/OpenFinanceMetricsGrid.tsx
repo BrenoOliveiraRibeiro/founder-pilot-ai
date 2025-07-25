@@ -15,10 +15,9 @@ import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useOpenFinanceDashboard } from "@/hooks/useOpenFinanceDashboard";
 import { formatCurrency } from "@/lib/utils";
-import { DataSourceIndicator } from "./DataSourceIndicator";
 
 export const OpenFinanceMetricsGrid = () => {
-  const { metrics, loading, error, handleReconnection } = useOpenFinanceDashboard();
+  const { metrics, loading, error } = useOpenFinanceDashboard();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -65,17 +64,6 @@ export const OpenFinanceMetricsGrid = () => {
 
   return (
     <>
-      {/* Indicador de fonte dos dados */}
-      {metrics && (
-        <DataSourceIndicator
-          isUsingFallback={metrics.isUsingTransactionFallback}
-          connectionStatus={metrics.connectionStatus}
-          onReconnect={handleReconnection}
-          numTransactions={metrics.totalTransactions}
-          lastSyncDate={metrics.ultimaAtualizacao}
-        />
-      )}
-
       {metrics.alertaCritico && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -102,9 +90,9 @@ export const OpenFinanceMetricsGrid = () => {
           <Alert className="mb-4">
             <Zap className="h-4 w-4" />
             <AlertTitle>Conecte suas contas bancárias</AlertTitle>
-             <AlertDescription>
-               Para ver métricas dinâmicas e precisas de suas contas de débito, conecte seus bancos via Open Finance.
-             </AlertDescription>
+            <AlertDescription>
+              Para ver métricas dinâmicas e precisas, conecte suas contas bancárias via Open Finance.
+            </AlertDescription>
           </Alert>
         </motion.div>
       )}
@@ -117,19 +105,11 @@ export const OpenFinanceMetricsGrid = () => {
       >
         <motion.div variants={itemVariants}>
           <MetricCard
-            title="Saldo em Caixa"
+            title="Saldo Total"
             value={formatCurrency(metrics.saldoTotal)}
-            description={
-              metrics.isUsingTransactionFallback 
-                ? `Calculado via ${metrics.totalTransactions} transações` 
-                : `${metrics.integracoesAtivas} bancos conectados`
-            }
+            description={`${metrics.integracoesAtivas} contas conectadas`}
             icon={<DollarSign className="h-5 w-5 text-primary" />}
-            tooltip={
-              metrics.isUsingTransactionFallback
-                ? "Saldo calculado baseado no histórico de transações (conexões bancárias podem estar expiradas)"
-                : "Saldo real em caixa - apenas contas de débito (corrente/poupança)"
-            }
+            tooltip="Saldo total em todas as contas bancárias conectadas via Open Finance"
             loading={loading}
             className="border-primary/20 bg-primary/5"
           />

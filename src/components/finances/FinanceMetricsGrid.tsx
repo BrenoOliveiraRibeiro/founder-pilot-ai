@@ -89,7 +89,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Nenhum dado financeiro encontrado</AlertTitle>
             <AlertDescription>
-              Conecte suas bancos via Open Finance para visualizar métricas reais de caixa (apenas contas de débito).
+              Conecte suas contas bancárias via Open Finance para visualizar suas métricas financeiras em tempo real.
             </AlertDescription>
           </Alert>
         </div>
@@ -158,7 +158,7 @@ export const FinanceMetricsGrid: React.FC<FinanceMetricsGridProps> = ({ selected
             <div className="text-2xl font-bold">{formatCurrency(saldoAtual)}</div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {hasOpenFinanceData ? "Saldo real em contas de débito" : `Acumulado até ${format(selectedDate, "dd/MM/yyyy", { locale: pt })}`}
+            {hasOpenFinanceData ? "Dados sincronizados do Open Finance" : `Acumulado até ${format(selectedDate, "dd/MM/yyyy", { locale: pt })}`}
           </p>
         </CardContent>
       </Card>

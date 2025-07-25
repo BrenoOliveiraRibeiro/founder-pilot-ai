@@ -16,10 +16,6 @@ interface OpenFinanceMetrics {
   ultimaAtualizacao: string | null;
   integracoesAtivas: number;
   alertaCritico: boolean;
-  // Novos campos para indicar status dos dados
-  isUsingTransactionFallback: boolean;
-  connectionStatus: 'connected' | 'expired' | 'error';
-  totalTransactions: number;
 }
 
 export const useOpenFinanceDashboard = () => {
@@ -30,10 +26,6 @@ export const useOpenFinanceDashboard = () => {
   const { toast } = useToast();
   const { refreshBalance } = useBalanceRefresh();
   const { performAutoSync } = useAutoSync();
-
-  const handleReconnection = () => {
-    window.location.href = '/open-finance';
-  };
 
   const fetchOpenFinanceData = async () => {
     if (!currentEmpresa?.id) {
@@ -69,10 +61,7 @@ export const useOpenFinanceDashboard = () => {
           burnRate: 0,
           ultimaAtualizacao: null,
           integracoesAtivas: 0,
-          alertaCritico: false,
-          isUsingTransactionFallback: false,
-          connectionStatus: 'error',
-          totalTransactions: 0
+          alertaCritico: false
         });
         setLoading(false);
         return;
@@ -80,53 +69,46 @@ export const useOpenFinanceDashboard = () => {
 
       console.log(`Encontradas ${integracoesAtivas} integrações ativas`);
 
-      // Tentar obter saldo das contas conectadas primeiro
+      // Refresh do saldo para todas as integrações ativas
       let saldoTotal = 0;
       let ultimaAtualizacao: string | null = null;
-      let saldoObtidoDasContas = false;
-
-      console.log('[OPEN FINANCE] Tentando obter saldo das contas conectadas...');
 
       for (const integracao of integracoes || []) {
         try {
           if (integracao.item_id) {
-            console.log(`Verificando saldo para integração: ${integracao.nome_banco}`);
+            console.log(`Atualizando saldo para integração: ${integracao.nome_banco}`);
             
             // Refresh do saldo via API
             const updatedAccountData = await refreshBalance(integracao.item_id, false);
             
-            if (updatedAccountData?.results && updatedAccountData.results.length > 0) {
-              // Filtrar apenas contas de débito (BANK)
-              const debitAccounts = updatedAccountData.results.filter((account: any) => account.type === 'BANK');
-              console.log(`[${integracao.nome_banco}] Contas encontradas: ${updatedAccountData.results.length}, Contas de débito: ${debitAccounts.length}`);
+            if (updatedAccountData?.results) {
+              const integracaoSaldo = updatedAccountData.results.reduce((sum: number, account: any) => {
+                return sum + (account.balance || 0);
+              }, 0);
               
-              if (debitAccounts.length > 0) {
-                const integracaoSaldo = debitAccounts.reduce((sum: number, account: any) => {
-                  console.log(`[${integracao.nome_banco}] Conta ${account.name} (${account.type}): ${account.balance}`);
+              saldoTotal += integracaoSaldo;
+              console.log(`Saldo da integração ${integracao.nome_banco}: ${integracaoSaldo}`);
+            } else if (integracao.account_data && typeof integracao.account_data === 'object') {
+              // Fallback para dados existentes
+              const accountData = integracao.account_data as any;
+              if (accountData.results && Array.isArray(accountData.results)) {
+                saldoTotal += accountData.results.reduce((sum: number, account: any) => {
                   return sum + (account.balance || 0);
                 }, 0);
-                
-                saldoTotal += integracaoSaldo;
-                saldoObtidoDasContas = true;
-                console.log(`Saldo de contas de débito da integração ${integracao.nome_banco}: ${integracaoSaldo}`);
-              }
-            } else if (integracao.account_data && typeof integracao.account_data === 'object') {
-              // Verificar dados existentes
-              const accountData = integracao.account_data as any;
-              if (accountData.results && Array.isArray(accountData.results) && accountData.results.length > 0) {
-                const debitAccounts = accountData.results.filter((account: any) => account.type === 'BANK');
-                if (debitAccounts.length > 0) {
-                  const integracaoSaldo = debitAccounts.reduce((sum: number, account: any) => {
-                    return sum + (account.balance || 0);
-                  }, 0);
-                  saldoTotal += integracaoSaldo;
-                  saldoObtidoDasContas = true;
-                }
               }
             }
           }
         } catch (refreshError) {
           console.error(`Erro ao atualizar saldo da integração ${integracao.id}:`, refreshError);
+          // Usar dados existentes em caso de erro
+          if (integracao.account_data && typeof integracao.account_data === 'object') {
+            const accountData = integracao.account_data as any;
+            if (accountData.results && Array.isArray(accountData.results)) {
+              saldoTotal += accountData.results.reduce((sum: number, account: any) => {
+                return sum + (account.balance || 0);
+              }, 0);
+            }
+          }
         }
         
         if (integracao.ultimo_sincronismo) {
@@ -136,27 +118,7 @@ export const useOpenFinanceDashboard = () => {
         }
       }
 
-      // FALLBACK: Se não conseguiu obter saldo das contas, calcular a partir das transações
-      let isUsingFallback = false;
-      let totalTransactions = 0;
-      
-      if (!saldoObtidoDasContas || saldoTotal === 0) {
-        console.log('[FALLBACK] Contas sem saldo - calculando a partir das transações...');
-        
-        const { data: todasTransacoes, error: transacoesTotalError } = await supabase
-          .from('transacoes')
-          .select('valor')
-          .eq('empresa_id', currentEmpresa.id);
-
-        if (!transacoesTotalError && todasTransacoes) {
-          saldoTotal = todasTransacoes.reduce((sum, tx) => sum + Number(tx.valor), 0);
-          totalTransactions = todasTransacoes.length;
-          isUsingFallback = true;
-          console.log(`[FALLBACK] Saldo calculado a partir de ${todasTransacoes.length} transações: R$ ${saldoTotal}`);
-        }
-      }
-
-      console.log(`Saldo total calculado: ${saldoTotal} (origem: ${saldoObtidoDasContas ? 'contas bancárias' : 'transações'})`);
+      console.log(`Saldo total calculado: ${saldoTotal}`);
 
       // Buscar transações dos últimos 3 meses para calcular métricas
       const threeMonthsAgo = new Date();
@@ -270,8 +232,6 @@ export const useOpenFinanceDashboard = () => {
       const runwayMeses = burnRate > 0 ? saldoTotal / burnRate : 0;
       const alertaCritico = runwayMeses < 3;
 
-      const connectionStatus: 'connected' | 'expired' | 'error' = isUsingFallback ? 'expired' : 'connected';
-
       const metricsResult = {
         saldoTotal,
         receitaMensal,
@@ -281,16 +241,22 @@ export const useOpenFinanceDashboard = () => {
         burnRate,
         ultimaAtualizacao,
         integracoesAtivas,
-        alertaCritico,
-        isUsingTransactionFallback: isUsingFallback,
-        connectionStatus,
-        totalTransactions
+        alertaCritico
       };
 
       console.log('[DASHBOARD] Métricas calculadas:', metricsResult);
-      console.log(`[DASHBOARD] Fonte dos dados: ${isUsingFallback ? 'Transações (fallback)' : 'Contas bancárias'}`);
+      console.log(`[DASHBOARD] Fonte dos dados: ${usingPluggyFallback ? 'Pluggy (fallback)' : 'Supabase'}`);
       
       setMetrics(metricsResult);
+      
+      // Mostrar notificação se usando fallback
+      if (usingPluggyFallback) {
+        toast({
+          title: "Dados em tempo real",
+          description: "Exibindo dados atuais do banco. Sincronização em background...",
+          variant: "default"
+        });
+      }
 
     } catch (error: any) {
       console.error('Erro ao buscar dados do Open Finance:', error);
@@ -347,7 +313,6 @@ export const useOpenFinanceDashboard = () => {
     metrics,
     loading,
     error,
-    refetch: fetchOpenFinanceData,
-    handleReconnection
+    refetch: fetchOpenFinanceData
   };
 };

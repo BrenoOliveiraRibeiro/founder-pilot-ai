@@ -15,21 +15,11 @@ serve(async (req) => {
   }
 
   try {
-    // Use environment variables for security
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://fhimpyxzedzildagctpq.supabase.co";
+    // Use your specific Supabase and Pluggy credentials
+    const supabaseUrl = "https://fhimpyxzedzildagctpq.supabase.co";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const pluggyClientId = Deno.env.get("PLUGGY_CLIENT_ID") || "";
-    const pluggyClientSecret = Deno.env.get("PLUGGY_CLIENT_SECRET") || "";
-
-    if (!pluggyClientId || !pluggyClientSecret) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Configuração incompleta",
-          message: "Credenciais do Pluggy não configuradas no servidor"
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
+    const pluggyClientId = "129bdd30-a6c1-40ce-afbb-ad38d7a993c0";
+    const pluggyClientSecret = "c93c4fb3-7c9a-4aa9-8358-9e2c562f94a7";
 
     console.log("Using Pluggy credentials - ID:", pluggyClientId ? pluggyClientId.substring(0, 8) + "***" : "not set");
     console.log("Client Secret length:", pluggyClientSecret ? pluggyClientSecret.length : "not set");
@@ -40,7 +30,7 @@ serve(async (req) => {
     const requestData = await req.json();
     const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
 
-    if (!empresa_id && action !== "test_connection" && action !== "get_token") {
+    if (!empresa_id && action !== "test_connection") {
       return new Response(
         JSON.stringify({ 
           error: "Empresa ID é obrigatório",
@@ -52,35 +42,6 @@ serve(async (req) => {
 
     // Route to appropriate handler based on action
     switch (action) {
-      case "get_token":
-        // Secure token retrieval using stored credentials
-        const { getPluggyToken } = await import('./utils.ts');
-        const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
-        
-        if (!tokenResult.success) {
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: tokenResult.error?.message || 'Token generation failed' 
-            }),
-            { 
-              status: tokenResult.error?.status || 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            apiKey: tokenResult.data?.apiKey 
-          }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-
       case "test_connection":
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
