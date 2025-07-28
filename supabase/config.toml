@@ -67,8 +67,8 @@ user = "apikey"
 # Using a placeholder for the password value. In your production environment, you would store the
 # actual password here. For local development, security is not as critical.
 password = "SG.your.api.key"
-sender_name = "Sync Partners"
-sender_email = "contato@syncpartners.com.br"
+sender_name = "FounderPilot AI"
+sender_email = "contato@founderpilot.ai"
 
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin`, `notion`, `twitch`,

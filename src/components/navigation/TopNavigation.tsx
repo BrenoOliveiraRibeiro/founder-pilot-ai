@@ -45,7 +45,7 @@ export const TopNavigation = () => {
     <header className="border-b border-gray-100/80 dark:border-gray-800/50 bg-background/80 backdrop-blur-lg sticky top-0 z-10">
       <div className="flex h-16 items-center px-4 md:px-6">
         <Link to="/dashboard" className="hidden items-center gap-2 md:flex group">
-          <span className="text-lg font-semibold">Sync Partners</span>
+          <span className="text-lg font-semibold">FounderPilot AI</span>
         </Link>
         
         <nav className="flex items-center gap-4 lg:gap-6 ml-6">
