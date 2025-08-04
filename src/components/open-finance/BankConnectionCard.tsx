@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProvidersList } from "./ProvidersList";
 import { ConnectionProgress } from "./ConnectionProgress";
 import { SecurityInfoItems } from "./SecurityInfoItems";
+import { MFADialog } from "./MFADialog";
 
 interface Provider {
   id: string;
@@ -26,6 +27,17 @@ interface BankConnectionCardProps {
   useSandbox: boolean;
   handleConnect: () => Promise<void>;
   connectContainerRef: React.RefObject<HTMLDivElement>;
+  // MFA props
+  mfaState: {
+    isRequired: boolean;
+    type: string;
+    parameter?: string;
+    qrCodeData?: string;
+    itemId?: string;
+  };
+  mfaLoading: boolean;
+  handleMFASubmit: (mfaData: { type: string; parameter?: string; value?: string }) => Promise<void>;
+  clearMFA: () => void;
 }
 
 export const BankConnectionCard = ({
@@ -38,7 +50,11 @@ export const BankConnectionCard = ({
   pluggyWidgetLoaded,
   useSandbox,
   handleConnect,
-  connectContainerRef
+  connectContainerRef,
+  mfaState,
+  mfaLoading,
+  handleMFASubmit,
+  clearMFA
 }: BankConnectionCardProps) => {
   return (
     <Card className="border-none shadow-md">
@@ -120,6 +136,17 @@ export const BankConnectionCard = ({
           </Button>
         </div>
       </CardContent>
+      
+      {/* MFA Dialog */}
+      <MFADialog
+        open={mfaState.isRequired}
+        onClose={clearMFA}
+        onSubmit={handleMFASubmit}
+        mfaType={mfaState.type}
+        mfaParameter={mfaState.parameter}
+        qrCodeData={mfaState.qrCodeData}
+        loading={mfaLoading}
+      />
     </Card>
   );
 };
