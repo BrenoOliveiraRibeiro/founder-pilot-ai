@@ -30,12 +30,20 @@ export const PluggyUpdateView = ({
   const [items, setItems] = useState<PluggyItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { currentEmpresa } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     loadExistingItems();
   }, [currentEmpresa?.id]);
+
+  useEffect(() => {
+    // Reset updating state when connection process finishes
+    if (!isConnecting) {
+      setIsUpdating(false);
+    }
+  }, [isConnecting]);
 
   const loadExistingItems = async () => {
     if (!currentEmpresa?.id) return;
@@ -79,6 +87,16 @@ export const PluggyUpdateView = ({
       });
       return;
     }
+
+    const selectedItem = items.find(item => item.item_id === selectedItemId);
+    console.log(`Iniciando atualização para item: ${selectedItemId} (${selectedItem?.nome_banco})`);
+    
+    setIsUpdating(true);
+    toast({
+      title: "Iniciando atualização",
+      description: `Preparando atualização da conexão com ${selectedItem?.nome_banco}...`,
+      variant: "default",
+    });
 
     onUpdateConnection(selectedItemId);
   };
@@ -208,12 +226,12 @@ export const PluggyUpdateView = ({
                   <Button 
                     onClick={handleUpdateClick}
                     className="w-full" 
-                    disabled={isConnecting || !isScriptLoaded || !selectedItemId}
+                    disabled={isConnecting || isUpdating || !isScriptLoaded || !selectedItemId}
                   >
-                    {isConnecting ? (
+                    {isConnecting || isUpdating ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Atualizando conexão...
+                        {isUpdating ? 'Preparando atualização...' : 'Atualizando conexão...'}
                       </>
                     ) : !isScriptLoaded ? (
                       <>

@@ -1,5 +1,6 @@
 
 import { getPluggyToken, callPluggyAPI } from "./utils.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 export async function authorizeConnection(empresaId: string, institution: string, sandbox: boolean, pluggyClientId: string, pluggyClientSecret: string, corsHeaders: Record<string, string>, updateItemId?: string) {
   const isUpdateMode = !!updateItemId;
@@ -10,6 +11,34 @@ export async function authorizeConnection(empresaId: string, institution: string
   }
   
   try {
+    // Se for modo UPDATE, validar se o item pertence à empresa
+    if (isUpdateMode && updateItemId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      console.log(`Validando se item ${updateItemId} pertence à empresa ${empresaId}`);
+      
+      const { data: integration, error: integrationError } = await supabase
+        .from('integracoes_bancarias')
+        .select('id, item_id, empresa_id')
+        .eq('item_id', updateItemId)
+        .eq('empresa_id', empresaId)
+        .single();
+      
+      if (integrationError || !integration) {
+        console.error(`Item ${updateItemId} não encontrado ou não pertence à empresa ${empresaId}:`, integrationError);
+        return new Response(
+          JSON.stringify({ 
+            error: "Item não encontrado ou acesso negado",
+            details: "O item especificado não existe ou não pertence a esta empresa" 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+        );
+      }
+      
+      console.log(`Item ${updateItemId} validado com sucesso para empresa ${empresaId}`);
+    }
     // Primeiro, obter token da API Pluggy
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
@@ -27,8 +56,9 @@ export async function authorizeConnection(empresaId: string, institution: string
     const apiKey = tokenResult.data.apiKey;
     console.log("Token da API Pluggy obtido com sucesso");
     
-    // Gerar connect token para o widget (modo CREATE ou UPDATE)
-    const connectTokenPayload: any = {
+    // Para modo UPDATE, usar o itemId como parâmetro de URL (formato correto da API Pluggy)
+    let endpoint = '/connect_token';
+    let payload: any = {
       clientUserId: `empresa_${empresaId}`,
       options: {
         includeSandbox: sandbox,
@@ -36,15 +66,15 @@ export async function authorizeConnection(empresaId: string, institution: string
       }
     };
 
-    // Se for modo UPDATE, adicionar itemId no payload
     if (isUpdateMode && updateItemId) {
-      connectTokenPayload.itemId = updateItemId;
-      console.log(`Connect token será criado para UPDATE do item: ${updateItemId}`);
+      // CORREÇÃO: Para update, usar itemId como parâmetro de URL, não no body
+      endpoint = `/connect_token?itemId=${updateItemId}`;
+      console.log(`Connect token será criado para UPDATE do item: ${updateItemId} (endpoint: ${endpoint})`);
     } else {
       console.log('Connect token será criado para CRIAÇÃO de novo item');
     }
 
-    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, connectTokenPayload);
+    const connectTokenResult = await callPluggyAPI(endpoint, 'POST', apiKey, payload);
     
     if (!connectTokenResult.success) {
       console.error("Erro ao gerar connect token:", connectTokenResult.error);

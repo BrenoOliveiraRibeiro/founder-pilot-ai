@@ -24,9 +24,21 @@ export const PluggyUpdate = () => {
 
         // Processar transações automaticamente após atualização
         try {
+          console.log('Processando transações após atualização...');
           await autoProcessAllAccountsAllPages(itemData.item.id, true);
+          
+          toast({
+            title: "Dados sincronizados",
+            description: "Transações foram atualizadas automaticamente.",
+            variant: "default",
+          });
         } catch (error) {
           console.error('Erro ao processar transações após atualização:', error);
+          toast({
+            title: "Atenção",
+            description: "Conexão atualizada, mas houve erro na sincronização dos dados.",
+            variant: "destructive",
+          });
         }
       },
       (error: any) => {
