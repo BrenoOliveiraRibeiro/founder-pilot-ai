@@ -9,9 +9,7 @@ import {
   Settings, 
   Sparkles, 
   TrendingUp, 
-  Users2,
-  CreditCard,
-  RefreshCw
+  Users2 
 } from "lucide-react";
 
 export interface NavItem {
@@ -35,8 +33,7 @@ export type NavGroups = Record<string, NavItem[]>;
 export const groupLabels: Record<string, string> = {
   "Principal": "Principal",
   "Análise": "Análise", 
-  "Gestão": "Gestão",
-  "Open Finance": "Open Finance"
+  "Gestão": "Gestão"
 };
 
 export const navItems: NavItem[] = [
@@ -73,18 +70,6 @@ export const navItems: NavItem[] = [
     icon: Sparkles,
     highlight: true,
     group: "Análise"
-  },
-  {
-    title: "Nova Conexão",
-    href: "/pluggy",
-    icon: CreditCard,
-    group: "Open Finance"
-  },
-  {
-    title: "Atualizar Conexão",
-    href: "/pluggy-update",
-    icon: RefreshCw,
-    group: "Open Finance"
   },
   {
     title: "Relatórios",

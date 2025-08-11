@@ -67,7 +67,7 @@ export const SyncMonitor = () => {
       
       const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
         body: {
-          action: 'sync',
+          action: 'sync_data',
           empresa_id: currentEmpresa.id,
           sandbox: true
         }

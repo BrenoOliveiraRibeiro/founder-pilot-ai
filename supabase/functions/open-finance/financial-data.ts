@@ -31,59 +31,20 @@ export async function processFinancialData(
     if (!targetAccountId) {
       console.log(`Buscando contas para item ${itemId}`);
       const accountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', apiKey);
-      
       if (accountsResult.success && accountsResult.data.results && accountsResult.data.results.length > 0) {
         // Use the first account by default
         targetAccountId = accountsResult.data.results[0].id;
         accountData = accountsResult.data.results[0];
         console.log(`Usando conta padrão: ${targetAccountId} (${accountData.name})`);
       } else {
-        // If account fetch failed due to auth, try to get fresh token and retry
-        if (accountsResult.error?.status === 403 || accountsResult.error?.status === 401) {
-          console.log('Falha de autenticação ao buscar contas, tentando renovar token...');
-          const freshTokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
-          
-          if (freshTokenResult.success) {
-            const freshApiKey = freshTokenResult.data.apiKey;
-            console.log('Token renovado, tentando buscar contas novamente...');
-            
-            const retryAccountsResult = await callPluggyAPI(`/accounts?itemId=${itemId}`, 'GET', freshApiKey);
-            if (retryAccountsResult.success && retryAccountsResult.data.results && retryAccountsResult.data.results.length > 0) {
-              targetAccountId = retryAccountsResult.data.results[0].id;
-              accountData = retryAccountsResult.data.results[0];
-              console.log(`Conta obtida após renovação do token: ${targetAccountId} (${accountData.name})`);
-              // Update apiKey for subsequent calls
-              apiKey = freshApiKey;
-            } else {
-              console.warn("Nenhuma conta encontrada mesmo após renovação do token:", itemId);
-              return {
-                success: true,
-                message: "Nenhuma conta encontrada",
-                newTransactions: 0,
-                duplicates: 0,
-                total: 0
-              };
-            }
-          } else {
-            console.error('Falha ao renovar token:', freshTokenResult.error);
-            return {
-              success: true,
-              message: "Falha na autenticação - token inválido",
-              newTransactions: 0,
-              duplicates: 0,
-              total: 0
-            };
-          }
-        } else {
-          console.warn("Nenhuma conta encontrada para o item:", itemId);
-          return {
-            success: true,
-            message: "Nenhuma conta encontrada",
-            newTransactions: 0,
-            duplicates: 0,
-            total: 0
-          };
-        }
+        console.warn("Nenhuma conta encontrada para o item:", itemId);
+        return {
+          success: true,
+          message: "Nenhuma conta encontrada",
+          newTransactions: 0,
+          duplicates: 0,
+          total: 0
+        };
       }
     }
     
@@ -94,15 +55,13 @@ export async function processFinancialData(
       console.log(`Usando transações fornecidas: ${transactionsData.results.length}`);
       allTransactions = transactionsData.results;
     } else {
-      // Fetch from API with extended date range to ensure we get all recent data
+      // Fetch from API
       console.log(`Buscando transações da API para conta ${targetAccountId}`);
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6); // Increased to 6 months for better sync
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       
-      const fromDate = sixMonthsAgo.toISOString().split('T')[0];
+      const fromDate = threeMonthsAgo.toISOString().split('T')[0];
       const toDate = new Date().toISOString().split('T')[0];
-      
-      console.log(`Período de sincronização: ${fromDate} até ${toDate}`);
       
       const transactionsResult = await callPluggyAPI(
         `/transactions?accountId=${targetAccountId}&from=${fromDate}&to=${toDate}`, 
@@ -115,36 +74,7 @@ export async function processFinancialData(
         console.log(`Transações obtidas da API: ${allTransactions.length}`);
       } else {
         console.warn(`Erro ao buscar transações para a conta ${targetAccountId}:`, transactionsResult.error);
-        
-        // If API call failed due to auth, try to get fresh token and retry once
-        if (transactionsResult.error?.status === 403 || transactionsResult.error?.status === 401) {
-          console.log('Token possivelmente expirado, tentando renovar...');
-          const freshTokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
-          
-          if (freshTokenResult.success) {
-            const freshApiKey = freshTokenResult.data.apiKey;
-            console.log('Token renovado, tentando buscar transações novamente...');
-            
-            const retryTransactionsResult = await callPluggyAPI(
-              `/transactions?accountId=${targetAccountId}&from=${fromDate}&to=${toDate}`, 
-              'GET',
-              freshApiKey
-            );
-            
-            if (retryTransactionsResult.success && retryTransactionsResult.data.results) {
-              allTransactions = retryTransactionsResult.data.results;
-              console.log(`Transações obtidas após renovação do token: ${allTransactions.length}`);
-            } else {
-              console.error('Falha mesmo com token renovado:', retryTransactionsResult.error);
-              allTransactions = [];
-            }
-          } else {
-            console.error('Falha ao renovar token:', freshTokenResult.error);
-            allTransactions = [];
-          }
-        } else {
-          allTransactions = [];
-        }
+        allTransactions = [];
       }
     }
     
