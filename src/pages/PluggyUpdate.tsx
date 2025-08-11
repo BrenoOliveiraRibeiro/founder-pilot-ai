@@ -1,16 +1,11 @@
 import React from 'react';
 import { usePluggyWidget } from '@/hooks/usePluggyWidget';
-import { usePluggyConnectionPersistence } from '@/hooks/usePluggyConnectionPersistence';
 import { PluggyUpdateView } from '@/components/pluggy/PluggyUpdateView';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 export const PluggyUpdate = () => {
   const { isConnecting, isScriptLoaded, initializePluggyConnect } = usePluggyWidget();
-  const { autoProcessAllAccountsAllPages } = usePluggyConnectionPersistence();
   const { toast } = useToast();
-  const { currentEmpresa } = useAuth();
 
   const handleUpdateConnection = async (itemId: string) => {
     console.log(`Iniciando atualização para item: ${itemId}`);
@@ -24,47 +19,6 @@ export const PluggyUpdate = () => {
           description: `A conexão bancária foi atualizada com sucesso.`,
           variant: "default",
         });
-
-        // Processar transações automaticamente após atualização
-        try {
-          console.log('Processando transações após atualização...');
-          
-          // Forçar sincronização completa independente de novas transações
-          const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
-            body: {
-              action: 'sync',
-              empresa_id: currentEmpresa.id,
-              sandbox: true
-            }
-          });
-          
-          if (syncError) {
-            console.error('Erro na sincronização forçada:', syncError);
-            toast({
-              title: "Erro na sincronização",
-              description: "Conexão atualizada, mas houve erro na sincronização dos dados.",
-              variant: "destructive",
-            });
-          } else {
-            console.log('Sincronização forçada concluída:', syncResult);
-            
-            // Processar contas e transações via hook
-            await autoProcessAllAccountsAllPages(itemData.item.id, true);
-            
-            toast({
-              title: "Dados sincronizados",
-              description: `Dados bancários foram atualizados. ${syncResult?.message || 'Sincronização concluída.'}`,
-              variant: "default",
-            });
-          }
-        } catch (error) {
-          console.error('Erro ao processar transações após atualização:', error);
-          toast({
-            title: "Atenção",
-            description: "Conexão atualizada, mas houve erro na sincronização dos dados.",
-            variant: "destructive",
-          });
-        }
       },
       (error: any) => {
         console.error('Erro na atualização:', error);
