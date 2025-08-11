@@ -223,7 +223,7 @@ export const usePluggyConnectionPersistence = () => {
           console.log('Iniciando sincronização automática via edge function...');
           const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
             body: {
-              action: 'sync_data',
+              action: 'sync',
               empresa_id: currentEmpresa.id,
               sandbox: true
             }

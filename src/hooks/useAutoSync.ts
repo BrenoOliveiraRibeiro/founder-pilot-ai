@@ -54,7 +54,7 @@ export const useAutoSync = () => {
           
           const { data: syncResult, error: syncError } = await supabase.functions.invoke('open-finance', {
             body: {
-              action: 'sync_data',
+              action: 'sync',
               empresa_id: currentEmpresa.id,
               integration_id: integracao.id,
               sandbox: (integracao.detalhes as any)?.sandbox || true
