@@ -33,7 +33,6 @@ export async function authorizeConnection(empresaId: string, institution: string
       options: {
         includeSandbox: sandbox,
         products: ['accounts', 'transactions'],
-        webhookUrl: null
       }
     };
 
