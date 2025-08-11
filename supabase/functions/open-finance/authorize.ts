@@ -27,8 +27,7 @@ export async function authorizeConnection(empresaId: string, institution: string
       clientUserId: `empresa_${empresaId}`,
       options: {
         includeSandbox: sandbox,
-        products: ['accounts', 'transactions'],
-        webhookUrl: null
+        products: ['accounts', 'transactions']
       }
     };
 
