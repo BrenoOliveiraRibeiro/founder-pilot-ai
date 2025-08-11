@@ -14,7 +14,7 @@ export async function syncData(
   console.log(`[SYNC] Iniciando sincronização para empresa ${empresaId}, integração: ${integrationId || 'todas'}, sandbox: ${sandbox}`);
   
   try {
-    // Get API key
+    // Get fresh API key for each sync operation
     console.log('[SYNC] Obtendo token da API Pluggy...');
     const tokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
     
@@ -103,17 +103,27 @@ export async function syncData(
       let totalProcessed = 0;
       let failedIntegrations = 0;
       
-      // For each integration, use processFinancialData consistently
+      // For each integration, get a fresh token and force full sync
       for (const integracao of integracoes) {
         try {
           console.log(`[SYNC] Processando integração: ${integracao.nome_banco} (${integracao.id}), item_id: ${integracao.detalhes?.item_id || integracao.item_id}`);
+          
+          // Get fresh token for each integration to avoid expiration
+          const freshTokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
+          if (!freshTokenResult.success) {
+            console.error(`[SYNC] Falha ao obter token fresco para integração ${integracao.id}:`, freshTokenResult.error);
+            throw new Error(`Falha na autenticação: ${freshTokenResult.error.message}`);
+          }
+          
+          const freshApiKey = freshTokenResult.data.apiKey;
+          console.log(`[SYNC] Token fresco obtido para integração ${integracao.nome_banco}`);
           
           const result = await processFinancialData(
             empresaId, 
             integracao.detalhes?.item_id || integracao.item_id, 
             null, // accountId será determinado automaticamente
             null, // transactionsData será buscado da API
-            apiKey,
+            freshApiKey, // Use fresh token
             pluggyClientId, 
             pluggyClientSecret, 
             integracao.detalhes?.sandbox || sandbox, 
@@ -131,17 +141,27 @@ export async function syncData(
           console.error(`[SYNC] Erro ao sincronizar integração ${integracao.id}:`, error);
           failedIntegrations++;
           
-          // Tentar novamente após 2 segundos
+          // Tentar novamente após 2 segundos com token fresco
           try {
             console.log(`[SYNC] Tentativa de retry para integração ${integracao.id}...`);
             await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Get another fresh token for retry
+            const retryTokenResult = await getPluggyToken(pluggyClientId, pluggyClientSecret, sandbox);
+            if (!retryTokenResult.success) {
+              console.error(`[SYNC] Falha ao obter token para retry:`, retryTokenResult.error);
+              throw new Error(`Falha na autenticação do retry: ${retryTokenResult.error.message}`);
+            }
+            
+            const retryApiKey = retryTokenResult.data.apiKey;
+            console.log(`[SYNC] Token fresco obtido para retry da integração ${integracao.nome_banco}`);
             
             const retryResult = await processFinancialData(
               empresaId, 
               integracao.detalhes?.item_id || integracao.item_id, 
               null,
               null,
-              apiKey,
+              retryApiKey, // Use fresh token for retry
               pluggyClientId, 
               pluggyClientSecret, 
               integracao.detalhes?.sandbox || sandbox, 
