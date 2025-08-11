@@ -15,6 +15,7 @@ import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { MultipleConnectionsManager } from "@/components/open-finance/MultipleConnectionsManager";
+import { BankUpdateCard } from "@/components/open-finance/BankUpdateCard";
 
 declare global {
   interface Window {
@@ -422,7 +423,10 @@ const OpenFinance = () => {
             </div>
 
             {/* Transações */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Bank Update Card */}
+              <BankUpdateCard />
+              
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Transações</h2>
