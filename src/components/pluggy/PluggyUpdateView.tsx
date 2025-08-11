@@ -78,29 +78,65 @@ export const PluggyUpdateView = ({
     }
   };
 
-  const handleUpdateClick = () => {
+  const handleUpdateClick = async () => {
+    console.log('🔄 [UPDATE VIEW] Botão de atualização clicado');
+    console.log('🔍 [UPDATE VIEW] Estado atual:', {
+      selectedItemId,
+      isConnecting,
+      isScriptLoaded,
+      isUpdating,
+      totalItems: items.length
+    });
+
     if (!selectedItemId) {
+      console.warn('⚠️ [UPDATE VIEW] Nenhum item selecionado');
       toast({
-        title: "Item não selecionado",
-        description: "Selecione um item para atualizar a conexão.",
+        title: "Seleção obrigatória",
+        description: "Selecione uma conexão para atualizar.",
         variant: "destructive",
       });
       return;
     }
 
+    if (isConnecting || isUpdating) {
+      console.warn('⚠️ [UPDATE VIEW] Processo já em andamento');
+      toast({
+        title: "Aguarde",
+        description: "Uma atualização já está em progresso.",
+        variant: "default",
+      });
+      return;
+    }
+
     const selectedItem = items.find(item => item.item_id === selectedItemId);
-    console.log(`[UPDATE] Iniciando atualização para item: ${selectedItemId} (${selectedItem?.nome_banco})`);
-    console.log(`[UPDATE] Script loaded: ${isScriptLoaded}, Connecting: ${isConnecting}`);
+    console.log('🚀 [UPDATE VIEW] Iniciando processo de atualização:', {
+      itemId: selectedItemId,
+      bankName: selectedItem?.nome_banco,
+      scriptLoaded: isScriptLoaded
+    });
     
     setIsUpdating(true);
     toast({
-      title: "Iniciando atualização",
-      description: `Preparando atualização da conexão com ${selectedItem?.nome_banco}...`,
+      title: "Preparando atualização",
+      description: `Carregando widget para ${selectedItem?.nome_banco}...`,
       variant: "default",
     });
 
-    console.log(`[UPDATE] Chamando onUpdateConnection com itemId: ${selectedItemId}`);
-    onUpdateConnection(selectedItemId);
+    try {
+      console.log('📞 [UPDATE VIEW] Chamando onUpdateConnection...');
+      await onUpdateConnection(selectedItemId);
+      console.log('✅ [UPDATE VIEW] onUpdateConnection concluído');
+    } catch (error: any) {
+      console.error('❌ [UPDATE VIEW] Erro durante atualização:', error);
+      toast({
+        title: "Erro na atualização",
+        description: error.message || "Falha ao atualizar conexão. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      console.log('🏁 [UPDATE VIEW] Finalizando processo de atualização');
+      setIsUpdating(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -225,28 +261,72 @@ export const PluggyUpdateView = ({
                     </Select>
                   </div>
 
-                  <Button 
-                    onClick={handleUpdateClick}
-                    className="w-full" 
-                    disabled={isConnecting || isUpdating || !isScriptLoaded || !selectedItemId}
-                  >
-                    {isConnecting || isUpdating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {isUpdating ? 'Preparando atualização...' : 'Atualizando conexão...'}
-                      </>
-                    ) : !isScriptLoaded ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Carregando widget...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Atualizar Conexão Selecionada
-                      </>
-                    )}
-                  </Button>
+                  <div className="space-y-3">
+                    {/* Status do Script */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Status do Widget:</span>
+                      <div className="flex items-center gap-2">
+                        {isScriptLoaded ? (
+                          <>
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-green-600">Carregado</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                            <span className="text-yellow-600">Carregando...</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Estado da Conexão */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Status da Conexão:</span>
+                      <div className="flex items-center gap-2">
+                        {isConnecting || isUpdating ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                            <span className="text-blue-600">
+                              {isUpdating ? 'Preparando...' : 'Conectando...'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                            <span className="text-gray-600">Pronto</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleUpdateClick}
+                      className="w-full" 
+                      disabled={!isScriptLoaded || !selectedItemId || isConnecting || isUpdating}
+                    >
+                      {isConnecting || isUpdating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {isUpdating ? 'Preparando atualização...' : 'Abrindo widget...'}
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Atualizar Conexão
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Informações de Debug */}
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+                      <div>Debug Info:</div>
+                      <div>• Script: {isScriptLoaded ? '✅' : '❌'}</div>
+                      <div>• Selecionado: {selectedItemId ? '✅' : '❌'}</div>
+                      <div>• Conectando: {isConnecting ? '🔄' : '⏸️'}</div>
+                      <div>• Preparando: {isUpdating ? '🔄' : '⏸️'}</div>
+                    </div>
+                  </div>
                 </div>
               </Card>
 
