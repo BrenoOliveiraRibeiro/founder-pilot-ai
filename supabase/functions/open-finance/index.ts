@@ -28,7 +28,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData = await req.json();
-    const { action, empresa_id, institution, item_id, sandbox = true } = requestData;
+    const { action, empresa_id, institution, item_id, sandbox = true, update_item_id } = requestData;
 
     if (!empresa_id && action !== "test_connection") {
       return new Response(
@@ -52,7 +52,8 @@ serve(async (req) => {
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
-          corsHeaders
+          corsHeaders,
+          update_item_id
         );
       
       case "callback":

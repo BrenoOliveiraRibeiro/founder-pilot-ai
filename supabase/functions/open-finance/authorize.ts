@@ -1,8 +1,13 @@
 
 import { getPluggyToken, callPluggyAPI } from "./utils.ts";
 
-export async function authorizeConnection(empresaId: string, institution: string, sandbox: boolean, pluggyClientId: string, pluggyClientSecret: string, corsHeaders: Record<string, string>) {
-  console.log(`Iniciando autorização para empresa ${empresaId} com ${institution} (sandbox: ${sandbox})`);
+export async function authorizeConnection(empresaId: string, institution: string, sandbox: boolean, pluggyClientId: string, pluggyClientSecret: string, corsHeaders: Record<string, string>, updateItemId?: string) {
+  const isUpdateMode = !!updateItemId;
+  console.log(`Iniciando autorização para empresa ${empresaId} com ${institution} (sandbox: ${sandbox}, modo: ${isUpdateMode ? 'UPDATE' : 'CREATE'})`);
+  
+  if (isUpdateMode) {
+    console.log(`Item ID para atualização: ${updateItemId}`);
+  }
   
   try {
     // Primeiro, obter token da API Pluggy
@@ -22,17 +27,25 @@ export async function authorizeConnection(empresaId: string, institution: string
     const apiKey = tokenResult.data.apiKey;
     console.log("Token da API Pluggy obtido com sucesso");
     
-    // Agora, gerar connect token para o widget
-    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, {
+    // Gerar connect token para o widget (modo CREATE ou UPDATE)
+    const connectTokenPayload: any = {
       clientUserId: `empresa_${empresaId}`,
       options: {
-        // Configurações opcionais do widget
         includeSandbox: sandbox,
         products: ['accounts', 'transactions'],
-        // Webhook URL para receber callbacks (opcional)
         webhookUrl: null
       }
-    });
+    };
+
+    // Se for modo UPDATE, adicionar itemId no payload
+    if (isUpdateMode && updateItemId) {
+      connectTokenPayload.itemId = updateItemId;
+      console.log(`Connect token será criado para UPDATE do item: ${updateItemId}`);
+    } else {
+      console.log('Connect token será criado para CRIAÇÃO de novo item');
+    }
+
+    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, connectTokenPayload);
     
     if (!connectTokenResult.success) {
       console.error("Erro ao gerar connect token:", connectTokenResult.error);
@@ -51,7 +64,9 @@ export async function authorizeConnection(empresaId: string, institution: string
         api_key: apiKey,
         institution,
         sandbox: sandbox,
-        empresa_id: empresaId
+        empresa_id: empresaId,
+        mode: isUpdateMode ? 'update' : 'create',
+        update_item_id: updateItemId || null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

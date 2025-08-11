@@ -24,6 +24,7 @@ import MarketSize from "@/pages/MarketSize";
 import Connect from "@/pages/Connect";
 import InvestorsSettings from "@/pages/InvestorsSettings";
 import PluggyIntegration from "@/pages/PluggyIntegration";
+import { PluggyUpdate } from "@/pages/PluggyUpdate";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/connect" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
             <Route path="/investors-settings" element={<ProtectedRoute><InvestorsSettings /></ProtectedRoute>} />
             <Route path="/pluggy" element={<ProtectedRoute><PluggyIntegration /></ProtectedRoute>} />
+            <Route path="/pluggy-update" element={<ProtectedRoute><PluggyUpdate /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

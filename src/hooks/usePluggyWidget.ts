@@ -60,7 +60,11 @@ export const usePluggyWidget = () => {
 
   const initializePluggyConnect = async (
     onSuccess: (itemData: any) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    options?: {
+      updateItemId?: string;
+      onEvent?: (event: any) => void;
+    }
   ) => {
     if (!isScriptLoaded || !window.PluggyConnect) {
       toast({
@@ -91,17 +95,25 @@ export const usePluggyWidget = () => {
     }
 
     setIsConnecting(true);
-    console.log("Iniciando conexão com Pluggy Connect...");
+    const isUpdateMode = !!options?.updateItemId;
+    console.log(`Iniciando ${isUpdateMode ? 'atualização' : 'conexão'} com Pluggy Connect...`);
 
     try {
       // Usar a edge function via supabase
+      const requestBody: any = {
+        action: 'authorize',
+        empresa_id: currentEmpresa.id,
+        institution: 'pluggy',
+        sandbox: true
+      };
+
+      // Se for modo update, incluir o item_id
+      if (options?.updateItemId) {
+        requestBody.update_item_id = options.updateItemId;
+      }
+
       const { data, error } = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'authorize',
-          empresa_id: currentEmpresa.id,
-          institution: 'pluggy',
-          sandbox: true
-        }
+        body: requestBody
       });
 
       if (error) {
@@ -118,11 +130,11 @@ export const usePluggyWidget = () => {
         throw new Error('No connect token received');
       }
 
-      pluggyConnectInstanceRef.current = new window.PluggyConnect({
+      const widgetConfig: any = {
         connectToken: data.connect_token,
         includeSandbox: true,
         onSuccess: async (itemData: any) => {
-          console.log('Pluggy connect success!', itemData);
+          console.log(`Pluggy ${isUpdateMode ? 'update' : 'connect'} success!`, itemData);
           console.log('Item ID:', itemData.item.id);
           
           setIsConnecting(false);
@@ -135,11 +147,23 @@ export const usePluggyWidget = () => {
           setIsConnecting(false);
           onError(error);
         },
+        onEvent: (event: any) => {
+          console.log('Pluggy Connect event:', event);
+          options?.onEvent?.(event);
+        },
         onClose: () => {
           console.log('Pluggy Connect closed');
           setIsConnecting(false);
         }
-      });
+      };
+
+      // Se for modo update, definir updateItem
+      if (options?.updateItemId) {
+        widgetConfig.updateItem = options.updateItemId;
+        console.log(`Widget configurado para atualizar item: ${options.updateItemId}`);
+      }
+
+      pluggyConnectInstanceRef.current = new window.PluggyConnect(widgetConfig);
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
