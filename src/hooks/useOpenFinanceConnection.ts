@@ -6,7 +6,6 @@ import { SANDBOX_PROVIDERS, REAL_PROVIDERS } from '../components/open-finance/Ba
 import { usePluggyWidget } from './usePluggyWidget';
 import { useOpenFinanceConnections } from './useOpenFinanceConnections';
 import { useNavigate } from 'react-router-dom';
-import { useMFAHandler } from './useMFAHandler';
 
 export const useOpenFinanceConnection = () => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -21,16 +20,6 @@ export const useOpenFinanceConnection = () => {
   const { isScriptLoaded: pluggyWidgetLoaded, initializePluggyConnect } = usePluggyWidget();
   const { fetchIntegrations } = useOpenFinanceConnections();
   const navigate = useNavigate();
-  
-  // MFA Handler
-  const { 
-    mfaState, 
-    loading: mfaLoading, 
-    checkMFAStatus, 
-    submitMFA, 
-    clearMFA, 
-    retryConnection 
-  } = useMFAHandler();
 
   const providers = useSandbox ? SANDBOX_PROVIDERS : REAL_PROVIDERS;
 
@@ -171,22 +160,8 @@ export const useOpenFinanceConnection = () => {
     
     try {
       setConnectionProgress(90);
-      setConnectionStatus("Verificando autenticação...");
+      setConnectionStatus("Sincronizando dados...");
       
-      console.log("Verificando se MFA é necessário para item:", itemId);
-      
-      // Verificar se MFA é necessário
-      const needsMFA = await checkMFAStatus(itemId);
-      
-      if (needsMFA) {
-        setConnectionStatus("Autenticação adicional necessária");
-        setConnecting(false);
-        setConnectionProgress(0);
-        console.log("MFA necessário, aguardando entrada do usuário");
-        return;
-      }
-      
-      setConnectionStatus("Registrando conexão...");
       console.log("Registrando item no backend:", itemId);
       
       // Registrar o item no backend
@@ -237,18 +212,6 @@ export const useOpenFinanceConnection = () => {
         setConnectionProgress(0);
       }, 1500);
     }
-  };
-
-  const handleMFASubmit = async (mfaData: { type: string; parameter?: string; value?: string }) => {
-    await submitMFA(mfaData, async () => {
-      // MFA bem-sucedido, continuar com o processo de conexão
-      if (mfaState.itemId) {
-        setConnecting(true);
-        setConnectionProgress(90);
-        setConnectionStatus("Finalizando conexão...");
-        await handlePluggySuccess(mfaState.itemId);
-      }
-    });
   };
 
   const testPluggyConnection = async () => {
@@ -313,11 +276,6 @@ export const useOpenFinanceConnection = () => {
     providers,
     handleConnect,
     testPluggyConnection,
-    debugInfo,
-    // MFA functionality
-    mfaState,
-    mfaLoading,
-    handleMFASubmit,
-    clearMFA
+    debugInfo
   };
 };

@@ -15,8 +15,6 @@ import { pluggyAuth } from '@/utils/pluggyAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ActiveIntegrationsCard } from "@/components/open-finance/ActiveIntegrationsCard";
 import { MultipleConnectionsManager } from "@/components/open-finance/MultipleConnectionsManager";
-import { MFADialog } from "@/components/open-finance/MFADialog";
-import { useMFAHandler } from "@/hooks/useMFAHandler";
 
 declare global {
   interface Window {
@@ -51,15 +49,6 @@ const OpenFinance = () => {
   } = useOpenFinanceConnection();
 
   const { currentEmpresa, loading: authLoading } = useAuth();
-
-  // MFA Handler
-  const { 
-    mfaState, 
-    loading: mfaLoading, 
-    checkMFAStatus, 
-    submitMFA, 
-    clearMFA 
-  } = useMFAHandler();
 
   const {
     loading,
@@ -302,15 +291,6 @@ const OpenFinance = () => {
             
             const accountData = await response.json();
             
-            // Verificar se MFA é necessário
-            const needsMFA = await checkMFAStatus(receivedItemId);
-            
-            if (needsMFA) {
-              console.log("MFA necessário, aguardando entrada do usuário");
-              setIsConnecting(false);
-              return;
-            }
-
             await saveConnection(
               receivedItemId, 
               accountData, 
@@ -742,24 +722,6 @@ const OpenFinance = () => {
             </div>
           </CardContent>
         </Card>
-        
-        {/* MFA Dialog */}
-        <MFADialog
-          open={mfaState.isRequired}
-          onClose={clearMFA}
-          onSubmit={async (mfaData) => {
-            await submitMFA(mfaData, () => {
-              toast({
-                title: "Conexão finalizada!",
-                description: "Banco conectado após autenticação adicional.",
-              });
-            });
-          }}
-          mfaType={mfaState.type}
-          mfaParameter={mfaState.parameter}
-          qrCodeData={mfaState.qrCodeData}
-          loading={mfaLoading}
-        />
       </div>
     </AppLayout>
   );
