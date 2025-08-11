@@ -31,11 +31,11 @@ export async function authorizeConnection(empresaId: string, institution: string
       }
     };
 
-    // CRÍTICO: Se for modo de atualização, adicionar updateItemId no nível raiz
+    // CRÍTICO: Para modo de atualização, não adicionar updateItemId no body
+    // A Pluggy requer apenas o parâmetro itemId na URL
     if (updateItemId) {
-      connectTokenBody.updateItemId = updateItemId;
       console.log(`Modo de atualização ativado para item: ${updateItemId}`);
-      console.log("Body completo para connect token:", JSON.stringify(connectTokenBody, null, 2));
+      console.log("Body para connect token (modo atualização):", JSON.stringify(connectTokenBody, null, 2));
     }
     
     // Agora, gerar connect token para o widget
