@@ -130,7 +130,8 @@ export const usePluggyWidget = () => {
         throw new Error('No connect token received');
       }
 
-      pluggyConnectInstanceRef.current = new window.PluggyConnect({
+      // Configurar instância PluggyConnect
+      const pluggyConfig: any = {
         connectToken: data.connect_token,
         includeSandbox: true,
         onSuccess: async (itemData: any) => {
@@ -151,7 +152,15 @@ export const usePluggyWidget = () => {
           console.log('Pluggy Connect closed');
           setIsConnecting(false);
         }
-      });
+      };
+
+      // CRÍTICO: Se for modo de atualização, adicionar updateItem
+      if (itemId && updateMode) {
+        pluggyConfig.updateItem = itemId;
+        console.log("Configurando widget para atualização do item:", itemId);
+      }
+
+      pluggyConnectInstanceRef.current = new window.PluggyConnect(pluggyConfig);
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
