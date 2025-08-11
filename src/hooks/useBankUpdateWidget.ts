@@ -96,32 +96,10 @@ export const useBankUpdateWidget = () => {
     try {
       console.log("Iniciando atualização para item:", connection.item_id);
       
-      // Get update token for existing item
-      const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: {
-          action: "authorize",
-          empresa_id: currentEmpresa.id,
-          institution: "pluggy",
-          sandbox: true,
-          item_id: connection.item_id, // Pass existing item_id for update
-          update_mode: true
-        }
-      });
-
-      if (error) {
-        console.error("Erro na autorização:", error);
-        throw error;
-      }
-
-      if (!data || !data.connect_token) {
-        console.error("Token não retornado:", data);
-        throw new Error("Token de conexão não retornado pelo servidor");
-      }
-
       setUpdateProgress(40);
       setUpdateStatus("Aguardando autenticação...");
 
-      // Initialize Pluggy Connect for update
+      // Initialize Pluggy Connect for update using the corrected hook
       await initializePluggyConnect(
         async (itemData: { item: { id: string } }) => {
           console.log("Item atualizado com sucesso:", itemData.item.id);
@@ -138,7 +116,9 @@ export const useBankUpdateWidget = () => {
             variant: "destructive"
           });
           setIsUpdating(false);
-        }
+        },
+        connection.item_id, // Pass item_id for update
+        true // Enable update mode
       );
 
       console.log("Pluggy Connect inicializado para atualização");

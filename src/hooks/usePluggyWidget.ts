@@ -60,7 +60,9 @@ export const usePluggyWidget = () => {
 
   const initializePluggyConnect = async (
     onSuccess: (itemData: any) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    itemId?: string,
+    updateMode?: boolean
   ) => {
     if (!isScriptLoaded || !window.PluggyConnect) {
       toast({
@@ -94,14 +96,24 @@ export const usePluggyWidget = () => {
     console.log("Iniciando conexão com Pluggy Connect...");
 
     try {
-      // Usar a edge function via supabase
-      const { data, error } = await supabase.functions.invoke('open-finance', {
-        body: {
-          action: 'authorize',
-          empresa_id: currentEmpresa.id,
-          institution: 'pluggy',
-          sandbox: true
-        }
+      console.log("Buscando token de conexão...", { itemId, updateMode });
+      
+      const requestBody: any = {
+        action: "authorize",
+        empresa_id: currentEmpresa.id,
+        institution: "pluggy",
+        sandbox: true
+      };
+
+      // Adicionar parâmetros de atualização se fornecidos
+      if (itemId && updateMode) {
+        requestBody.item_id = itemId;
+        requestBody.update_mode = true;
+        console.log("Modo de atualização ativado para item:", itemId);
+      }
+      
+      const { data, error } = await supabase.functions.invoke("open-finance", {
+        body: requestBody
       });
 
       if (error) {
