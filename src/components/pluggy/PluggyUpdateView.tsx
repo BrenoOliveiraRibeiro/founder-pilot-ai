@@ -89,7 +89,8 @@ export const PluggyUpdateView = ({
     }
 
     const selectedItem = items.find(item => item.item_id === selectedItemId);
-    console.log(`Iniciando atualização para item: ${selectedItemId} (${selectedItem?.nome_banco})`);
+    console.log(`[UPDATE] Iniciando atualização para item: ${selectedItemId} (${selectedItem?.nome_banco})`);
+    console.log(`[UPDATE] Script loaded: ${isScriptLoaded}, Connecting: ${isConnecting}`);
     
     setIsUpdating(true);
     toast({
@@ -98,6 +99,7 @@ export const PluggyUpdateView = ({
       variant: "default",
     });
 
+    console.log(`[UPDATE] Chamando onUpdateConnection com itemId: ${selectedItemId}`);
     onUpdateConnection(selectedItemId);
   };
 

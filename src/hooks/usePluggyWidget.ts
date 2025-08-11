@@ -97,6 +97,9 @@ export const usePluggyWidget = () => {
     setIsConnecting(true);
     const isUpdateMode = !!options?.updateItemId;
     console.log(`Iniciando ${isUpdateMode ? 'atualização' : 'conexão'} com Pluggy Connect...`);
+    console.log('Script loaded:', isScriptLoaded);
+    console.log('Window.PluggyConnect disponível:', !!window.PluggyConnect);
+    console.log('Update item ID:', options?.updateItemId);
 
     try {
       // Usar a edge function via supabase
@@ -110,26 +113,38 @@ export const usePluggyWidget = () => {
       // Se for modo update, incluir o item_id
       if (options?.updateItemId) {
         requestBody.update_item_id = options.updateItemId;
+        console.log('Requisição para UPDATE com item_id:', options.updateItemId);
+      } else {
+        console.log('Requisição para CRIAÇÃO de novo item');
       }
+
+      console.log('Chamando edge function open-finance com body:', requestBody);
 
       const { data, error } = await supabase.functions.invoke('open-finance', {
         body: requestBody
       });
 
+      console.log('Resposta da edge function:', { data, error });
+
       if (error) {
+        console.error('Erro na edge function:', error);
         throw new Error(`Erro na edge function: ${error.message}`);
       }
 
       if (data?.error) {
+        console.error('Erro retornado pela edge function:', data.error);
         throw new Error(data.error);
       }
 
       console.log('Connect token response:', data);
 
       if (!data?.connect_token) {
+        console.error('Connect token não retornado:', data);
         throw new Error('No connect token received');
       }
 
+      console.log('Configurando widget PluggyConnect...');
+      
       const widgetConfig: any = {
         connectToken: data.connect_token,
         includeSandbox: true,
@@ -163,10 +178,20 @@ export const usePluggyWidget = () => {
         console.log(`Widget configurado para atualizar item: ${options.updateItemId}`);
       }
 
+      console.log('Configuração final do widget:', {
+        hasConnectToken: !!widgetConfig.connectToken,
+        includeSandbox: widgetConfig.includeSandbox,
+        updateItem: widgetConfig.updateItem,
+        mode: isUpdateMode ? 'UPDATE' : 'CREATE'
+      });
+
+      console.log('Instanciando PluggyConnect...');
       pluggyConnectInstanceRef.current = new window.PluggyConnect(widgetConfig);
 
-      console.log('Initializing Pluggy Connect widget...');
+      console.log('Inicializando widget PluggyConnect...');
       pluggyConnectInstanceRef.current.init();
+      
+      console.log('Widget PluggyConnect inicializado com sucesso!');
     } catch (error) {
       console.error('Error initializing Pluggy Connect:', error);
       setIsConnecting(false);
