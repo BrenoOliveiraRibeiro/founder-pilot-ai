@@ -1,8 +1,8 @@
 
 import { getPluggyToken, callPluggyAPI } from "./utils.ts";
 
-export async function authorizeConnection(empresaId: string, institution: string, sandbox: boolean, pluggyClientId: string, pluggyClientSecret: string, corsHeaders: Record<string, string>) {
-  console.log(`Iniciando autorização para empresa ${empresaId} com ${institution} (sandbox: ${sandbox})`);
+export async function authorizeConnection(empresaId: string, institution: string, sandbox: boolean, pluggyClientId: string, pluggyClientSecret: string, corsHeaders: Record<string, string>, updateItemId?: string) {
+  console.log(`Iniciando autorização para empresa ${empresaId} com ${institution} (sandbox: ${sandbox}, updateMode: ${!!updateItemId})`);
   
   try {
     // Primeiro, obter token da API Pluggy
@@ -22,17 +22,24 @@ export async function authorizeConnection(empresaId: string, institution: string
     const apiKey = tokenResult.data.apiKey;
     console.log("Token da API Pluggy obtido com sucesso");
     
-    // Agora, gerar connect token para o widget
-    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, {
+    // Preparar body para connect token
+    const connectTokenBody: any = {
       clientUserId: `empresa_${empresaId}`,
       options: {
-        // Configurações opcionais do widget
         includeSandbox: sandbox,
         products: ['accounts', 'transactions'],
-        // Webhook URL para receber callbacks (opcional)
         webhookUrl: null
       }
-    });
+    };
+
+    // Se for modo de atualização, adicionar updateItemId
+    if (updateItemId) {
+      connectTokenBody.updateItemId = updateItemId;
+      console.log(`Modo de atualização ativado para item: ${updateItemId}`);
+    }
+    
+    // Agora, gerar connect token para o widget
+    const connectTokenResult = await callPluggyAPI('/connect_token', 'POST', apiKey, connectTokenBody);
     
     if (!connectTokenResult.success) {
       console.error("Erro ao gerar connect token:", connectTokenResult.error);
@@ -51,7 +58,8 @@ export async function authorizeConnection(empresaId: string, institution: string
         api_key: apiKey,
         institution,
         sandbox: sandbox,
-        empresa_id: empresaId
+        empresa_id: empresaId,
+        updateMode: !!updateItemId
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

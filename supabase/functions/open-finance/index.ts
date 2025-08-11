@@ -52,7 +52,8 @@ serve(async (req) => {
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
-          corsHeaders
+          corsHeaders,
+          requestData.update_item_id
         );
       
       case "callback":

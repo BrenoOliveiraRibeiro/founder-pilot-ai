@@ -61,7 +61,7 @@ export async function callPluggyAPI(endpoint: string, method: string, apiKey: st
     
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'X-API-KEY': apiKey,
     };
     
     const options: RequestInit = {
