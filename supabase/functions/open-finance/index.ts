@@ -46,21 +46,13 @@ serve(async (req) => {
         return await testPluggyConnection(pluggyClientId, pluggyClientSecret, sandbox, corsHeaders);
       
       case "authorize":
-        console.log("Parâmetros de autorização:", {
-          empresa_id: empresa_id,
-          institution: institution,
-          sandbox: sandbox,
-          item_id: requestData.item_id,
-          update_mode: requestData.update_mode
-        });
         return await authorizeConnection(
           empresa_id, 
           institution, 
           sandbox, 
           pluggyClientId, 
           pluggyClientSecret, 
-          corsHeaders,
-          requestData.item_id // Corrigido: era update_item_id
+          corsHeaders
         );
       
       case "callback":

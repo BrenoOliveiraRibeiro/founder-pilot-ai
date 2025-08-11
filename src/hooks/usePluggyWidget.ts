@@ -60,9 +60,7 @@ export const usePluggyWidget = () => {
 
   const initializePluggyConnect = async (
     onSuccess: (itemData: any) => Promise<void>,
-    onError: (error: any) => void,
-    itemId?: string,
-    updateMode?: boolean
+    onError: (error: any) => void
   ) => {
     if (!isScriptLoaded || !window.PluggyConnect) {
       toast({
@@ -96,24 +94,14 @@ export const usePluggyWidget = () => {
     console.log("Iniciando conexão com Pluggy Connect...");
 
     try {
-      console.log("Buscando token de conexão...", { itemId, updateMode });
-      
-      const requestBody: any = {
-        action: "authorize",
-        empresa_id: currentEmpresa.id,
-        institution: "pluggy",
-        sandbox: true
-      };
-
-      // Adicionar parâmetros de atualização se fornecidos
-      if (itemId && updateMode) {
-        requestBody.item_id = itemId;
-        requestBody.update_mode = true;
-        console.log("Modo de atualização ativado para item:", itemId);
-      }
-      
-      const { data, error } = await supabase.functions.invoke("open-finance", {
-        body: requestBody
+      // Usar a edge function via supabase
+      const { data, error } = await supabase.functions.invoke('open-finance', {
+        body: {
+          action: 'authorize',
+          empresa_id: currentEmpresa.id,
+          institution: 'pluggy',
+          sandbox: true
+        }
       });
 
       if (error) {
@@ -130,8 +118,7 @@ export const usePluggyWidget = () => {
         throw new Error('No connect token received');
       }
 
-      // Configurar instância PluggyConnect
-      const pluggyConfig: any = {
+      pluggyConnectInstanceRef.current = new window.PluggyConnect({
         connectToken: data.connect_token,
         includeSandbox: true,
         onSuccess: async (itemData: any) => {
@@ -152,15 +139,7 @@ export const usePluggyWidget = () => {
           console.log('Pluggy Connect closed');
           setIsConnecting(false);
         }
-      };
-
-      // CRÍTICO: Se for modo de atualização, adicionar updateItem
-      if (itemId && updateMode) {
-        pluggyConfig.updateItem = itemId;
-        console.log("Configurando widget para atualização do item:", itemId);
-      }
-
-      pluggyConnectInstanceRef.current = new window.PluggyConnect(pluggyConfig);
+      });
 
       console.log('Initializing Pluggy Connect widget...');
       pluggyConnectInstanceRef.current.init();
